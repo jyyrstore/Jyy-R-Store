@@ -22,3 +22,5 @@
 .align-right{min-width:0;max-width:100%}
 .align-right>*{max-width:100%;overflow-wrap:anywhere;word-break:break-word}
 .summary-row>*{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+
+.thumbnail-preview{display:block;width:100%;max-width:360px;max-height:220px;object-fit:cover;border:1px solid var(--border);border-radius:12px;background:var(--deep);padding:4px}
