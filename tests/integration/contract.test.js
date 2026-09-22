@@ -14,3 +14,25 @@ test('explicit owner URL routes exist',()=>{assert.match(route,/owner\.get\('\/p
 test('owner order fulfillment status API is routed',()=>{assert.match(route,/ownerApi\.post\('\/orders\/:id\/status'/);assert.match(fs.readFileSync(path.join(root,'src/services/order/order.service.js'),'utf8'),/ownerUpdateStatus/)});
 test('service metadata migration exists',()=>assert.ok(fs.existsSync(path.join(root,'database/migrations/029_service_metadata.sql'))));
 test('views do not read process.env directly',()=>{for(const f of fs.readdirSync(path.join(root,'views'),{recursive:true}).filter(x=>x.endsWith('.ejs'))){const s=fs.readFileSync(path.join(root,'views',f),'utf8');assert.doesNotMatch(s,/process\.env\./,f)}});
+
+test('owner content editor uses contextual fields',()=>{
+  const js=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
+  assert.match(js,/data-owner-content-field="file"/);
+  assert.match(js,/data-owner-content-field="text"/);
+  assert.match(js,/data-owner-content-field="url"/);
+  assert.match(js,/data-owner-content-type/);
+  assert.match(js,/data-owner-content-access/);
+});
+
+test('PREVIEW content automatically enables preview semantics',()=>{
+  const js=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
+  assert.match(js,/isPreview:access==='PREVIEW'/);
+  assert.match(js,/is_preview:access==='PREVIEW'/);
+});
+
+test('owner publish UI has readiness checklist',()=>{
+  const js=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
+  assert.match(js,/owner-publish-checklist/);
+  assert.match(js,/data-owner-publish/);
+  assert.match(js,/canPublish/);
+});
