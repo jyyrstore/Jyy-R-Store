@@ -1,10 +1,26 @@
 <section class="page-shell">
   <div class="product-detail">
     <div class="detail-media">
-      <% if(product.thumbnail_url || product.thumbnail_path){ %>
-        <img src="<%= product.thumbnail_url || assetUrl(publicAssetBucket,product.thumbnail_path) %>" alt="<%= product.name %>" class="detail-image" loading="eager" data-image-fallback>
-        <div class="detail-image image-fallback" hidden><%- icon('image') %><span>Image unavailable</span></div>
-      <% } else { %><div class="detail-image image-fallback"><%- icon('image') %><span>Image unavailable</span></div><% } %>
+      <div class="detail-image-frame">
+        <% if(product.thumbnail_url || product.thumbnail_path){ %>
+          <img
+            src="<%= product.thumbnail_url || assetUrl(publicAssetBucket,product.thumbnail_path) %>"
+            alt="<%= product.name %>"
+            class="detail-image"
+            loading="eager"
+            data-image-fallback
+          >
+          <div class="detail-image-fallback image-fallback" hidden>
+            <%- icon('image') %>
+            <span>Image unavailable</span>
+          </div>
+        <% } else { %>
+          <div class="detail-image-fallback image-fallback">
+            <%- icon('image') %>
+            <span>Image unavailable</span>
+          </div>
+        <% } %>
+      </div>
     </div>
     <div class="detail-copy">
       <div class="eyebrow"><%= product.category_name || 'Product' %></div><h1><%= product.name %></h1>
