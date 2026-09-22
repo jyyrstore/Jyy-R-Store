@@ -1,1 +1,12 @@
 .auth-links{display:flex;justify-content:space-between;margin-top:16px;font-size:13px;color:var(--primary-2)}
+
+
+/* Owner Store product flow */
+.product-flow-steps{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem}
+.product-flow-steps span{display:inline-flex;align-items:center;padding:.45rem .7rem;border:1px solid var(--border,#141720);border-radius:999px;font-size:.78rem;color:var(--muted,#9da3b1);background:var(--surface,#2B313F)}
+.product-flow-steps span.active{color:#fff;border-color:rgba(130,88,220,.65);background:rgba(110,70,190,.18)}
+.product-flow-note{display:flex;flex-direction:column;gap:.3rem;padding:.8rem 1rem;border:1px solid var(--border,#141720);border-radius:12px;background:rgba(43,49,63,.55)}
+.product-flow-note span{color:var(--muted,#9da3b1);font-size:.9rem}
+.owner-content-manager .owner-content-row{align-items:center}
+.owner-content-manager .owner-content-row>div{min-width:0}
+.owner-content-manager .owner-content-row span{display:block}

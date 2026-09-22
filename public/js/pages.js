@@ -35,6 +35,59 @@
     });
   }
   function open(html,onReady){window.JYYRModal.open(html);onReady?.();}
+
+
+  async function openOwnerContentManager(productId,productName='Produk',productStatus='DRAFT'){
+    try{
+      const r=await api.request('/api/owner/products/'+encodeURIComponent(productId)+'/content');
+      const items=Array.isArray(r)?r:(r.items||[]);
+      const rows=items.length?items.map((c,i)=>`
+        <div class="list-card owner-content-row">
+          <div>
+            <strong>${esc(c.title||('Content '+(i+1)))}</strong>
+            <span>${esc(c.type)} · ${esc(c.access_type||'PURCHASED')}${c.file_size?` · ${(Number(c.file_size)/1024/1024).toFixed(2)} MB`:''}</span>
+          </div>
+          <button class="button button-danger button-small" type="button" data-owner-content-delete="${esc(c.id)}" data-owner-content-product="${esc(productId)}" data-owner-content-name="${esc(productName)}" data-owner-content-status="${esc(productStatus)}">Hapus</button>
+        </div>`).join(''):`<div class="empty-state compact"><h3>Belum ada content</h3><p>Tambahkan barang digital yang akan diterima pembeli setelah pembayaran berhasil.</p></div>`;
+
+      const publishAction=String(productStatus)==='DRAFT'
+        ? `<button class="button button-primary" type="button" data-owner-publish="${esc(productId)}">Publish Produk</button>`
+        : '';
+
+      open(`<div class="stack-form owner-content-manager">
+        <div class="product-modal-kicker">Owner Store · Langkah 2</div>
+        <h2>Kelola Content</h2>
+        <p class="muted"><strong>${esc(productName)}</strong> · Status <strong>${esc(productStatus)}</strong></p>
+        <div class="product-flow-steps"><span>1. Data Produk</span><span class="active">2. Content</span><span>3. Publish</span></div>
+
+        <div class="panel subdued">
+          <strong>${items.length} content</strong>
+          <p class="muted">Content di bawah adalah barang yang akan diberikan kepada user setelah pembayaran terkonfirmasi.</p>
+        </div>
+
+        <div class="list-stack">${rows}</div>
+
+        <form data-owner-content-form data-product-id="${esc(productId)}" data-product-name="${esc(productName)}" data-product-status="${esc(productStatus)}">
+          <h3>Tambah Content</h3>
+          <label class="field"><span>Type</span><select name="type"><option>FILE</option><option>IMAGE</option><option>VIDEO</option><option>AUDIO</option><option>TEXT</option><option>LINK</option></select></label>
+          <label class="field"><span>Title</span><input name="title" required maxlength="160"></label>
+          <label class="field"><span>Description</span><textarea name="description" maxlength="2000"></textarea></label>
+          <label class="field"><span>Text Content</span><textarea name="text_content" maxlength="50000"></textarea></label>
+          <label class="field"><span>URL (untuk LINK)</span><input name="url" type="url"></label>
+          <label class="field"><span>Access</span><select name="access_type"><option>PURCHASED</option><option>PREVIEW</option><option>PUBLIC</option></select></label>
+          <label class="field"><span>File</span><input name="file" type="file" accept="image/*,video/*,audio/*,.zip,.rar,.7z,.pdf"></label>
+          <progress data-upload-progress value="0" max="100" hidden></progress>
+          <small class="muted" data-upload-status>FILE / IMAGE / VIDEO / AUDIO membutuhkan file.</small>
+
+          <div class="product-modal-actions">
+            <button class="button button-primary" type="submit">Simpan Content</button>
+            ${publishAction}
+            <button class="button button-secondary" type="button" data-modal-close>Tutup</button>
+          </div>
+        </form>
+      </div>`);
+    }catch(err){toast.error(err.message)}
+  }
   function formButtons(label='Simpan'){return `<div class="inline-actions"><button class="button button-primary">${esc(label)}</button><button class="button button-secondary" type="button" data-modal-close>Batal</button></div>`}
 
   document.addEventListener('error',e=>{const img=e.target;if(img?.matches?.('[data-image-fallback]')){img.hidden=true;img.nextElementSibling?.removeAttribute('hidden')} if(img?.matches?.('[data-image-fallback-hide]'))img.hidden=true;},{capture:true});
@@ -91,9 +144,10 @@
       categories:`<form data-owner-category-form class="stack-form"><h2>Tambah Kategori</h2><label class="field"><span>Nama</span><input name="name" required maxlength="80"></label><label class="field"><span>Slug (opsional)</span><input name="slug" maxlength="100"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" checked></label>${formButtons()}}</form>`,
       products:`<form data-owner-product-form class="product-form-modal">
   <div class="product-modal-head">
-    <div class="product-modal-kicker">Owner Store</div>
-    <h2>Tambah Produk</h2>
-    <p>Buat produk baru dan siapkan thumbnail sebelum ditampilkan di Store.</p>
+    <div class="product-modal-kicker">Owner Store · Langkah 1</div>
+    <h2>Buat Produk</h2>
+    <p>Isi <strong>Data Produk</strong> dan <strong>Thumbnail</strong>. Produk selalu disimpan sebagai <strong>DRAFT</strong> terlebih dahulu.</p>
+    <div class="product-flow-steps"><span class="active">1. Data Produk</span><span>2. Content</span><span>3. Publish</span></div>
   </div>
 
   <section class="product-modal-section">
@@ -154,13 +208,10 @@
         <textarea name="description" rows="4" placeholder="Deskripsi singkat produk..."></textarea>
       </label>
 
-      <label class="field full">
-        <span>Status</span>
-        <select name="status">
-          <option>DRAFT</option>
-          <option>PUBLISHED</option>
-        </select>
-      </label>
+      <div class="product-flow-note full">
+        <strong>Setelah disimpan</strong>
+        <span>Produk masuk ke <b>DRAFT</b>. Lanjutkan ke <b>Kelola Content</b>, tambahkan barang yang akan diterima pembeli, lalu Publish.</span>
+      </div>
     </div>
   </section>
 
@@ -175,8 +226,9 @@
 
     const ep=e.target.closest('[data-owner-edit-product]');if(ep){let d;try{d=JSON.parse(ep.dataset.ownerEditProduct)}catch{return}open(`<form data-owner-product-edit class="stack-form"><h2>Edit Produk</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Slug</span><input name="slug" value="${esc(d.slug)}"></label><label class="form-grid"><span class="field"><span>Harga</span><input name="price" type="number" min="0" value="${Number(d.price)||0}"></span><span class="field"><span>Stock</span><input name="stock" type="number" min="0" value="${Number(d.stock)||0}"></span></label><label class="field"><span>Description</span><textarea name="description">${esc(d.description||'')}</textarea></label><label class="field"><span>Thumbnail Produk</span>${d.thumbnail_url?`<img class="thumbnail-preview" data-current-thumbnail src="${esc(d.thumbnail_url)}" alt="Thumbnail saat ini">`:``}<input name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp" data-thumbnail-input><small class="muted">Pilih file baru untuk mengganti thumbnail.</small><img class="thumbnail-preview" data-thumbnail-preview alt="Preview thumbnail baru" hidden><progress data-thumbnail-progress value="0" max="100" hidden></progress><small class="muted" data-thumbnail-status>Belum ada thumbnail baru dipilih.</small></label><label class="field"><span>Status</span><select name="status"><option ${d.status==='DRAFT'?'selected':''}>DRAFT</option><option ${d.status==='PUBLISHED'?'selected':''}>PUBLISHED</option><option ${d.status==='ARCHIVED'?'selected':''}>ARCHIVED</option></select></label>${formButtons('Update Product')}</form>`)}
 
-    const content=e.target.closest('[data-owner-content]');if(content){open(`<div class="stack-form"><h2>Tambah Product Content</h2><form data-owner-content-form data-product-id="${esc(content.dataset.ownerContent)}"><label class="field"><span>Type</span><select name="type"><option>FILE</option><option>IMAGE</option><option>VIDEO</option><option>AUDIO</option><option>TEXT</option><option>LINK</option></select></label><label class="field"><span>Title</span><input name="title" required></label><label class="field"><span>Description</span><textarea name="description"></textarea></label><label class="field content-field-text"><span>Text Content</span><textarea name="text_content"></textarea></label><label class="field content-field-link"><span>URL</span><input name="url" type="url"></label><label class="field"><span>Access</span><select name="access_type"><option>PURCHASED</option><option>PREVIEW</option><option>PUBLIC</option></select></label><label class="field"><span>Upload file (untuk FILE/IMAGE/VIDEO/AUDIO)</span><input name="file" type="file" accept="image/*,video/*,audio/*,.zip,,.pdf"></label><progress data-upload-progress value="0" max="100" hidden></progress><small class="muted" data-upload-status>Preview akan menyesuaikan tipe content setelah file dipilih.</small>${formButtons('Add Content')}</form></div>`,()=>{})}
+    const content=e.target.closest('[data-owner-content]');if(content){await openOwnerContentManager(content.dataset.ownerContent,content.dataset.ownerProductName||'Produk',content.dataset.ownerProductStatus||'DRAFT');}
 
+    const contentDelete=e.target.closest('[data-owner-content-delete]');if(contentDelete){if(!confirm('Hapus content ini?'))return;try{await ownerAction('/api/owner/products/'+encodeURIComponent(contentDelete.dataset.ownerContentProduct)+'/content/'+encodeURIComponent(contentDelete.dataset.ownerContentDelete),{},'DELETE','Content dihapus.');await openOwnerContentManager(contentDelete.dataset.ownerContentProduct,contentDelete.dataset.ownerContentName||'Produk',contentDelete.dataset.ownerContentStatus||'DRAFT')}catch(err){toast.error(err.message)}}
     const publish=e.target.closest('[data-owner-publish]');if(publish){if(!confirm('Publish produk ini?'))return;try{await ownerAction('/api/owner/products/'+publish.dataset.ownerPublish+'/publish',{},'POST','Produk dipublish.');location.reload()}catch(err){toast.error(err.message)}}
     const unpublish=e.target.closest('[data-owner-unpublish]');if(unpublish){if(!confirm('Unpublish produk ini?'))return;try{await ownerAction('/api/owner/products/'+unpublish.dataset.ownerUnpublish+'/unpublish',{},'POST','Produk di-unpublish.');location.reload()}catch(err){toast.error(err.message)}}
     const dup=e.target.closest('[data-owner-duplicate]');if(dup){try{await ownerAction('/api/owner/products/'+dup.dataset.ownerDuplicate+'/duplicate',{},'POST','Produk diduplikasi.');location.reload()}catch(err){toast.error(err.message)}}
@@ -211,9 +263,11 @@
     const maint=e.target.closest('[data-owner-maintenance]');if(maint){e.preventDefault();const fd=new FormData(maint);const body={enabled:fd.get('enabled')==='on',title:fd.get('title'),message:fd.get('message'),scheduled_start:fd.get('scheduled_start')||null,scheduled_end:fd.get('scheduled_end')||null,allow_owner_access:fd.get('allow_owner_access')==='on'};try{await api.request('/api/owner/maintenance',{method:'PUT',body});toast.success('Maintenance setting tersimpan.')}catch(err){toast.error(err.message)}}
     const form=e.target.closest('[data-deposit-submit]');if(form){e.preventDefault()}
     const category=e.target.closest('[data-owner-category-form], [data-owner-category-edit]');if(category){e.preventDefault();const fd=Object.fromEntries(new FormData(category));fd.is_active=fd.is_active==='on';try{const id=fd.id;if(id)await ownerAction('/api/owner/categories/'+id,{name:fd.name,slug:fd.slug,is_active:fd.is_active},'PUT','Kategori diperbarui.');else await ownerAction('/api/owner/categories',{name:fd.name,slug:fd.slug,is_active:fd.is_active},'POST','Kategori dibuat.');location.reload()}catch(err){toast.error(err.message)}}
-    const pfm=e.target.closest('[data-owner-product-form]');if(pfm){e.preventDefault();const formData=new FormData(pfm);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);delete fd.thumbnail;fd.price=Number(fd.price);fd.stock=Number(fd.stock);if(!fd.category_id)fd.category_id=null;try{const created=await ownerAction('/api/owner/products',fd,'POST','Produk dibuat.');if(thumbnail instanceof File && thumbnail.size){const progress=pfm.querySelector('[data-thumbnail-progress]'),status=pfm.querySelector('[data-thumbnail-status]');await uploadOwnerFile(created.id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Produk dan thumbnail berhasil disimpan.')}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
+    const pfm=e.target.closest('[data-owner-product-form]');if(pfm){e.preventDefault();const formData=new FormData(pfm),thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);delete fd.thumbnail;delete fd.status;fd.status='DRAFT';fd.price=Number(fd.price);fd.stock=Number(fd.stock);if(!fd.category_id)fd.category_id=null;const btn=pfm.querySelector('button[type="submit"]');if(btn)btn.disabled=true;try{const created=await ownerAction('/api/owner/products',fd,'POST','Produk DRAFT dibuat.');if(thumbnail instanceof File&&thumbnail.size){const progress=pfm.querySelector('[data-thumbnail-progress]'),status=pfm.querySelector('[data-thumbnail-status]');await uploadOwnerFile(created.id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});}window.JYYRModal.close();await openOwnerContentManager(created.id,created.name||fd.name,'DRAFT')}catch(err){toast.error(err.message)}finally{if(btn)btn.disabled=false}}
+
     const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.price=Number(fd.price);fd.stock=Number(fd.stock);try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
-    const cfm=e.target.closest('[data-owner-content-form]');if(cfm){e.preventDefault();const fd=new FormData(cfm),type=fd.get('type'),id=fd.get('product_id')||cfm.dataset.productId,file=fd.get('file');try{if(file&&file.size&&['FILE','IMAGE','VIDEO','AUDIO'].includes(type)){fd.append('contentType',type);const progress=cfm.querySelector('[data-upload-progress]'),status=cfm.querySelector('[data-upload-status]');if(progress)progress.hidden=false;const out=await new Promise((resolve,reject)=>{const x=new XMLHttpRequest();x.open('POST','/api/owner/products/'+id+'/upload');x.withCredentials=true;x.setRequestHeader('X-CSRF-Token',csrf());x.upload.onprogress=e=>{if(e.lengthComputable){const pct=Math.round(e.loaded/e.total*100);if(progress)progress.value=pct;if(status)status.textContent=`Uploading… ${pct}% · ${(e.loaded/1024/1024).toFixed(1)} / ${(e.total/1024/1024).toFixed(1)} MB`;}};x.onload=()=>{try{const v=JSON.parse(x.responseText);if(x.status>=200&&x.status<300&&v.success!==false)resolve(v);else reject(new Error(v.error?.message||'Upload gagal'))}catch{reject(new Error('Response upload tidak valid.'))}};x.onerror=()=>reject(new Error('Network error saat upload.'));x.onabort=()=>reject(new Error('Upload dibatalkan.'));x.send(fd)});toast.success('Content berhasil diupload.')}else{const body=Object.fromEntries(fd);delete body.file;body.is_preview=fd.get('is_preview')==='on';await ownerAction('/api/owner/products/'+id+'/content',body,'POST','Content dibuat.')}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
+    const cfm=e.target.closest('[data-owner-content-form]');if(cfm){e.preventDefault();const fd=new FormData(cfm),type=fd.get('type'),id=fd.get('product_id')||cfm.dataset.productId,file=fd.get('file');const btn=cfm.querySelector('button[type="submit"]');if(btn)btn.disabled=true;try{if(file&&file.size&&['FILE','IMAGE','VIDEO','AUDIO'].includes(type)){fd.append('contentType',type);const progress=cfm.querySelector('[data-upload-progress]'),status=cfm.querySelector('[data-upload-status]');if(progress)progress.hidden=false;await new Promise((resolve,reject)=>{const x=new XMLHttpRequest();x.open('POST','/api/owner/products/'+encodeURIComponent(id)+'/upload');x.withCredentials=true;x.setRequestHeader('X-CSRF-Token',csrf());x.upload.onprogress=e=>{if(e.lengthComputable){const pct=Math.round(e.loaded/e.total*100);if(progress)progress.value=pct;if(status)status.textContent=`Uploading… ${pct}% · ${(e.loaded/1024/1024).toFixed(1)} / ${(e.total/1024/1024).toFixed(1)} MB`;}};x.onload=()=>{try{const v=JSON.parse(x.responseText);if(x.status>=200&&x.status<300&&v.success!==false)resolve(v);else reject(new Error(v.error?.message||'Upload gagal'))}catch{reject(new Error('Response upload tidak valid.'))}};x.onerror=()=>reject(new Error('Network error saat upload.'));x.onabort=()=>reject(new Error('Upload dibatalkan.'));x.send(fd)});toast.success('Content berhasil diupload')}else{const body=Object.fromEntries(fd);delete body.file;body.product_id=id;body.is_preview=fd.get('is_preview')==='on';await ownerAction('/api/owner/products/'+encodeURIComponent(id)+'/content',body,'POST','Content dibuat.');}await openOwnerContentManager(id,cfm.dataset.productName||'Produk',cfm.dataset.productStatus||'DRAFT')}catch(err){toast.error(err.message)}finally{if(btn)btn.disabled=false}}
+
     const sem=e.target.closest('[data-owner-service-form], [data-owner-service-edit]');if(sem){e.preventDefault();const fd=Object.fromEntries(new FormData(sem));fd.price=Number(fd.price||0);fd.sort_order=Number(fd.sort_order||0);fd.is_active=fd.is_active==='on';try{fd.requirements=fd.requirements?JSON.parse(fd.requirements):{};}catch{toast.error('Requirements harus JSON valid.');return}const id=fd.id;delete fd.id;if(id)await ownerAction('/api/owner/services/'+id,fd,'PUT','Service diperbarui.');else await ownerAction('/api/owner/services',fd,'POST','Service dibuat.');location.reload()}
     const ff=e.target.closest('[data-owner-faq-form], [data-owner-faq-edit]');if(ff){e.preventDefault();const fd=Object.fromEntries(new FormData(ff));fd.is_published=fd.is_published==='on';const id=fd.id;delete fd.id;try{if(id)await ownerAction('/api/owner/faq/'+id,fd,'PUT','FAQ diperbarui.');else await ownerAction('/api/owner/faq',fd,'POST','FAQ dibuat.');location.reload()}catch(err){toast.error(err.message)}}
     const fi=e.target.closest('[data-owner-info-form], [data-owner-info-edit]');if(fi){e.preventDefault();const fd=Object.fromEntries(new FormData(fi));fd.is_published=fd.is_published==='on';const id=fd.id;delete fd.id;try{if(id)await ownerAction('/api/owner/information/'+id,fd,'PUT','Information diperbarui.');else await ownerAction('/api/owner/information',fd,'POST','Information dibuat.');location.reload()}catch(err){toast.error(err.message)}}
