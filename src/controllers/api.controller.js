@@ -185,7 +185,7 @@ async function ownerUploadInit(req,res){
 
   const env=loadEnv();
   const maxBytes=Math.floor(Number(env.MAX_UPLOAD_MB||100)*1024*1024);
-  const thumbnailMax=Math.min(maxBytes,10*1024*1024);
+  const thumbnailMax=Math.min(maxBytes,100*1024*1024);
 
   if(!Number.isSafeInteger(fileSize)||fileSize<=0){
     throw Object.assign(new Error('Ukuran file tidak valid.'),{
@@ -200,7 +200,7 @@ async function ownerUploadInit(req,res){
   }
 
   if(contentType==='THUMBNAIL'&&fileSize>thumbnailMax){
-    throw Object.assign(new Error('Ukuran thumbnail maksimal 10 MB.'),{
+    throw Object.assign(new Error('Ukuran thumbnail maksimal 100 MB.'),{
       status:413,code:'THUMBNAIL_TOO_LARGE',expose:true
     });
   }
@@ -277,7 +277,7 @@ async function ownerUploadComplete(req,res){
   }
 
   const maxBytes=Math.floor(Number(env.MAX_UPLOAD_MB||100)*1024*1024);
-  const thumbnailMax=Math.min(maxBytes,10*1024*1024);
+  const thumbnailMax=Math.min(maxBytes,100*1024*1024);
 
   if(!Number.isSafeInteger(fileSize)||fileSize<=0){
     throw Object.assign(new Error('Ukuran file tidak valid.'),{
@@ -292,7 +292,7 @@ async function ownerUploadComplete(req,res){
   }
 
   if(contentType==='THUMBNAIL'&&fileSize>thumbnailMax){
-    throw Object.assign(new Error('Ukuran thumbnail maksimal 10 MB.'),{
+    throw Object.assign(new Error('Ukuran thumbnail maksimal 100 MB.'),{
       status:413,code:'THUMBNAIL_TOO_LARGE',expose:true
     });
   }
