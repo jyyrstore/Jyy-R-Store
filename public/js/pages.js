@@ -44,15 +44,18 @@
     const file=input.files?.[0];
     const form=input.closest('form');
     const preview=form?.querySelector('[data-thumbnail-preview]');
+    const empty=form?.querySelector('[data-thumbnail-empty]');
     const status=form?.querySelector('[data-thumbnail-status]');
     if(!file){
       if(preview)preview.hidden=true;
+      if(empty)empty.hidden=false;
       if(status)status.textContent='Belum ada thumbnail dipilih.';
       return;
     }
     if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
       input.value='';
       if(preview)preview.hidden=true;
+      if(empty)empty.hidden=false;
       if(status)status.textContent='Thumbnail harus JPG, PNG, atau WebP.';
       toast.error('Thumbnail harus JPG, PNG, atau WebP.');
       return;
@@ -63,6 +66,7 @@
       preview.src=url;
       preview.dataset.objectUrl=url;
       preview.hidden=false;
+      if(empty)empty.hidden=true;
     }
     if(status)status.textContent=`${file.name} · ${(file.size/1024/1024).toFixed(2)} MB`;
   });
@@ -85,7 +89,86 @@
 
     const dep2=e.target.closest('[data-owner-create]');if(dep2){const section=dep2.dataset.ownerCreate;const forms={
       categories:`<form data-owner-category-form class="stack-form"><h2>Tambah Kategori</h2><label class="field"><span>Nama</span><input name="name" required maxlength="80"></label><label class="field"><span>Slug (opsional)</span><input name="slug" maxlength="100"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" checked></label>${formButtons()}}</form>`,
-      products:`<form data-owner-product-form class="stack-form"><h2>Tambah Produk</h2><label class="field"><span>Nama</span><input name="name" required></label><label class="field"><span>Slug (opsional)</span><input name="slug"></label><label class="field"><span>Kategori</span><select name="category_id"><option value="">Tanpa kategori</option>${(window.__OWNER_CATEGORIES||[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label><div class="form-grid"><label class="field"><span>Harga</span><input name="price" type="number" min="0" required></label><label class="field"><span>Stock</span><input name="stock" type="number" min="0" required></label></div><label class="field"><span>Description</span><textarea name="description"></textarea></label><label class="field"><span>Thumbnail Produk</span><input name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp" data-thumbnail-input><small class="muted">JPG, PNG, atau WebP.</small><img class="thumbnail-preview" data-thumbnail-preview alt="Preview thumbnail" hidden><progress data-thumbnail-progress value="0" max="100" hidden></progress><small class="muted" data-thumbnail-status>Belum ada thumbnail dipilih.</small></label><label class="field"><span>Status</span><select name="status"><option>DRAFT</option><option>PUBLISHED</option></select></label>${formButtons('Save Product')}</form>`,
+      products:`<form data-owner-product-form class="product-form-modal">
+  <div class="product-modal-head">
+    <div class="product-modal-kicker">Owner Store</div>
+    <h2>Tambah Produk</h2>
+    <p>Buat produk baru dan siapkan thumbnail sebelum ditampilkan di Store.</p>
+  </div>
+
+  <section class="product-modal-section">
+    <div class="product-modal-section-title">
+      <strong>Thumbnail Produk</strong>
+      <span class="badge">JPG · PNG · WEBP</span>
+    </div>
+
+    <div class="product-thumbnail-box">
+      <div class="product-thumbnail-empty" data-thumbnail-empty>Preview Thumbnail</div>
+      <div class="product-upload-info">
+        <strong>Pilih gambar produk</strong>
+        <small>Gunakan gambar yang jelas agar produk terlihat bagus di halaman Store.</small>
+        <input name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp" data-thumbnail-input>
+        <small data-thumbnail-status>Belum ada thumbnail dipilih.</small>
+        <progress data-thumbnail-progress value="0" max="100" hidden></progress>
+        <img class="product-thumbnail-preview" data-thumbnail-preview alt="Preview thumbnail" hidden>
+      </div>
+    </div>
+  </section>
+
+  <section class="product-modal-section">
+    <div class="product-modal-section-title">
+      <strong>Informasi Produk</strong>
+    </div>
+
+    <div class="product-modal-grid">
+      <label class="field full">
+        <span>Nama Produk</span>
+        <input name="name" required placeholder="Contoh: Alight Motion Premium">
+      </label>
+
+      <label class="field">
+        <span>Slug</span>
+        <input name="slug" placeholder="Opsional">
+      </label>
+
+      <label class="field">
+        <span>Kategori</span>
+        <select name="category_id">
+          <option value="">Tanpa kategori</option>
+          ${(window.__OWNER_CATEGORIES||[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Harga</span>
+        <input name="price" type="number" min="0" required placeholder="10000">
+      </label>
+
+      <label class="field">
+        <span>Stock</span>
+        <input name="stock" type="number" min="0" required placeholder="10">
+      </label>
+
+      <label class="field full">
+        <span>Description</span>
+        <textarea name="description" rows="4" placeholder="Deskripsi singkat produk..."></textarea>
+      </label>
+
+      <label class="field full">
+        <span>Status</span>
+        <select name="status">
+          <option>DRAFT</option>
+          <option>PUBLISHED</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <div class="product-modal-actions">
+    <button class="button button-secondary" type="button" data-modal-close>Batal</button>
+    <button class="button button-primary" type="submit">Simpan Produk</button>
+  </div>
+</form>`,
       services:`<form data-owner-service-form class="stack-form"><h2>Tambah Service</h2><label class="field"><span>Nama</span><input name="name" required></label><label class="field"><span>Kategori</span><input name="category"></label><label class="field"><span>Harga</span><input name="price" type="number" min="0"></label><label class="field"><span>Icon key (SVG semantic)</span><input name="icon_key" value="settings" maxlength=40></label><label class="field"><span>Urutan</span><input name="sort_order" type="number" value="0" min="0"></label><label class="field"><span>Description</span><textarea name="description"></textarea></label><label class="field"><span>Requirements JSON</span><textarea name="requirements">{}</textarea></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" checked></label>${formButtons()}</form>`,
       faq:`<form data-owner-faq-form class="stack-form"><h2>Tambah FAQ</h2><label class="field"><span>Category</span><input name="category" required></label><label class="field"><span>Question</span><input name="question" required></label><label class="field"><span>Answer</span><textarea name="answer" required></textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" checked></label>${formButtons()}</form>`,
       information:`<form data-owner-info-form class="stack-form"><h2>Tambah Information</h2><label class="field"><span>Type</span><select name="type"><option>ANNOUNCEMENT</option><option>BANNER</option><option>PROMOTION</option><option>MAINTENANCE_NOTICE</option><option>SYSTEM_NOTICE</option></select></label><label class="field"><span>Title</span><input name="title" required></label><label class="field"><span>Body</span><textarea name="body" required></textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" checked></label>${formButtons()}</form>`}[section]; if(forms)open(forms)}
