@@ -1,5 +1,16 @@
 .mobile-only{display:none}
 .owner-page .stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.owner-content{display:flex;flex-direction:column;gap:18px}
+.owner-content>.page-header{margin-bottom:0}
+.owner-content>.stat-grid{gap:16px}
+.owner-content>.service-grid{gap:16px}
+.owner-content>.category-grid{gap:16px}
+.owner-content>.chart-grid{gap:18px}
+.owner-content>.panel,
+.owner-content>.toolbar,
+.owner-content>.table-panel{margin:0}
+.owner-sidebar{gap:6px}
+
 .owner-page .service-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .owner-page .category-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 .owner-page .chart-grid{grid-template-columns:minmax(0,1.4fr) minmax(0,.6fr)}
