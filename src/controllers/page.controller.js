@@ -17,6 +17,7 @@ const storage = require('../config/storage');
 const auth = require('../services/auth/auth.service');
 const messages = require('../services/support/message.service');
 const {safeNextPath}=require('../utils/url');
+const {setAuthSession}=require('../utils/auth-session');
 
 function base(req, extra={}) {
   return { title: "Jyy'R Store", req, csrfToken: req.csrfToken?.() || null, ...extra };
@@ -60,7 +61,7 @@ async function login(req,res){res.render('app',base(req,{view:'pages/auth',mode:
 async function register(req,res){res.render('app',base(req,{view:'pages/auth',mode:'register',error:req.query.error||''}))}
 async function forgotPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'forgot',error:req.query.error||''}))}
 async function resetPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'reset',error:req.query.error||''}))}
-async function authCallback(req,res,next){ try { if(!req.query.code) return res.redirect('/auth/login?error=Kode autentikasi tidak tersedia.'); const d=await auth.exchangeCode(req.query.code); req.session.auth={accessToken:d.session.access_token,refreshToken:d.session.refresh_token,userId:d.user.id}; return res.redirect(safeNextPath(req.query.next)); } catch(e){ return next(e); } }
+async function authCallback(req,res,next){ try { if(!req.query.code) return res.redirect('/auth/login?error=Kode autentikasi tidak tersedia.'); const d=await auth.exchangeCode(req.query.code); await setAuthSession(req,d); return res.redirect(safeNextPath(req.query.next)); } catch(e){ return next(e); } }
 async function paymentStatus(req,res,next){try{const p=await require('../services/payment/payment.service').getStatus(req.params.id,req.user.id);res.render('app',base(req,{view:'pages/payment',payment:p}));}catch(e){next(e)}}
 async function delivery(req,res,next){try{const ent=(await require('../repositories/delivery.repository').entitlements(req.user.id))||[];res.render('app',base(req,{view:'pages/delivery',entitlements:ent}));}catch(e){next(e)}}
 

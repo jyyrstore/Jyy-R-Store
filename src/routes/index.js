@@ -9,6 +9,59 @@ const {validate}=require('../middleware/validation.middleware');
 const {z}=require('zod');
 const {loadEnv}=require('../config/env');
 
+const zBool=z.preprocess(
+  v=>typeof v==='string' ? ['true','1','on','yes'].includes(v.toLowerCase()) : v,
+  z.boolean()
+);
+const ownerCategorySchema=z.object({
+  name:z.string().trim().min(2).max(120),
+  slug:z.string().trim().min(1).max(140).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+  description:z.string().max(2000).optional(),
+  sort_order:z.coerce.number().int().min(0).max(10000).optional(),
+  is_active:zBool.optional()
+});
+const ownerServiceSchema=z.object({
+  category:z.string().trim().max(80).nullable().optional(),
+  name:z.string().trim().min(2).max(120),
+  price:z.coerce.number().int().min(0).max(1000000000),
+  description:z.string().max(5000).nullable().optional(),
+  requirements:z.record(z.any()).optional(),
+  is_active:zBool.optional(),
+  icon_key:z.string().trim().max(80).regex(/^[a-z0-9_-]+$/).optional(),
+  sort_order:z.coerce.number().int().min(0).max(10000).optional()
+});
+const ownerFaqSchema=z.object({
+  category:z.string().trim().max(80),
+  question:z.string().trim().min(3).max(240),
+  answer:z.string().trim().min(1).max(20000),
+  is_published:zBool.optional(),
+  sort_order:z.coerce.number().int().min(0).max(10000).optional()
+});
+const ownerInformationSchema=z.object({
+  type:z.string().trim().min(1).max(40),
+  title:z.string().trim().min(2).max(240),
+  body:z.string().trim().min(1).max(20000),
+  is_published:zBool.optional(),
+  publish_at:z.string().max(64).nullable().optional(),
+  unpublish_at:z.string().max(64).nullable().optional()
+});
+const ownerSettingsSchema=z.object({
+  items:z.array(z.object({
+    key:z.string().trim().min(1).max(120),
+    category:z.string().trim().min(1).max(80),
+    value_json:z.any(),
+    is_public:zBool.optional()
+  })).max(200)
+});
+const ownerMaintenanceSchema=z.object({
+  enabled:zBool,
+  title:z.string().max(160).optional(),
+  message:z.string().max(5000).optional(),
+  scheduled_start:z.string().max(64).nullable().optional(),
+  scheduled_end:z.string().max(64).nullable().optional(),
+  allow_owner_access:zBool
+});
+
 const pageRouter=express.Router();
 pageRouter.get('/',asyncHandler(page.home));
 pageRouter.get('/store',asyncHandler(page.store));
@@ -124,8 +177,8 @@ ownerApi.post('/products/:id/content',validate(z.object({type:z.enum(['FILE','IM
 ownerApi.delete('/products/:id/content/:contentId',asyncHandler(api.ownerController.productContentDelete));
 ownerApi.post('/products/:id/upload',upload.single('file'),asyncHandler(api.ownerUpload));
 ownerApi.get('/categories',asyncHandler(api.ownerController.categories));
-ownerApi.post('/categories',asyncHandler(api.ownerController.categoryCreate));
-ownerApi.put('/categories/:id',asyncHandler(api.ownerController.categoryUpdate));
+ownerApi.post('/categories',validate(ownerCategorySchema),asyncHandler(api.ownerController.categoryCreate));
+ownerApi.put('/categories/:id',validate(ownerCategorySchema),asyncHandler(api.ownerController.categoryUpdate));
 ownerApi.get('/orders',asyncHandler(api.ownerController.orders));
 ownerApi.post('/orders/:id/status',validate(z.object({status:z.enum(['PENDING','PAID','PROCESSING','COMPLETED','CANCELLED'])})),asyncHandler(api.ownerController.orderStatus));
 ownerApi.get('/payments',asyncHandler(api.ownerController.payments));
@@ -134,11 +187,11 @@ ownerApi.get('/users',asyncHandler(api.ownerController.users));
 ownerApi.get('/roles',asyncHandler(api.ownerController.roles));
 ownerApi.post('/users/:id/ban',asyncHandler(api.ownerController.ban)); ownerApi.post('/users/:id/unban',asyncHandler(api.ownerController.unban)); ownerApi.post('/users/:id/suspend',asyncHandler(api.ownerController.suspend)); ownerApi.post('/users/:id/unsuspend',asyncHandler(api.ownerController.unsuspend)); ownerApi.post('/users/:id/change-role',validate(z.object({role:z.enum(['USER','MODERATOR','ADMIN','OWNER'])})),asyncHandler(api.ownerController.role)); ownerApi.post('/users/:id/reset-sessions',asyncHandler(api.ownerController.resetSessions)); ownerApi.delete('/users/:id',asyncHandler(api.ownerController.deleteUser));
 ownerApi.get('/messages',asyncHandler(api.ownerController.messages)); ownerApi.post('/messages/:userId/reply',validate(z.object({body:z.string().min(1).max(10000)})),asyncHandler(api.ownerController.messageReply));
-ownerApi.get('/tickets',asyncHandler(api.ownerController.tickets)); ownerApi.post('/tickets/:id/reply',asyncHandler(api.ownerController.ticketReply)); ownerApi.post('/tickets/:id/status',asyncHandler(api.ownerController.ticketStatus));
-ownerApi.get('/services',asyncHandler(api.ownerController.services)); ownerApi.post('/services',asyncHandler(api.ownerController.serviceCreate)); ownerApi.put('/services/:id',asyncHandler(api.ownerController.serviceUpdate));
-ownerApi.get('/settings',asyncHandler(api.ownerController.settings)); ownerApi.put('/settings',asyncHandler(api.ownerController.settingsSave)); ownerApi.get('/maintenance',asyncHandler(api.ownerController.maintenance)); ownerApi.put('/maintenance',asyncHandler(api.ownerController.maintenanceSave));
+ownerApi.get('/tickets',asyncHandler(api.ownerController.tickets)); ownerApi.post('/tickets/:id/reply',validate(z.object({body:z.string().min(1).max(10000)})),asyncHandler(api.ownerController.ticketReply)); ownerApi.post('/tickets/:id/status',validate(z.object({status:z.enum(['OPEN','WAITING','REPLIED','CLOSED'])})),asyncHandler(api.ownerController.ticketStatus));
+ownerApi.get('/services',asyncHandler(api.ownerController.services)); ownerApi.post('/services',validate(ownerServiceSchema),asyncHandler(api.ownerController.serviceCreate)); ownerApi.put('/services/:id',validate(ownerServiceSchema),asyncHandler(api.ownerController.serviceUpdate));
+ownerApi.get('/settings',asyncHandler(api.ownerController.settings)); ownerApi.put('/settings',validate(ownerSettingsSchema),asyncHandler(api.ownerController.settingsSave)); ownerApi.get('/maintenance',asyncHandler(api.ownerController.maintenance)); ownerApi.put('/maintenance',validate(ownerMaintenanceSchema),asyncHandler(api.ownerController.maintenanceSave));
 ownerApi.get('/storage',asyncHandler(api.ownerController.storage)); ownerApi.get('/system',asyncHandler(api.ownerController.system)); ownerApi.get('/login-history',asyncHandler(api.ownerController.loginHistory));
-ownerApi.get('/activity',asyncHandler(api.ownerController.activity)); ownerApi.get('/reports',asyncHandler(api.ownerController.reports)); ownerApi.get('/security',asyncHandler(api.ownerController.security)); ownerApi.get('/faq',asyncHandler(api.ownerController.faq)); ownerApi.post('/faq',asyncHandler(api.ownerController.faqCreate)); ownerApi.put('/faq/:id',asyncHandler(api.ownerController.faqUpdate)); ownerApi.get('/information',asyncHandler(api.ownerController.information)); ownerApi.post('/information',asyncHandler(api.ownerController.informationCreate)); ownerApi.put('/information/:id',asyncHandler(api.ownerController.informationUpdate)); ownerApi.get('/notifications',asyncHandler(api.ownerController.notifications)); ownerApi.post('/notifications',validate(z.object({user_id:z.string().uuid().nullable().optional(),type:z.enum(['ORDER','PAYMENT','DEPOSIT','TICKET','SYSTEM','PROMOTION']),title:z.string().min(2).max(160),body:z.string().min(2).max(5000),link:z.string().max(500).nullable().optional()})),asyncHandler(api.ownerController.notificationCreate)); ownerApi.post('/notifications/broadcast',validate(z.object({type:z.enum(['SYSTEM','PROMOTION','ORDER','PAYMENT','DEPOSIT','TICKET']),title:z.string().min(2).max(160),body:z.string().min(2).max(5000),link:z.string().max(500).nullable().optional()})),asyncHandler(api.ownerController.notificationBroadcast)); ownerApi.get('/refunds',asyncHandler(api.ownerController.refunds)); ownerApi.post('/refunds/:id',validate(z.object({reason:z.string().min(5).max(500)})),asyncHandler(api.ownerController.refund));
+ownerApi.get('/activity',asyncHandler(api.ownerController.activity)); ownerApi.get('/reports',asyncHandler(api.ownerController.reports)); ownerApi.get('/security',asyncHandler(api.ownerController.security)); ownerApi.get('/faq',asyncHandler(api.ownerController.faq)); ownerApi.post('/faq',validate(ownerFaqSchema),asyncHandler(api.ownerController.faqCreate)); ownerApi.put('/faq/:id',validate(ownerFaqSchema),asyncHandler(api.ownerController.faqUpdate)); ownerApi.get('/information',asyncHandler(api.ownerController.information)); ownerApi.post('/information',validate(ownerInformationSchema),asyncHandler(api.ownerController.informationCreate)); ownerApi.put('/information/:id',validate(ownerInformationSchema),asyncHandler(api.ownerController.informationUpdate)); ownerApi.get('/notifications',asyncHandler(api.ownerController.notifications)); ownerApi.post('/notifications',validate(z.object({user_id:z.string().uuid().nullable().optional(),type:z.enum(['ORDER','PAYMENT','DEPOSIT','TICKET','SYSTEM','PROMOTION']),title:z.string().min(2).max(160),body:z.string().min(2).max(5000),link:z.string().max(500).nullable().optional()})),asyncHandler(api.ownerController.notificationCreate)); ownerApi.post('/notifications/broadcast',validate(z.object({type:z.enum(['SYSTEM','PROMOTION','ORDER','PAYMENT','DEPOSIT','TICKET']),title:z.string().min(2).max(160),body:z.string().min(2).max(5000),link:z.string().max(500).nullable().optional()})),asyncHandler(api.ownerController.notificationBroadcast)); ownerApi.get('/refunds',asyncHandler(api.ownerController.refunds)); ownerApi.post('/refunds/:id',validate(z.object({reason:z.string().min(5).max(500)})),asyncHandler(api.ownerController.refund));
 apiRouter.use('/owner',ownerApi);
 
 const webhookRouter=express.Router();

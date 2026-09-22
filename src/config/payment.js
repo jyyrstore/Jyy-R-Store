@@ -3,12 +3,29 @@ let provider;
 class GenericJsonProvider {
   constructor(env) { this.env = env; }
   configured() { return Boolean(this.env.PAYMENT_API_BASE_URL && this.env.PAYMENT_API_KEY); }
-  async createPayment({ orderId, amount, customer, returnUrl }) {
+  async createPayment({ orderId, amount, customer, returnUrl, idempotencyKey }) {
     if (!this.configured()) throw new Error('PAYMENT_PROVIDER_NOT_CONFIGURED');
-    const response = await fetch(`${this.env.PAYMENT_API_BASE_URL.replace(/\/$/, '')}/payments`, {
-      method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${this.env.PAYMENT_API_KEY}` },
-      body: JSON.stringify({ orderId, amount: Number(amount), customer, returnUrl, environment: this.env.PAYMENT_ENVIRONMENT })
-    });
+    const timeoutMs=Math.max(1000,Number(this.env.PAYMENT_REQUEST_TIMEOUT_MS||15000));
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeoutMs);
+    let response;
+    try{
+      response=await fetch(`${this.env.PAYMENT_API_BASE_URL.replace(/\/$/, '')}/payments`, {
+        method: 'POST',
+        headers: {
+          'content-type':'application/json',
+          authorization:`Bearer ${this.env.PAYMENT_API_KEY}`,
+          ...(idempotencyKey?{'Idempotency-Key':idempotencyKey}:{})
+        },
+        body: JSON.stringify({ orderId, amount:Number(amount), customer, returnUrl, environment:this.env.PAYMENT_ENVIRONMENT, ...(idempotencyKey?{idempotencyKey}: {}) }),
+        signal:controller.signal
+      });
+    }catch(error){
+      if(error?.name==='AbortError') throw new Error('Payment provider request timed out.');
+      throw error;
+    }finally{
+      clearTimeout(timer);
+    }
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.message || `Payment provider returned ${response.status}`);
     if (!body.reference || !body.paymentUrl) throw new Error('Payment provider response must contain reference and paymentUrl.');

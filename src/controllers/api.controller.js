@@ -29,14 +29,15 @@ const makeSlug=require('../utils/slug');
 const { validateFile }=require('../utils/file');
 const crypto=require('crypto');
 const {safeNextPath}=require('../utils/url');
+const {setAuthSession}=require('../utils/auth-session');
 
 const authController={
  register:async(req,res)=>ok(res,await auth.register(req.body),201),
- login:async(req,res)=>{const d=await auth.login(req.body,{ip:req.ip,userAgent:req.get('user-agent')});req.session.auth={accessToken:d.session?.access_token,refreshToken:d.session?.refresh_token,userId:d.user?.id};return ok(res,{user:d.user},200)},
+ login:async(req,res)=>{const d=await auth.login(req.body,{ip:req.ip,userAgent:req.get('user-agent')});await setAuthSession(req,d);return ok(res,{user:d.user},200)},
  logout:async(req,res)=>{await require('../services/audit.service').record(req,{action:'LOGOUT',entityType:'session'}).catch(()=>{});await auth.logout();req.session.destroy(()=>{});return ok(res,{})},
  resetRequest:async(req,res)=>{await auth.sendPasswordReset(req.body.email);return ok(res,{message:'Reset email request accepted.'})},
  resetPassword:async(req,res)=>{await auth.updatePassword({accessToken:req.session.auth?.accessToken,refreshToken:req.session.auth?.refreshToken},req.body.password);return ok(res,{message:'Password updated.'})},
- callback:async(req,res)=>{const d=await auth.exchangeCode(req.query.code);req.session.auth={accessToken:d.session.access_token,refreshToken:d.session.refresh_token,userId:d.user.id};res.redirect(safeNextPath(req.query.next))},
+ callback:async(req,res)=>{const d=await auth.exchangeCode(req.query.code);await setAuthSession(req,d);res.redirect(safeNextPath(req.query.next))},
  me:async(req,res)=>ok(res,{user:req.user,profile:req.profile})
 };
 
@@ -82,7 +83,7 @@ const ticketController={
  create:async(req,res)=>ok(res,await tickets.create(req.user.id,req.body),201),
  detail:async(req,res)=>{const t=await tickets.detail(req.params.id,req.user.id);if(!t)throw Object.assign(new Error('Ticket not found.'),{status:404,code:'TICKET_NOT_FOUND',expose:true});return ok(res,t)},
  reply:async(req,res)=>ok(res,await tickets.reply(req.params.id,req.user.id,req.body.body)),
- status:async(req,res)=>ok(res,await tickets.setStatus(req.params.id,req.body.status))
+ status:async(req,res)=>ok(res,await tickets.setStatus(req.params.id,req.user.id,req.body.status))
 };
 const notificationController={
  list:async(req,res)=>ok(res,await notifications.list(req.user.id)),
@@ -122,8 +123,8 @@ const ownerController={
  resetSessions:async(req,res)=>{await users.resetSessions(req.params.id);await require('../services/audit.service').record(req,{action:'RESET_SESSIONS',entityType:'profile',entityId:req.params.id});return ok(res,{})},
  deleteUser:async(req,res)=>{if(req.params.id===req.user.id)throw Object.assign(new Error('Owner tidak dapat menghapus/anonymize akun sendiri.'),{status:400,code:'SELF_ACTION_BLOCKED',expose:true});const target=await require('../repositories/profiles.repository').findById(req.params.id);if(target?.role==='OWNER')throw Object.assign(new Error('Akun OWNER dilindungi.'),{status:403,code:'OWNER_TARGET_PROTECTED',expose:true});const p=await users.anonymize(req.params.id);await users.resetSessions(req.params.id);await require('../services/audit.service').record(req,{action:'DELETE_USER',entityType:'profile',entityId:req.params.id});return ok(res,p)},
  tickets:async(req,res)=>ok(res,await tickets.adminList(req.query.status)),
- ticketReply:async(req,res)=>ok(res,await tickets.reply(req.params.id,req.user.id,req.body.body)),
- ticketStatus:async(req,res)=>ok(res,await tickets.setStatus(req.params.id,req.body.status)),
+ ticketReply:async(req,res)=>ok(res,await tickets.ownerReply(req.params.id,req.user.id,req.body.body)),
+ ticketStatus:async(req,res)=>ok(res,await tickets.ownerSetStatus(req.params.id,req.body.status)),
  services:async(req,res)=>ok(res,await services.list(false)),
  serviceCreate:async(req,res)=>ok(res,await services.create(req.body),201),
  serviceUpdate:async(req,res)=>ok(res,await services.update(req.params.id,req.body)),
@@ -157,6 +158,6 @@ async function ownerUpload(req,res){
   if(!req.file) throw Object.assign(new Error('File wajib diunggah.'),{status:400,code:'FILE_REQUIRED',expose:true});
   const contentType=(req.body.contentType||'FILE').toUpperCase(); const allowed=['THUMBNAIL','FILE','IMAGE','VIDEO','AUDIO']; if(!allowed.includes(contentType)) throw Object.assign(new Error('Content type upload tidak didukung.'),{status:400,code:'INVALID_CONTENT_TYPE',expose:true}); if(contentType==='THUMBNAIL' && !['image/jpeg','image/png','image/webp'].includes(req.file.mimetype)) throw Object.assign(new Error('Thumbnail harus berupa JPG, PNG, atau WebP.'),{status:400,code:'INVALID_THUMBNAIL_TYPE',expose:true});
   const validated=await validateFile(req.file,contentType==='THUMBNAIL'?'THUMBNAIL':contentType);
-  const productId=req.params.id; const ext=(req.file.originalname.match(/\.([a-z0-9]+)$/i)||['','bin'])[1].toLowerCase(); const path=`products/${productId}/${crypto.randomUUID()}.${ext}`; const isThumb=contentType==='THUMBNAIL'; const bucket=isThumb?loadEnv().PUBLIC_ASSET_BUCKET:loadEnv().PRIVATE_PRODUCT_BUCKET; await storage.uploadBuffer({bucket,path,buffer:req.file.buffer,contentType:validated.mime,upsert:false}); if(isThumb){const p=await require('../repositories/products.repository').update(productId,{thumbnail_path:path});return ok(res,{product:p,path});} const content=await require('../repositories/products.repository').addContent({product_id:productId,type:contentType==='THUMBNAIL'?'IMAGE':(contentType==='FILE'?validated.kind:contentType),title:req.body.title||req.file.originalname,description:req.body.description,storage_path:path,mime_type:validated.mime,file_size:req.file.size,sort_order:Number(req.body.sortOrder||0),is_preview:req.body.isPreview==='true',access_type:req.body.accessType||'PURCHASED'}); return ok(res,content,201);
+  const productId=req.params.id; const ext=String(validated.extension||'bin').toLowerCase(); const path=`products/${productId}/${crypto.randomUUID()}.${ext}`; const isThumb=contentType==='THUMBNAIL'; const bucket=isThumb?loadEnv().PUBLIC_ASSET_BUCKET:loadEnv().PRIVATE_PRODUCT_BUCKET; await storage.uploadBuffer({bucket,path,buffer:req.file.buffer,contentType:validated.mime,upsert:false}); if(isThumb){const p=await require('../repositories/products.repository').update(productId,{thumbnail_path:path});return ok(res,{product:p,path});} const content=await require('../repositories/products.repository').addContent({product_id:productId,type:contentType==='THUMBNAIL'?'IMAGE':(contentType==='FILE'?validated.kind:contentType),title:req.body.title||req.file.originalname,description:req.body.description,storage_path:path,mime_type:validated.mime,file_size:req.file.size,sort_order:Number(req.body.sortOrder||0),is_preview:req.body.isPreview==='true',access_type:req.body.accessType||'PURCHASED'}); return ok(res,content,201);
 }
 module.exports={authController,productController,cartController,orderController,paymentController,depositController,deliveryController,profileController,ticketController,notificationController,serviceController,messageController,contentController,ownerController,ownerUpload};
