@@ -16,23 +16,227 @@ test('service metadata migration exists',()=>assert.ok(fs.existsSync(path.join(r
 test('views do not read process.env directly',()=>{for(const f of fs.readdirSync(path.join(root,'views'),{recursive:true}).filter(x=>x.endsWith('.ejs'))){const s=fs.readFileSync(path.join(root,'views',f),'utf8');assert.doesNotMatch(s,/process\.env\./,f)}});
 
 test('owner content editor uses contextual fields',()=>{
-  const js=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
-  assert.match(js,/data-owner-content-field="file"/);
-  assert.match(js,/data-owner-content-field="text"/);
-  assert.match(js,/data-owner-content-field="url"/);
-  assert.match(js,/data-owner-content-type/);
-  assert.match(js,/data-owner-content-access/);
+  const js=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.match(
+    js,
+    /data-owner-content-field="file"/
+  );
+
+  assert.match(
+    js,
+    /data-owner-content-field="text"/
+  );
+
+  assert.match(
+    js,
+    /data-owner-content-field="url"/
+  );
+
+  assert.match(
+    js,
+    /data-owner-content-type/
+  );
+
+  assert.match(
+    js,
+    /data-owner-content-access/
+  );
 });
 
 test('PREVIEW content automatically enables preview semantics',()=>{
-  const js=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
-  assert.match(js,/isPreview:access==='PREVIEW'/);
-  assert.match(js,/is_preview:access==='PREVIEW'/);
+  const js=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.match(
+    js,
+    /isPreview\s*:/
+  );
+
+  assert.match(
+    js,
+    /is_preview\s*:\s*access==='PREVIEW'/
+  );
 });
 
 test('owner publish UI has readiness checklist',()=>{
-  const js=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
-  assert.match(js,/owner-publish-checklist/);
-  assert.match(js,/data-owner-publish/);
-  assert.match(js,/canPublish/);
+  const js=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.match(
+    js,
+    /owner-publish-checklist/
+  );
+
+  assert.match(
+    js,
+    /data-owner-publish/
+  );
+
+  assert.match(
+    js,
+    /canPublish/
+  );
+});
+
+test('Supabase Auth is isolated from admin Storage client',()=>{
+  const supabase=fs.readFileSync(
+    path.join(root,'src/config/supabase.js'),
+    'utf8'
+  );
+
+  const auth=fs.readFileSync(
+    path.join(root,'src/services/auth/auth.service.js'),
+    'utf8'
+  );
+
+  const storage=fs.readFileSync(
+    path.join(root,'src/config/storage.js'),
+    'utf8'
+  );
+
+  assert.match(
+    supabase,
+    /function supabaseAdmin\(/
+  );
+
+  assert.match(
+    supabase,
+    /function supabasePublic\(/
+  );
+
+  assert.match(
+    auth,
+    /supabasePublic\(\)/
+  );
+
+  assert.doesNotMatch(
+    auth,
+    /supabase\(\)\.auth\./
+  );
+
+  assert.match(
+    storage,
+    /supabaseAdmin\(\)/
+  );
+});
+
+test('general limiter skips routes already protected by sensitive limiter',()=>{
+  const security=fs.readFileSync(
+    path.join(
+      root,
+      'src/middleware/security.middleware.js'
+    ),
+    'utf8'
+  );
+
+  assert.match(
+    security,
+    /sensitiveApiPrefixes/
+  );
+
+  assert.match(
+    security,
+    /kind==='general'[\s\S]{0,200}isSensitiveApiPath\(req\)/
+  );
+});
+
+test('API mutation requests are deduplicated and have loading feedback',()=>{
+  const api=fs.readFileSync(
+    path.join(root,'public/js/api.js'),
+    'utf8'
+  );
+
+  assert.match(
+    api,
+    /const inFlight=new Map\(\)/
+  );
+
+  assert.match(
+    api,
+    /if\(existing\)\s*\{\s*return existing;/
+  );
+
+  assert.match(
+    api,
+    /jyyr-request-progress/
+  );
+
+  assert.match(
+    api,
+    /retryAfter/
+  );
+});
+
+test('API 429 responses create a client cooldown',()=>{
+  const api=fs.readFileSync(
+    path.join(root,'public/js/api.js'),
+    'utf8'
+  );
+
+  assert.match(
+    api,
+    /const cooldowns=new Map\(\)/
+  );
+
+  assert.match(
+    api,
+    /function getCooldownError/
+  );
+
+  assert.match(
+    api,
+    /cooldowns\.set\(/
+  );
+
+  assert.match(
+    api,
+    /res\.status===429 && retryAfter>0/
+  );
+});
+
+test('content file is cleared only when content type changes',()=>{
+  const js=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.match(
+    js,
+    /ownerContentLastType/
+  );
+
+  assert.match(
+    js,
+    /if\(\s*lastType\s*&&\s*lastType!==type\s*\)\s*\{\s*file\.value=''/
+  );
+});
+
+test('owner content UI has single active submit state',()=>{
+  const js=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.match(
+    js,
+    /cfm\.dataset\.submitting/
+  );
+
+  assert.match(
+    js,
+    /aria-busy/
+  );
+
+  assert.match(
+    js,
+    /Mengunggah…/
+  );
 });

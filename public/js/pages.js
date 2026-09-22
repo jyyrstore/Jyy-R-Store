@@ -513,31 +513,80 @@
   function syncOwnerContentForm(form){
     if(!form)return;
 
-    const type=String(form.querySelector('[data-owner-content-type]')?.value||'FILE').toUpperCase();
-    const access=String(form.querySelector('[data-owner-content-access]')?.value||'PURCHASED').toUpperCase();
+    const type=String(
+      form.querySelector(
+        '[data-owner-content-type]'
+      )?.value || 'FILE'
+    ).toUpperCase();
 
-    form.querySelectorAll('[data-owner-content-field]').forEach(field=>{
-      const fieldType=String(field.dataset.ownerContentField||'');
-      const visible=(
-        (fieldType==='file' && ['FILE','IMAGE','VIDEO','AUDIO'].includes(type)) ||
-        (fieldType==='text' && type==='TEXT') ||
-        (fieldType==='url' && type==='LINK')
+    const access=String(
+      form.querySelector(
+        '[data-owner-content-access]'
+      )?.value || 'PURCHASED'
+    ).toUpperCase();
+
+    form.querySelectorAll(
+      '[data-owner-content-field]'
+    ).forEach(field=>{
+      const fieldType=String(
+        field.dataset.ownerContentField || ''
       );
+
+      const visible=(
+        (
+          fieldType==='file' &&
+          ['FILE','IMAGE','VIDEO','AUDIO'].includes(type)
+        ) ||
+        (
+          fieldType==='text' &&
+          type==='TEXT'
+        ) ||
+        (
+          fieldType==='url' &&
+          type==='LINK'
+        )
+      );
+
       field.hidden=!visible;
     });
 
-    const file=form.querySelector('[data-owner-content-file]');
+    const file=form.querySelector(
+      '[data-owner-content-file]'
+    );
+
+    const lastType=String(
+      form.dataset.ownerContentLastType || ''
+    );
+
     if(file){
-      file.value='';
+      if(
+        lastType &&
+        lastType!==type
+      ){
+        file.value='';
+      }
+
       file.accept=(
-        type==='FILE' ? '.zip,.pdf' :
-        type==='IMAGE' ? 'image/jpeg,image/png,image/webp' :
-        type==='VIDEO' ? 'video/mp4,video/webm,video/quicktime' :
-        type==='AUDIO' ? 'audio/mpeg,audio/wav,audio/ogg,audio/mp4' :
-        ''
+        type==='FILE'
+          ? '.zip,.pdf'
+          : type==='IMAGE'
+            ? 'image/jpeg,image/png,image/webp'
+            : type==='VIDEO'
+              ? 'video/mp4,video/webm,video/quicktime'
+              : type==='AUDIO'
+                ? 'audio/mpeg,audio/wav,audio/ogg,audio/mp4'
+                : ''
       );
-      file.disabled=!['FILE','IMAGE','VIDEO','AUDIO'].includes(type);
+
+      file.disabled=![
+        'FILE',
+        'IMAGE',
+        'VIDEO',
+        'AUDIO'
+      ].includes(type);
     }
+
+    form.dataset.ownerContentLastType=type;
 
     const help={
       FILE:'Upload ZIP atau PDF yang akan diterima pembeli.',
@@ -548,23 +597,50 @@
       LINK:'Gunakan link langsung, misalnya link preset Alight Motion.'
     };
 
-    const typeHelp=form.querySelector('[data-owner-content-type-help]');
-    if(typeHelp)typeHelp.textContent=help[type]||'';
+    const typeHelp=form.querySelector(
+      '[data-owner-content-type-help]'
+    );
+
+    if(typeHelp){
+      typeHelp.textContent=
+        help[type] || '';
+    }
 
     const accessHelp={
-      PURCHASED:'Hanya user yang memiliki pembelian terkonfirmasi yang dapat membuka content ini.',
-      PREVIEW:'Content akan ditandai sebagai preview dan dapat dibuka sebelum pembelian.',
-      PUBLIC:'Content dapat diakses tanpa entitlement pembelian.'
+      PURCHASED:
+        'Hanya user yang memiliki pembelian terkonfirmasi yang dapat membuka content ini.',
+      PREVIEW:
+        'Content akan ditandai sebagai preview dan dapat dibuka sebelum pembelian.',
+      PUBLIC:
+        'Content dapat diakses tanpa entitlement pembelian.'
     };
 
-    const accessHelpEl=form.querySelector('[data-owner-content-access-help]');
-    if(accessHelpEl)accessHelpEl.textContent=accessHelp[access]||'';
+    const accessHelpEl=form.querySelector(
+      '[data-owner-content-access-help]'
+    );
 
-    const uploadStatus=form.querySelector('[data-upload-status]');
-    if(uploadStatus && !uploadStatus.dataset.uploading){
-      uploadStatus.textContent=['FILE','IMAGE','VIDEO','AUDIO'].includes(type)
-        ? 'Belum ada upload berjalan.'
-        : 'Tidak membutuhkan upload file.';
+    if(accessHelpEl){
+      accessHelpEl.textContent=
+        accessHelp[access] || '';
+    }
+
+    const uploadStatus=form.querySelector(
+      '[data-upload-status]'
+    );
+
+    if(
+      uploadStatus &&
+      !uploadStatus.dataset.uploading
+    ){
+      uploadStatus.textContent=
+        [
+          'FILE',
+          'IMAGE',
+          'VIDEO',
+          'AUDIO'
+        ].includes(type)
+          ? 'Belum ada upload berjalan.'
+          : 'Tidak membutuhkan upload file.';
     }
   }
 
@@ -880,33 +956,75 @@
     if(cfm){
       e.preventDefault();
 
+      if(cfm.dataset.submitting==='1'){
+        return;
+      }
+
       const fd=new FormData(cfm);
-      const type=String(fd.get('type')||'FILE').toUpperCase();
-      const id=fd.get('product_id')||cfm.dataset.productId;
+      const type=String(
+        fd.get('type')||'FILE'
+      ).toUpperCase();
+
+      const id=
+        fd.get('product_id') ||
+        cfm.dataset.productId;
+
       const file=fd.get('file');
-      const title=String(fd.get('title')||'').trim();
-      const description=String(fd.get('description')||'').trim();
-      const textContent=String(fd.get('text_content')||'').trim();
-      const url=String(fd.get('url')||'').trim();
-      const access=String(fd.get('access_type')||'PURCHASED').toUpperCase();
+
+      const title=String(
+        fd.get('title')||''
+      ).trim();
+
+      const description=String(
+        fd.get('description')||''
+      ).trim();
+
+      const textContent=String(
+        fd.get('text_content')||''
+      ).trim();
+
+      const url=String(
+        fd.get('url')||''
+      ).trim();
+
+      const access=String(
+        fd.get('access_type')||'PURCHASED'
+      ).toUpperCase();
 
       if(!title){
-        toast.error('Judul content wajib diisi.');
+        toast.error(
+          'Judul content wajib diisi.'
+        );
         return;
       }
 
-      if(['FILE','IMAGE','VIDEO','AUDIO'].includes(type) && !(file instanceof File && file.size)){
-        toast.error('Pilih file terlebih dahulu.');
+      if(
+        ['FILE','IMAGE','VIDEO','AUDIO'].includes(type) &&
+        !(file instanceof File && file.size)
+      ){
+        toast.error(
+          'Pilih file terlebih dahulu.'
+        );
         return;
       }
 
-      if(type==='TEXT' && !textContent){
-        toast.error('Isi teks wajib diisi.');
+      if(
+        type==='TEXT' &&
+        !textContent
+      ){
+        toast.error(
+          'Isi teks wajib diisi.'
+        );
         return;
       }
 
-      if(type==='LINK' && !url){
-        toast.error('Link content wajib diisi.');
+      if(
+        type==='LINK' &&
+        !url
+      ){
+        toast.error(
+          'Link content wajib diisi.'
+        );
         return;
       }
 
@@ -914,44 +1032,93 @@
         try{
           new URL(url);
         }catch{
-          toast.error('URL tidak valid.');
+          toast.error(
+            'URL tidak valid.'
+          );
           return;
         }
       }
 
-      const btn=cfm.querySelector('button[type="submit"]');
-      if(btn)btn.disabled=true;
+      cfm.dataset.submitting='1';
+
+      const btn=
+        cfm.querySelector(
+          'button[type="submit"]'
+        );
+
+      const originalText=
+        btn?.textContent ||
+        'Simpan Content';
+
+      if(btn){
+        btn.disabled=true;
+        btn.setAttribute(
+          'aria-busy',
+          'true'
+        );
+        btn.textContent=
+          ['FILE','IMAGE','VIDEO','AUDIO'].includes(type)
+            ? 'Mengunggah…'
+            : 'Menyimpan…';
+      }
 
       try{
-        if(file instanceof File && file.size && ['FILE','IMAGE','VIDEO','AUDIO'].includes(type)){
-          const progress=cfm.querySelector('[data-upload-progress]');
-          const status=cfm.querySelector('[data-upload-status]');
+        if(
+          file instanceof File &&
+          file.size &&
+          ['FILE','IMAGE','VIDEO','AUDIO'].includes(type)
+        ){
+          const progress=
+            cfm.querySelector(
+              '[data-upload-progress]'
+            );
 
-          await uploadOwnerFile(id,file,{
-            contentType:type,
-            progressEl:progress,
-            statusEl:status,
-            meta:{
-              title,
-              description,
-              accessType:access,
-              isPreview:access==='PREVIEW',
-              sortOrder:0
+          const status=
+            cfm.querySelector(
+              '[data-upload-status]'
+            );
+
+          await uploadOwnerFile(
+            id,
+            file,
+            {
+              contentType:type,
+              progressEl:progress,
+              statusEl:status,
+              meta:{
+                title,
+                description,
+                accessType:access,
+                isPreview:
+                  access==='PREVIEW',
+                sortOrder:0
+              }
             }
-          });
+          );
 
-          toast.success('Content berhasil diupload.');
+          toast.success(
+            'Content berhasil diupload.'
+          );
         }else{
           await ownerAction(
-            '/api/owner/products/'+encodeURIComponent(id)+'/content',
+            '/api/owner/products/' +
+            encodeURIComponent(id) +
+            '/content',
             {
               product_id:id,
               type,
               title,
               description,
-              text_content:type==='TEXT'?textContent:undefined,
-              url:type==='LINK'?url:undefined,
-              is_preview:access==='PREVIEW',
+              text_content:
+                type==='TEXT'
+                  ? textContent
+                  : undefined,
+              url:
+                type==='LINK'
+                  ? url
+                  : undefined,
+              is_preview:
+                access==='PREVIEW',
               access_type:access,
               sort_order:0
             },
@@ -962,14 +1129,28 @@
 
         await openOwnerContentManager(
           id,
-          cfm.dataset.productName||'Produk',
-          cfm.dataset.productStatus||'DRAFT',
+          cfm.dataset.productName ||
+            'Produk',
+          cfm.dataset.productStatus ||
+            'DRAFT',
           cfm.dataset.productHasThumbnail==='1'
         );
       }catch(err){
-        toast.error(err.message);
+        toast.error(
+          err.message ||
+          'Operasi gagal.'
+        );
       }finally{
-        if(btn)btn.disabled=false;
+        if(btn){
+          btn.disabled=false;
+          btn.removeAttribute(
+            'aria-busy'
+          );
+          btn.textContent=
+            originalText;
+        }
+
+        delete cfm.dataset.submitting;
       }
     }
 

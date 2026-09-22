@@ -405,3 +405,55 @@
     flex:0 0 auto;
   }
 }
+
+
+/* Global request progress / anti-spam feedback */
+#jyyr-request-progress{
+  position:fixed;
+  inset:0 0 auto 0;
+  width:100%;
+  height:3px;
+  z-index:99999;
+  pointer-events:none;
+  opacity:0;
+  overflow:hidden;
+  background:transparent;
+}
+
+#jyyr-request-progress .jyyr-request-progress-bar{
+  width:42%;
+  height:100%;
+  transform:translateX(-120%);
+  transform-origin:left center;
+  background:#8b5cf6;
+  box-shadow:0 0 12px rgba(139,92,246,.45);
+}
+
+#jyyr-request-progress.active{
+  opacity:1;
+}
+
+#jyyr-request-progress.active .jyyr-request-progress-bar{
+  animation:jyyrRequestLoading 1.05s ease-in-out infinite;
+}
+
+#jyyr-request-progress.done{
+  opacity:1;
+}
+
+#jyyr-request-progress.done .jyyr-request-progress-bar{
+  width:100%;
+  transform:translateX(0);
+  animation:none;
+  transition:transform .18s ease,width .18s ease;
+}
+
+@keyframes jyyrRequestLoading{
+  0%{transform:translateX(-120%);}
+  50%{transform:translateX(105%);}
+  100%{transform:translateX(245%);}
+}
+
+button[aria-busy="true"]{
+  cursor:wait;
+}

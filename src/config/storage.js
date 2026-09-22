@@ -1,9 +1,9 @@
-const { supabase } = require('./supabase');
+const { supabaseAdmin } = require('./supabase');
 let envRef;
 async function initStorage(env) {
   envRef = env;
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
-  const client = supabase();
+  const client = supabaseAdmin();
   const existing = await client.storage.listBuckets();
   if (existing.error) throw existing.error;
   const names = new Set((existing.data || []).map((b) => b.name));
@@ -21,13 +21,13 @@ async function initStorage(env) {
 }
 function getBucket(name) { return name || envRef?.PRIVATE_PRODUCT_BUCKET; }
 async function uploadBuffer({ bucket, path, buffer, contentType, upsert = false }) {
-  const { data, error } = await supabase().storage.from(bucket).upload(path, buffer, { contentType, upsert });
+  const { data, error } = await supabaseAdmin().storage.from(bucket).upload(path, buffer, { contentType, upsert });
   if (error) throw error;
   return data;
 }
 
 async function createSignedUploadUrl(bucket,path,upsert=false){
-  const {data,error}=await supabase().storage
+  const {data,error}=await supabaseAdmin().storage
     .from(bucket)
     .createSignedUploadUrl(path,{upsert});
   if(error) throw error;
@@ -39,7 +39,7 @@ async function fileExists(bucket,path){
   const name=parts.pop();
   const folder=parts.join('/');
 
-  const {data,error}=await supabase()
+  const {data,error}=await supabaseAdmin()
     .storage
     .from(bucket)
     .list(folder,{limit:100,search:name});
@@ -64,7 +64,7 @@ function resumableUploadUrl(){
   return `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
 }
 async function fileInfo(bucket,path){
-  const {data,error}=await supabase()
+  const {data,error}=await supabaseAdmin()
     .storage
     .from(bucket)
     .info(path);
@@ -72,7 +72,7 @@ async function fileInfo(bucket,path){
   if(error) throw error;
   return data || null;
 }
-async function remove(bucket, path) { const { error } = await supabase().storage.from(bucket).remove([path]); if (error) throw error; }
-function publicUrl(bucket, path) { return supabase().storage.from(bucket).getPublicUrl(path).data.publicUrl; }
-async function signedUrl(bucket, path, expiresIn) { const { data, error } = await supabase().storage.from(bucket).createSignedUrl(path, expiresIn); if (error) throw error; return data.signedUrl; }
+async function remove(bucket, path) { const { error } = await supabaseAdmin().storage.from(bucket).remove([path]); if (error) throw error; }
+function publicUrl(bucket, path) { return supabaseAdmin().storage.from(bucket).getPublicUrl(path).data.publicUrl; }
+async function signedUrl(bucket, path, expiresIn) { const { data, error } = await supabaseAdmin().storage.from(bucket).createSignedUrl(path, expiresIn); if (error) throw error; return data.signedUrl; }
 module.exports = { initStorage, uploadBuffer, createSignedUploadUrl, fileExists, fileInfo, resumableUploadUrl, remove, publicUrl, signedUrl, getBucket };

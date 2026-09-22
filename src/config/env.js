@@ -82,7 +82,13 @@ function loadEnv() {
 
 function isConfigured() {
   const env = loadEnv();
-  return Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY && env.DATABASE_URL && env.SESSION_SECRET);
+  return Boolean(
+    env.SUPABASE_URL &&
+    env.SUPABASE_PUBLISHABLE_KEY &&
+    env.SUPABASE_SECRET_KEY &&
+    env.DATABASE_URL &&
+    env.SESSION_SECRET
+  );
 }
 
 function generateSecret() { return crypto.randomBytes(32).toString('base64url'); }
