@@ -13,7 +13,7 @@
     <% } %>
     <a class="nav-link" href="/faq"><%- icon('info') %><span>FAQ</span></a>
     <a class="nav-link" href="/security"><%- icon('shield') %><span>Security</span></a>
-    <% if (profile?.role === 'OWNER' || profile?.role === 'ADMIN' || profile?.role === 'MODERATOR') { %>
+    <% if (profile?.role === 'OWNER') { %>
       <div class="sidebar-section-label">Management</div>
       <a class="nav-link" href="/owner"><%- icon('dashboard') %><span>Owner Panel</span></a>
     <% } %>
