@@ -202,6 +202,44 @@ test('API 429 responses create a client cooldown',()=>{
   );
 });
 
+
+test('Cover Produk uses signed direct upload instead of TUS',()=>{
+  const controller=fs.readFileSync(
+    path.join(root,'src/controllers/api.controller.js'),
+    'utf8'
+  );
+
+  const pages=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.match(
+    controller,
+    /signedUrl:signed\.signedUrl/
+  );
+
+  assert.match(
+    pages,
+    /function uploadSignedFile\(/
+  );
+
+  assert.match(
+    pages,
+    /xhr\.open\('PUT',signedUrl,true\)/
+  );
+
+  assert.match(
+    pages,
+    /contentType==='THUMBNAIL'/
+  );
+
+  assert.match(
+    pages,
+    /uploadSignedFile\(\s*file,\s*init\.signedUrl/
+  );
+});
+
 test('content file is cleared only when content type changes',()=>{
   const js=fs.readFileSync(
     path.join(root,'public/js/pages.js'),

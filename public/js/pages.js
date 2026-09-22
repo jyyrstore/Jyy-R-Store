@@ -7,6 +7,97 @@
   async function ownerAction(url,body={},method='POST',ok='Selesai'){const r=await api.request(url,{method,body});toast.success(ok);return r;}
   let tusLoaderPromise=null;
 
+  function uploadSignedFile(file,signedUrl,{progressEl=null,statusEl=null}={}){
+    return new Promise((resolve,reject)=>{
+      if(!signedUrl){
+        reject(new Error('Signed upload URL tidak tersedia.'));
+        return;
+      }
+
+      const xhr=new XMLHttpRequest();
+
+      xhr.open('PUT',signedUrl,true);
+      xhr.withCredentials=false;
+      xhr.timeout=15*60*1000;
+
+      if(file.type){
+        xhr.setRequestHeader(
+          'content-type',
+          file.type
+        );
+      }
+
+      xhr.upload.onprogress=e=>{
+        if(!e.lengthComputable)return;
+
+        const pct=Math.round(
+          (e.loaded/e.total)*100
+        );
+
+        if(progressEl){
+          progressEl.hidden=false;
+          progressEl.value=pct;
+        }
+
+        if(statusEl){
+          statusEl.textContent=
+            `Mengunggah… ${pct}% · `+
+            `${(e.loaded/1024/1024).toFixed(1)} / `+
+            `${(e.total/1024/1024).toFixed(1)} MB`;
+        }
+      };
+
+      xhr.onload=()=>{
+        if(xhr.status>=200 && xhr.status<300){
+          if(progressEl){
+            progressEl.hidden=false;
+            progressEl.value=100;
+          }
+
+          if(statusEl){
+            statusEl.textContent=
+              'Upload Storage selesai. Menyimpan metadata…';
+          }
+
+          resolve();
+          return;
+        }
+
+        reject(
+          new Error(
+            `Upload Storage gagal (${xhr.status}).`
+          )
+        );
+      };
+
+      xhr.onerror=()=>{
+        reject(
+          new Error(
+            'Koneksi ke Storage terputus saat upload.'
+          )
+        );
+      };
+
+      xhr.ontimeout=()=>{
+        reject(
+          new Error(
+            'Upload Storage timeout. Periksa koneksi lalu coba lagi.'
+          )
+        );
+      };
+
+      xhr.onabort=()=>{
+        reject(
+          new Error(
+            'Upload dibatalkan.'
+          )
+        );
+      };
+
+      xhr.send(file);
+    });
+  }
+
   function loadTus(){
     if(window.tus?.Upload)return Promise.resolve(window.tus);
     if(tusLoaderPromise)return tusLoaderPromise;
@@ -47,8 +138,6 @@
       }
     );
 
-    const tus=await loadTus();
-
     if(progressEl){
       progressEl.hidden=false;
       progressEl.value=0;
@@ -58,8 +147,20 @@
       statusEl.textContent='Menyiapkan upload langsung ke Storage…';
     }
 
-    await new Promise((resolve,reject)=>{
-      const upload=new tus.Upload(file,{
+    if(contentType==='THUMBNAIL'){
+      await uploadSignedFile(
+        file,
+        init.signedUrl,
+        {
+          progressEl,
+          statusEl
+        }
+      );
+    }else{
+      const tus=await loadTus();
+
+      await new Promise((resolve,reject)=>{
+        const upload=new tus.Upload(file,{
         endpoint:init.uploadEndpoint,
         retryDelays:[0,3000,5000,10000,20000],
         headers:{
@@ -105,8 +206,9 @@
         }
       });
 
-      upload.start();
-    });
+        upload.start();
+      });
+    }
 
     const completed=await api.request(
       '/api/owner/products/'+encodeURIComponent(productId)+'/upload-complete',

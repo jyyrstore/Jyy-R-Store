@@ -222,6 +222,7 @@ async function ownerUploadInit(req,res){
     bucket,
     path,
     token:signed.token,
+    signedUrl:signed.signedUrl,
     uploadEndpoint:storage.resumableUploadUrl(),
     expiresIn:7200,
     contentType,
