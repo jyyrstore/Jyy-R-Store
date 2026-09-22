@@ -1,0 +1,1 @@
+module.exports=Object.freeze({OPEN:'OPEN',WAITING:'WAITING',REPLIED:'REPLIED',CLOSED:'CLOSED'});

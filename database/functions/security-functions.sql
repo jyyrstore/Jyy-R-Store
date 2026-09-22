@@ -1,0 +1,1 @@
+-- Security helpers live in Node to keep privileged secrets server-only.

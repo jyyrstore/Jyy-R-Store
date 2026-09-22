@@ -1,0 +1,1 @@
+const {z}=require('zod');module.exports={role:z.object({role:z.enum(['USER','MODERATOR','ADMIN','OWNER'])}),status:z.object({status:z.enum(['ACTIVE','SUSPENDED','BANNED','PENDING'])}),maintenance:z.object({enabled:z.boolean(),title:z.string().min(2),message:z.string().optional(),allow_owner_access:z.boolean()})};

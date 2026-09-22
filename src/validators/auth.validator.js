@@ -1,0 +1,1 @@
+const {z}=require('zod');module.exports={login:z.object({email:z.string().email(),password:z.string().min(8)}),register:z.object({username:z.string().min(3).max(32).regex(/^[A-Za-z0-9._-]+$/),email:z.string().email(),password:z.string().min(8)}),reset:z.object({password:z.string().min(8)})};

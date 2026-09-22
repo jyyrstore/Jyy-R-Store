@@ -1,0 +1,41 @@
+<section class="page-shell">
+  <div class="product-detail">
+    <div class="detail-media">
+      <% if(product.thumbnail_url || product.thumbnail_path){ %>
+        <img src="<%= product.thumbnail_url || assetUrl(publicAssetBucket,product.thumbnail_path) %>" alt="<%= product.name %>" class="detail-image" loading="eager" data-image-fallback>
+        <div class="detail-image image-fallback" hidden><%- icon('image') %><span>Image unavailable</span></div>
+      <% } else { %><div class="detail-image image-fallback"><%- icon('image') %><span>Image unavailable</span></div><% } %>
+    </div>
+    <div class="detail-copy">
+      <div class="eyebrow"><%= product.category_name || 'Product' %></div><h1><%= product.name %></h1>
+      <div class="detail-price"><%= formatIDR(product.price) %></div>
+      <p class="detail-description"><%= product.description || 'Tidak ada deskripsi.' %></p>
+      <div class="detail-meta"><span class="badge"><%= product.stock>0 ? `${product.stock} stock` : 'Habis' %></span><span class="badge"><%= product.status %></span></div>
+      <div class="detail-actions">
+        <% if(currentUser && product.stock>0){ %>
+          <button class="button button-secondary" data-add-cart="<%= product.id %>"><%- icon('cart') %> Tambah ke Cart</button>
+          <button class="button button-primary" data-buy-now="<%= product.id %>"><%- icon('check') %> Beli Sekarang</button>
+        <% } else if (!currentUser){ %><a class="button button-primary" href="/auth/login?next=<%= encodeURIComponent(req.originalUrl) %>">Masuk untuk membeli</a><% } %>
+      </div>
+      <div class="security-note"><%- icon('shield') %><div><strong>Secure delivery</strong><span>Content premium diverifikasi server sebelum akses dan menggunakan temporary signed link.</span></div></div>
+    </div>
+  </div>
+  <div class="section"><div class="section-header"><h2>Product contents</h2><span class="muted"><%= product.contents.length %> item</span></div><div class="content-list">
+    <% if(product.contents.length===0){ %><%- include('../partials/empty',{title:'Belum ada content',description:'Owner belum menambahkan delivery content untuk produk ini.'}) %><% } %>
+    <% product.contents.forEach(c=>{ %>
+      <article class="content-card">
+        <div class="content-icon"><%- icon(c.type==='VIDEO'?'play':c.type==='AUDIO'?'music':c.type==='IMAGE'?'image':c.type==='LINK'?'external':c.type==='TEXT'?'note':'package') %></div>
+        <div class="content-body"><strong><%= c.title %></strong><small><%= c.type %> · <%= c.access_type %></small>
+          <% if(c.description){ %><p><%= c.description %></p><% } %>
+          <% if(c.type==='TEXT' && c.allowed){ %><div class="content-text"><%= c.text_content || '' %></div><% } else if(c.type==='TEXT'){ %><div class="muted">Content tersedia setelah pembayaran terverifikasi.</div><% } %>
+          <% if(c.type==='LINK' && c.url && c.allowed){ %><a class="button button-secondary button-small" href="<%= c.url %>" target="_blank" rel="noopener noreferrer"><%- icon('external') %> Buka Link</a><% } %>
+          <% if(c.preview_url && c.type==='IMAGE'){ %><button class="button button-secondary button-small content-action" data-open-content-url="<%= c.preview_url %>">Preview penuh</button><img class="content-preview" src="<%= c.preview_url %>" alt="Preview <%= c.title %>" loading="lazy" data-image-fallback-hide><% } %>
+          <% if(c.preview_url && c.type==='VIDEO'){ %><video class="content-preview" controls preload="metadata"><source src="<%= c.preview_url %>" type="<%= c.mime_type || 'video/mp4' %>"></video><% } %>
+          <% if(c.preview_url && c.type==='AUDIO'){ %><audio controls preload="metadata"><source src="<%= c.preview_url %>" type="<%= c.mime_type || 'audio/mpeg' %>"></audio><% } %>
+          <% if(c.type==='FILE'){ %><div class="file-meta"><span><%= c.mime_type || 'File' %></span><span><%= c.file_size ? (Number(c.file_size)/1024/1024).toFixed(2)+' MB' : '—' %></span></div><% } %><% if(c.allowed && ['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)){ %><button class="button button-primary button-small content-action" data-download-content="<%= c.id %>"><%- icon('download') %> Secure Access</button><% } else if(!c.allowed){ %><span class="muted small">Purchase required</span><% } %>
+        </div>
+        <% if(c.is_preview){ %><span class="badge">Preview</span><% } %>
+      </article>
+    <% }) %>
+  </div></div>
+</section>

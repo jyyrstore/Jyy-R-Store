@@ -1,0 +1,1 @@
+-- Wallet mutations are recorded atomically by the balance service.

@@ -1,0 +1,1 @@
+const {z}=require('zod');module.exports=z.object({type:z.enum(['ANNOUNCEMENT','BANNER','PROMOTION','MAINTENANCE_NOTICE','SYSTEM_NOTICE']),title:z.string().min(2),body:z.string().min(2),is_published:z.boolean().optional(),publish_at:z.string().datetime().nullable().optional(),unpublish_at:z.string().datetime().nullable().optional()});

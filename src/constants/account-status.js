@@ -1,0 +1,1 @@
+module.exports=Object.freeze({ACTIVE:'ACTIVE',SUSPENDED:'SUSPENDED',BANNED:'BANNED',PENDING:'PENDING'});

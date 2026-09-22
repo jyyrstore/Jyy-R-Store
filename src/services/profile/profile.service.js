@@ -1,0 +1,5 @@
+const profiles=require('../../repositories/profiles.repository'); const { query }=require('../../config/database'); const {badRequest}=require('../../utils/error');
+async function get(userId){const p=await profiles.findById(userId); if(!p) return null; const totals=await query("select (select count(*) from orders where user_id=$1) total_orders, (select coalesce(sum(amount),0) from deposits where user_id=$1 and status='SUCCESS') total_deposit, (select coalesce(balance,0) from wallets where user_id=$1) balance",[userId]); return {...p,...totals.rows[0]};}
+async function update(userId,data){const allowed={display_name:data.display_name,phone:data.phone,bio:data.bio,username:data.username}; if(allowed.username){const other=await profiles.findByUsername(allowed.username); if(other&&other.id!==userId) throw badRequest('USERNAME_EXISTS','Username sudah digunakan.');} return profiles.update(userId,Object.fromEntries(Object.entries(allowed).filter(([,v])=>v!==undefined)));}
+async function loginHistory(userId){return (await query('select * from login_history where user_id=$1 order by created_at desc limit 100',[userId])).rows}
+module.exports={get,update,loginHistory};

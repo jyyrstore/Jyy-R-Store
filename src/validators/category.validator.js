@@ -1,0 +1,1 @@
+const {z}=require('zod');module.exports=z.object({name:z.string().min(2).max(80),slug:z.string().optional(),description:z.string().max(500).optional(),sort_order:z.coerce.number().int().min(0).optional(),is_active:z.boolean().optional()});

@@ -1,0 +1,1 @@
+-- Payment state transitions are recorded by the webhook service with idempotent provider event rows.

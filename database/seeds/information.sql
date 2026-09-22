@@ -1,0 +1,1 @@
+insert into announcements(type,title,body,is_published) select 'SYSTEM_NOTICE','Selamat datang di Jyy'R Store','Gunakan katalog untuk menemukan produk digital dan layanan yang tersedia.',true where not exists(select 1 from announcements where title='Selamat datang di Jyy'R Store');

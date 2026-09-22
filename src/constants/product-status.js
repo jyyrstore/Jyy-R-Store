@@ -1,0 +1,1 @@
+module.exports=Object.freeze({DRAFT:'DRAFT',PUBLISHED:'PUBLISHED',ARCHIVED:'ARCHIVED'});

@@ -1,0 +1,1 @@
+const {z}=require('zod');module.exports=z.object({username:z.string().min(3).max(32).optional(),display_name:z.string().max(80).optional(),phone:z.string().max(30).optional(),bio:z.string().max(500).optional()});

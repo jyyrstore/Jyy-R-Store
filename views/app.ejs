@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="csrf-token" content="<%= csrfToken || '' %>">
+  <meta name="theme-color" content="#191827">
+  <title><%= title || appName %> · <%= appName %></title>
+  <link rel="icon" href="/favicon/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/reset.css">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/navigation.css">
+  <link rel="stylesheet" href="/css/store.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <link rel="stylesheet" href="/css/components/modal.css">
+  <link rel="stylesheet" href="/css/components/toast.css">
+  <link rel="stylesheet" href="/css/animations.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <script defer src="/js/app.js"></script>
+</head>
+<body data-view="<%= view || '' %>" data-user-id="<%= currentUser?.id || '' %>">
+  <% if (view !== 'pages/configuration' && !String(view||'').startsWith('pages/auth')) { %>
+    <%- include('partials/header') %>
+    <div class="app-shell">
+      <%- include('partials/sidebar') %>
+      <main class="main-content" id="main-content">
+        <%- include(view) %>
+      </main>
+    </div>
+    <%- include('partials/bottom-nav') %>
+    <%- include('partials/footer') %>
+  <% } else { %>
+    <main class="auth-shell"><%- include(view) %></main>
+  <% } %>
+  <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
+  <div id="modal-root"></div>
+  <script nonce="<%= cspNonce %>">
+    window.JYYR = { user: <%- JSON.stringify(profile || null) %>, csrf: <%- JSON.stringify(csrfToken || '') %> };
+  </script>
+  <script defer src="/js/api.js"></script>
+  <script defer src="/js/navigation.js"></script>
+  <script defer src="/js/modal.js"></script>
+  <script defer src="/js/toast.js"></script>
+  <script defer src="/js/pages.js"></script>
+</body>
+</html>

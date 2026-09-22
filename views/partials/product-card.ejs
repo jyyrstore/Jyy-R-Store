@@ -1,0 +1,12 @@
+<article class="product-card" data-product-card data-product-id="<%= product.id %>">
+  <a href="/product/<%= product.slug %>" class="product-thumb-wrap">
+    <% if (product.thumbnail_url || product.thumbnail_path) { %><img loading="lazy" class="product-thumb" src="<%= product.thumbnail_url || assetUrl(publicAssetBucket, product.thumbnail_path) %>" alt="<%= product.name %>" data-image-fallback><div class="image-fallback" hidden><%- icon('image') %><span>Image unavailable</span></div><% } else { %><div class="image-fallback"><%- icon('image') %><span>Image unavailable</span></div><% } %>
+  </a>
+  <div class="product-body">
+    <div class="eyebrow"><%= product.category_name || 'Product' %></div>
+    <a class="product-title" href="/product/<%= product.slug %>"><%= product.name %></a>
+    <div class="product-meta"><span><%= product.stock > 0 ? `${product.stock} tersedia` : 'Stock habis' %></span><span class="status-dot <%= product.status==='PUBLISHED'?'success':'' %>"></span></div>
+    <div class="product-price"><%= formatIDR(product.price) %></div>
+    <div class="product-actions"><a class="button button-secondary button-small" href="/product/<%= product.slug %>">Detail</a><% if (currentUser && product.stock>0) { %><button class="button button-primary button-small" data-add-cart="<%= product.id %>"><%- icon('cart') %> Tambah</button><% } %></div>
+  </div>
+</article>

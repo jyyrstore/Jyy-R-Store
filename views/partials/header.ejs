@@ -1,0 +1,10 @@
+<header class="site-header">
+  <button class="icon-button mobile-only" data-drawer-toggle aria-label="Buka menu"><%- icon('menu') %></button>
+  <a class="brand" href="/"><span class="brand-mark"><%- icon('package') %></span><span>Jyy'R Store</span></a>
+  <form class="header-search" action="/search" method="get">
+    <%- icon('search') %><input name="q" value="<%= req.query.q || '' %>" aria-label="Cari produk" placeholder="Cari produk, layanan, atau kategori">
+  </form>
+  <nav class="header-actions">
+    <% if (currentUser) { %><a class="icon-button" href="/notifications" aria-label="Notifikasi"><%- icon('bell') %></a><a class="profile-chip" href="/profile"><span class="avatar"><%= (profile?.username || 'U').slice(0,1).toUpperCase() %></span><span class="hide-mobile"><%= profile?.username || 'Account' %></span></a><% } else { %><a class="button button-secondary button-small" href="/auth/login">Masuk</a><a class="button button-primary button-small" href="/auth/register">Daftar</a><% } %>
+  </nav>
+</header>

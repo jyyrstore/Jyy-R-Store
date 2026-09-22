@@ -1,0 +1,1 @@
+-- User lifecycle changes are implemented server-side with audited status transitions.

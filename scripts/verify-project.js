@@ -1,0 +1,9 @@
+const fs=require('fs');const path=require('path');const root=path.join(__dirname,'..');
+const requiredDirs=['src/config','src/routes','src/controllers','src/services','src/repositories','src/middleware','src/validators','src/utils','views','public','database/migrations','database/policies','tests','docs'];
+const requiredRoutes=['/','/store','/product/:slug','/dashboard','/cart','/checkout','/orders','/deposit','/history','/profile','/tickets','/notifications','/services','/faq','/security','/owner'];
+const text=fs.readFileSync(path.join(root,'src/routes/index.js'),'utf8');
+const missingDirs=requiredDirs.filter(d=>!fs.existsSync(path.join(root,d)));if(missingDirs.length){console.error('Missing dirs:',missingDirs);process.exit(1)}
+const missingRoutes=requiredRoutes.filter(r=>!text.includes(`'${r}'`)&&!text.includes(`"${r}"`));if(missingRoutes.length){console.error('Missing route registrations:',missingRoutes);process.exit(1)}
+const requiredTables=['profiles','roles','categories','products','product_contents','carts','cart_items','orders','order_items','payments','payment_events','deposits','wallets','wallet_transactions','entitlements','download_logs','services','service_orders','tickets','ticket_messages','notifications','notification_preferences','login_history','activity_logs','announcements','faqs','maintenance_settings','site_settings','refunds'];
+const migrationText=fs.readdirSync(path.join(root,'database/migrations')).filter(f=>f.endsWith('.sql')).map(f=>fs.readFileSync(path.join(root,'database/migrations',f),'utf8')).join('\n');const missingTables=requiredTables.filter(t=>!new RegExp(`create table if not exists ${t}\\b`,'i').test(migrationText));if(missingTables.length){console.error('Missing tables:',missingTables);process.exit(1)}
+console.log('JyyR Store project contract verified.');

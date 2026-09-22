@@ -1,0 +1,1 @@
+-- Provider-specific payment state is applied by the server transaction.

@@ -1,0 +1,16 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('fs'),path=require('path');
+const root=path.join(__dirname,'..','..');
+const route=fs.readFileSync(path.join(root,'src/routes/index.js'),'utf8');
+const page=fs.readFileSync(path.join(root,'src/controllers/page.controller.js'),'utf8');
+const migrations=fs.readdirSync(path.join(root,'database/migrations')).filter(x=>x.endsWith('.sql')).map(x=>fs.readFileSync(path.join(root,'database/migrations',x),'utf8')).join('\n');
+for(const r of ['/','/store','/product/:slug','/dashboard','/cart','/checkout','/orders','/deposit','/history','/profile','/tickets','/notifications','/messages','/services','/faq','/security','/owner']) test(`required route ${r}`,()=>assert.ok(route.includes(`'${r}'`),r));
+for(const t of ['profiles','roles','categories','products','product_contents','carts','cart_items','orders','order_items','payments','payment_events','deposits','wallets','wallet_transactions','entitlements','download_logs','services','service_orders','tickets','ticket_messages','messages','notifications','notification_preferences','login_history','activity_logs','announcements','faqs','maintenance_settings','site_settings','refunds']) test(`schema includes ${t}`,()=>assert.match(migrations,new RegExp(`create table if not exists ${t}\\b`,'i')));
+test('webhook route is raw-body protected before JSON parser',()=>{const server=fs.readFileSync(path.join(root,'server.js'),'utf8');const webhook=server.indexOf("app.use('/api/payment/webhook'");const json=server.indexOf('express.json');assert.ok(webhook!==-1&&json!==-1&&webhook<json)});
+test('owner APIs require auth + owner middleware',()=>assert.match(route,/const ownerApi=express\.Router\(\); ownerApi\.use\(requireAuth,requireOwner\)/));
+test('owner extended sections are routed',()=>{for(const r of ['roles','messages','storage','login-history','system','top-orders']) assert.ok(page.includes(`'${r}'`),r)});
+test('explicit owner URL routes exist',()=>{assert.match(route,/owner\.get\('\/products\/create'/);assert.match(route,/ownerApi\.get\('\/top-orders'/)});
+test('owner order fulfillment status API is routed',()=>{assert.match(route,/ownerApi\.post\('\/orders\/:id\/status'/);assert.match(fs.readFileSync(path.join(root,'src/services/order/order.service.js'),'utf8'),/ownerUpdateStatus/)});
+test('service metadata migration exists',()=>assert.ok(fs.existsSync(path.join(root,'database/migrations/029_service_metadata.sql'))));
+test('views do not read process.env directly',()=>{for(const f of fs.readdirSync(path.join(root,'views'),{recursive:true}).filter(x=>x.endsWith('.ejs'))){const s=fs.readFileSync(path.join(root,'views',f),'utf8');assert.doesNotMatch(s,/process\.env\./,f)}});

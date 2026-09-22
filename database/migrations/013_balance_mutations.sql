@@ -1,0 +1,3 @@
+create table if not exists wallet_transactions(
+ id uuid primary key default gen_random_uuid(), wallet_id uuid not null references wallets(id) on delete cascade, user_id uuid not null references profiles(id) on delete restrict, type text not null check(type in ('DEPOSIT','PURCHASE','REFUND','BONUS','ADJUSTMENT','WITHDRAWAL')), amount bigint not null check(amount>=0), balance_before bigint not null check(balance_before>=0), balance_after bigint not null check(balance_after>=0), reference text, status text not null default 'COMPLETED', reason text, metadata jsonb, created_at timestamptz not null default now()
+);

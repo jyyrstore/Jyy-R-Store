@@ -1,0 +1,1 @@
+-- Wallet balance mutation is implemented in service transactions with SELECT ... FOR UPDATE.

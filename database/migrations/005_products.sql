@@ -1,0 +1,4 @@
+do $$ begin create type product_status as enum ('DRAFT','PUBLISHED','ARCHIVED'); exception when duplicate_object then null; end $$;
+create table if not exists products(
+ id uuid primary key default gen_random_uuid(), category_id uuid references categories(id) on delete set null, name text not null, slug text not null unique, description text, price bigint not null check(price>=0), stock int not null default 0 check(stock>=0), reserved_stock int not null default 0 check(reserved_stock>=0), thumbnail_path text, status product_status not null default 'DRAFT', purchase_count int not null default 0, view_count int not null default 0, cart_add_count int not null default 0, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), check(reserved_stock<=stock)
+);

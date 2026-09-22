@@ -1,0 +1,3 @@
+create table if not exists product_contents(
+ id uuid primary key default gen_random_uuid(), product_id uuid not null references products(id) on delete cascade, type text not null check(type in ('FILE','IMAGE','VIDEO','AUDIO','TEXT','LINK')), title text not null, description text, text_content text, url text, storage_path text, mime_type text, file_size bigint, sort_order int not null default 0, is_preview boolean not null default false, access_type text not null default 'PURCHASED' check(access_type in ('PUBLIC','PREVIEW','PURCHASED')), created_at timestamptz not null default now(), updated_at timestamptz not null default now()
+);

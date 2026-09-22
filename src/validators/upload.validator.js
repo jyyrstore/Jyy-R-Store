@@ -1,0 +1,1 @@
+const {z}=require('zod');module.exports=z.object({contentType:z.enum(['THUMBNAIL','FILE','IMAGE','VIDEO','AUDIO']),title:z.string().max(160).optional(),accessType:z.enum(['PUBLIC','PREVIEW','PURCHASED']).optional()});

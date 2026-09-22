@@ -1,0 +1,14 @@
+create unique index if not exists idx_products_slug_lower on products(lower(slug));
+create index if not exists idx_products_catalog on products(status,category_id,created_at desc);
+create index if not exists idx_profiles_role_status on profiles(role,status);
+create index if not exists idx_announcements_publish on announcements(is_published,publish_at,unpublish_at);
+create index if not exists idx_faq_category on faqs(category,is_published,sort_order);
+create index if not exists idx_product_contents_product on product_contents(product_id,sort_order);
+create index if not exists idx_orders_user on orders(user_id,created_at desc);
+create index if not exists idx_payments_user on payments(user_id,created_at desc);
+create index if not exists idx_deposits_user on deposits(user_id,created_at desc);
+create index if not exists idx_wallet_tx_user on wallet_transactions(user_id,created_at desc);
+create index if not exists idx_entitlements_user on entitlements(user_id,status);
+create index if not exists idx_tickets_user on tickets(user_id,updated_at desc);
+create index if not exists idx_notifications_user on notifications(user_id,is_read,created_at desc);
+create index if not exists idx_activity_logs_actor on activity_logs(actor_user_id,created_at desc);

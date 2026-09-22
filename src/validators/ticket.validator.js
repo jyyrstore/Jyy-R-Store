@@ -1,0 +1,1 @@
+const {z}=require('zod');module.exports=z.object({category:z.string().min(2).max(40),subject:z.string().min(3).max(120),priority:z.enum(['LOW','NORMAL','HIGH','URGENT']).optional(),message:z.string().min(2).max(10000)});

@@ -1,0 +1,1 @@
+const {z}=require('zod');module.exports=z.object({category:z.string().min(2),question:z.string().min(2),answer:z.string().min(2),is_published:z.boolean().optional(),sort_order:z.coerce.number().int().min(0).optional()});

@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+node_modules/
+logs/
+coverage/
+tmp/
+temporary/
+.temp/
+*.tmp
+*.log
+local-artifacts/
+artifacts/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,1 @@
+const crypto=require('crypto');const type=process.argv[2]||'random';if(type==='encryption-key'){console.log(crypto.randomBytes(32).toString('base64'));}else{console.log(crypto.randomBytes(32).toString('base64url'));}

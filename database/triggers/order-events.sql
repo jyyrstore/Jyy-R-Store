@@ -1,0 +1,1 @@
+-- Order state transitions are recorded by the order service in the same database transaction.

@@ -1,0 +1,1 @@
+insert into services(name,category,price,description,requirements) select 'Custom Digital Service','Digital',0,'Layanan custom; harga dikonfigurasi owner.','{"fields": ["username","notes"]}'::jsonb where not exists(select 1 from services where name='Custom Digital Service');

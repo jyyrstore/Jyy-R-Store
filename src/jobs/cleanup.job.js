@@ -1,0 +1,1 @@
+const {query}=require('../config/database'); async function run(){await query("delete from payment_events where processed_at is not null and processed_at < now() - interval '90 days'").catch(()=>{});} module.exports={run};

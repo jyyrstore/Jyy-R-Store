@@ -1,0 +1,1 @@
+module.exports=Object.freeze({READ_DASHBOARD:'read:dashboard',MANAGE_PRODUCTS:'manage:products',MANAGE_ORDERS:'manage:orders',MANAGE_PAYMENTS:'manage:payments',MANAGE_DEPOSITS:'manage:deposits',MANAGE_USERS:'manage:users',MANAGE_SUPPORT:'manage:support',MANAGE_SETTINGS:'manage:settings',MANAGE_SECURITY:'manage:security'});

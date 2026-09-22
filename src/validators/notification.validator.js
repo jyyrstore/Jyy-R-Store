@@ -1,0 +1,1 @@
+const {z}=require('zod');module.exports=z.object({type:z.enum(['ORDER','PAYMENT','DEPOSIT','TICKET','SYSTEM','PROMOTION']),title:z.string().min(2).max(120),body:z.string().min(2).max(5000),link:z.string().optional(),user_id:z.string().uuid().nullable().optional()});

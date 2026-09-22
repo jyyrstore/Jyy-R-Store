@@ -1,0 +1,1 @@
+insert into faqs(category,question,answer,sort_order) select 'Account','Bagaimana membuat akun?','Daftar menggunakan email dan password yang valid, lalu verifikasi email bila diwajibkan.',1 where not exists(select 1 from faqs where question='Bagaimana membuat akun?');
