@@ -13,6 +13,21 @@ async function duplicate(id){ return withTransaction(async(client)=>{ const p=(a
 async function contents(productId){ return (await query('select * from product_contents where product_id=$1 order by sort_order,created_at',[productId])).rows; }
 async function addContent(data){ return (await query('insert into product_contents(product_id,type,title,description,text_content,url,storage_path,mime_type,file_size,sort_order,is_preview,access_type) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *',[data.product_id,data.type,data.title,data.description||null,data.text_content||null,data.url||null,data.storage_path||null,data.mime_type||null,data.file_size||null,data.sort_order||0,!!data.is_preview,data.access_type||'PURCHASED'])).rows[0]; }
 async function updateContent(id,data){ return (await query('update product_contents set title=$2,description=$3,text_content=$4,url=$5,sort_order=$6,is_preview=$7,access_type=$8,updated_at=now() where id=$1 returning *',[id,data.title,data.description||null,data.text_content||null,data.url||null,data.sort_order||0,!!data.is_preview,data.access_type||'PURCHASED'])).rows[0]; }
-async function deleteContent(id){ await query('delete from product_contents where id=$1',[id]); }
+async function deleteContent(id,productId=null){
+  if(productId){
+    const row=(await query(
+      'delete from product_contents where id=$1 and product_id=$2 returning id',
+      [id,productId]
+    )).rows[0];
+    return row||null;
+  }
+
+  const row=(await query(
+    'delete from product_contents where id=$1 returning id',
+    [id]
+  )).rows[0];
+
+  return row||null;
+}
 async function event(productId,userId,type){ await query('insert into product_events(product_id,user_id,event_type) values($1,$2,$3)',[productId,userId||null,type]); const expression=type==='VIEW'?'view_count=view_count+1':type==='CART_ADD'?'cart_add_count=cart_add_count+1':'purchase_count=purchase_count+1'; await query(`update products set ${expression} where id=$1`,[productId]); }
 module.exports={list,adminList,count,findBySlug,findById,create,update,remove,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event};

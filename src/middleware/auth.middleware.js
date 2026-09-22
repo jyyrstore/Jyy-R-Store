@@ -14,10 +14,10 @@ async function authMiddleware(req,res,next){
     const result = await query('select id, username, email, role, status, avatar_path, created_at, last_login_at from profiles where id=$1',[set.data.user.id]);
     const profile=result.rows[0] || null;
     if (!profile) { res.locals.currentUser=set.data.user; res.locals.profile=null; req.user=set.data.user; return next(); }
-    if (['BANNED','SUSPENDED'].includes(profile.status)) { delete req.session.auth; if (req.path.startsWith('/api/')) return res.status(403).json({success:false,error:{code:'ACCOUNT_DISABLED',message:'Account is not active.'}}); return res.redirect('/auth/login?error=account-disabled'); }
+    if (['BANNED','SUSPENDED'].includes(profile.status)) { delete req.session.auth; if (req.originalUrl.startsWith('/api/')) return res.status(403).json({success:false,error:{code:'ACCOUNT_DISABLED',message:'Account is not active.'}}); return res.redirect('/auth/login?error=account-disabled'); }
     req.user=set.data.user; req.profile=profile; res.locals.currentUser=set.data.user; res.locals.profile=profile;
     next();
   } catch (e) { next(e); }
 }
-function requireAuth(req,res,next){ if(!req.user) return req.path.startsWith('/api/') ? res.status(401).json({success:false,error:{code:'UNAUTHORIZED',message:'Authentication required'}}) : res.redirect(`/auth/login?next=${encodeURIComponent(req.originalUrl)}`); next(); }
+function requireAuth(req,res,next){ if(!req.user) return req.originalUrl.startsWith('/api/') ? res.status(401).json({success:false,error:{code:'UNAUTHORIZED',message:'Authentication required'}}) : res.redirect(`/auth/login?next=${encodeURIComponent(req.originalUrl)}`); next(); }
 module.exports={authMiddleware,requireAuth};

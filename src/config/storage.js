@@ -25,7 +25,45 @@ async function uploadBuffer({ bucket, path, buffer, contentType, upsert = false 
   if (error) throw error;
   return data;
 }
+
+async function createSignedUploadUrl(bucket,path,upsert=false){
+  const {data,error}=await supabase().storage
+    .from(bucket)
+    .createSignedUploadUrl(path,{upsert});
+  if(error) throw error;
+  return data;
+}
+
+async function fileExists(bucket,path){
+  const parts=String(path).split('/');
+  const name=parts.pop();
+  const folder=parts.join('/');
+
+  const {data,error}=await supabase()
+    .storage
+    .from(bucket)
+    .list(folder,{limit:100,search:name});
+
+  if(error) throw error;
+
+  return Boolean((data||[]).some(item=>item.name===name));
+}
+
+function resumableUploadUrl(){
+  if(!envRef?.SUPABASE_URL){
+    throw new Error('Supabase URL is not configured.');
+  }
+
+  const hostname=new URL(envRef.SUPABASE_URL).hostname;
+  const projectRef=hostname.split('.')[0];
+
+  if(!projectRef){
+    throw new Error('Invalid Supabase project URL.');
+  }
+
+  return `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
+}
 async function remove(bucket, path) { const { error } = await supabase().storage.from(bucket).remove([path]); if (error) throw error; }
 function publicUrl(bucket, path) { return supabase().storage.from(bucket).getPublicUrl(path).data.publicUrl; }
 async function signedUrl(bucket, path, expiresIn) { const { data, error } = await supabase().storage.from(bucket).createSignedUrl(path, expiresIn); if (error) throw error; return data.signedUrl; }
-module.exports = { initStorage, uploadBuffer, remove, publicUrl, signedUrl, getBucket };
+module.exports = { initStorage, uploadBuffer, createSignedUploadUrl, fileExists, resumableUploadUrl, remove, publicUrl, signedUrl, getBucket };

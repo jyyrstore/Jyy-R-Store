@@ -4,7 +4,7 @@ class GenericJsonProvider {
   constructor(env) { this.env = env; }
   configured() { return Boolean(this.env.PAYMENT_API_BASE_URL && this.env.PAYMENT_API_KEY); }
   async createPayment({ orderId, amount, customer, returnUrl, idempotencyKey }) {
-    if (!this.configured()) throw new Error('PAYMENT_PROVIDER_NOT_CONFIGURED');
+    if (!this.configured()) throw Object.assign(new Error('Payment provider belum dikonfigurasi.'),{status:503,code:'PAYMENT_PROVIDER_NOT_CONFIGURED',expose:true});
     const timeoutMs=Math.max(1000,Number(this.env.PAYMENT_REQUEST_TIMEOUT_MS||15000));
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),timeoutMs);
@@ -21,7 +21,7 @@ class GenericJsonProvider {
         signal:controller.signal
       });
     }catch(error){
-      if(error?.name==='AbortError') throw new Error('Payment provider request timed out.');
+      if(error?.name==='AbortError') throw new Error('Payment provider request timed out.',{cause:error});
       throw error;
     }finally{
       clearTimeout(timer);

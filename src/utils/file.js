@@ -22,6 +22,45 @@ function validateContentType(type, detectedMime, category) {
   const allowed = ALLOWED[category] || ALLOWED.FILE;
   return allowed.includes(type) && (!detectedMime || allowed.includes(detectedMime));
 }
+function validateUploadDescriptor({originalName,mime},category){
+  const normalized=String(category||'FILE').toUpperCase();
+
+  if(!ALLOWED[normalized]){
+    throw Object.assign(
+      new Error('Tipe file tidak didukung.'),
+      {status:400,code:'UNSUPPORTED_FILE_TYPE',expose:true}
+    );
+  }
+
+  const cleanName=safeName(originalName);
+  const originalExt=ext(cleanName);
+  const allowedExt=EXTENSIONS[normalized]||[];
+
+  if(!originalExt || !allowedExt.includes(originalExt)){
+    throw Object.assign(
+      new Error(`Extension ${originalExt||'(tanpa extension)'} tidak diperbolehkan.`),
+      {status:400,code:'INVALID_FILE_EXTENSION',expose:true}
+    );
+  }
+
+  const declaredMime=String(mime||'').toLowerCase();
+  const allowedMime=ALLOWED[normalized]||[];
+
+  if(!declaredMime || !allowedMime.includes(declaredMime)){
+    throw Object.assign(
+      new Error('MIME type file tidak diperbolehkan.'),
+      {status:400,code:'INVALID_FILE_MIME',expose:true}
+    );
+  }
+
+  return {
+    mime:declaredMime,
+    kind:normalized==='THUMBNAIL'?'IMAGE':normalized,
+    extension:originalExt.slice(1),
+    originalName:cleanName
+  };
+}
+
 async function validateFile(file, category) {
   if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length===0) throw Object.assign(new Error('File upload tidak valid.'),{status:400,code:'INVALID_FILE',expose:true});
   const normalized=String(category||'FILE').toUpperCase();
@@ -37,4 +76,4 @@ async function validateFile(file, category) {
   const kind=normalized==='THUMBNAIL'?'IMAGE':normalized;
   return {mime,kind,extension:detected?.ext||originalExt.slice(1),size:file.size||file.buffer.length,originalName:safeName(file.originalname)};
 }
-module.exports = { detect, safeName, ext, validateContentType, validateFile, ALLOWED, EXTENSIONS };
+module.exports = { detect, safeName, ext, validateContentType, validateUploadDescriptor, validateFile, ALLOWED, EXTENSIONS };

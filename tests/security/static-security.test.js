@@ -4,7 +4,7 @@ const fs=require('fs'); const path=require('path');
 const root=path.join(__dirname,'..','..');
 function walk(dir){const out=[];for(const name of fs.readdirSync(dir)){const p=path.join(dir,name),st=fs.statSync(p);if(st.isDirectory()&&!['node_modules','.git'].includes(name))out.push(...walk(p));else if(/\.(js|ejs|html|css|sql|md)$/.test(name))out.push(p)}return out}
 const files=walk(root);
-test('service role key never appears in public/views source',()=>{for(const dir of ['public','views']){for(const f of walk(path.join(root,dir))){assert.doesNotMatch(fs.readFileSync(f,'utf8'),/SUPABASE_SERVICE_ROLE_KEY\s*[:=]\s*['\"]?[^$\s<"']+/)}}});
+test('service role key never appears in public/views source',()=>{for(const dir of ['public','views']){for(const f of walk(path.join(root,dir))){assert.doesNotMatch(fs.readFileSync(f,'utf8'),/SUPABASE_SERVICE_ROLE_KEY\s*[:=]\s*['"]?[^$\s<"']+/)}}});
 test('browser source has no role-based localStorage authorization',()=>{for(const f of walk(path.join(root,'public'))){const s=fs.readFileSync(f,'utf8');assert.doesNotMatch(s,/localStorage\s*\.\s*(role|permission|admin)/i)}});
 test('private delivery uses signed URLs',()=>{const s=fs.readFileSync(path.join(root,'src/services/delivery/delivery.service.js'),'utf8');assert.match(s,/signedUrl\(/);assert.match(s,/entitlement\(/)});
 test('payment webhook has signature + idempotency controls',()=>{const s=fs.readFileSync(path.join(root,'src/services/payment/payment.service.js'),'utf8');assert.match(s,/verifyWebhook\(/);assert.match(s,/payment_events/);assert.match(s,/for update/)});

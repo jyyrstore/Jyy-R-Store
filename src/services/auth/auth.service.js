@@ -21,7 +21,7 @@ async function login({email,password},{ip,userAgent}={}){
   await query("insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'SUCCESS',now())",[data.user.id,'Unknown',userAgent||null,ip||null]);
   return data;
 }
-async function logout(){ try{await supabase().auth.signOut();}catch{} }
+async function logout(){ try{await supabase().auth.signOut();}catch{/* logout failure is intentionally ignored */} }
 async function exchangeCode(code){ const {data,error}=await supabase().auth.exchangeCodeForSession(code); if(error) throw Object.assign(new Error('Kode autentikasi tidak valid atau sudah kedaluwarsa.'),{status:400,code:'AUTH_CODE_INVALID',expose:true}); return data; }
 async function sendPasswordReset(email){ const {error}=await supabase().auth.resetPasswordForEmail(email,{redirectTo:`${loadEnv().APP_URL}/auth/callback?next=/auth/reset-password`}); if(error) throw Object.assign(new Error('Tidak dapat mengirim email reset password.'),{status:400,code:'RESET_FAILED',expose:true}); }
 async function updatePassword({accessToken,refreshToken},password){ if(!accessToken||!refreshToken) throw Object.assign(new Error('Sesi reset password tidak valid.'),{status:401,code:'RESET_SESSION_INVALID',expose:true}); const client=supabase(); const {error:setError}=await client.auth.setSession({access_token:accessToken,refresh_token:refreshToken}); if(setError) throw Object.assign(new Error('Sesi reset password tidak valid.'),{status:401,code:'RESET_SESSION_INVALID',expose:true}); const {error}=await client.auth.updateUser({password}); if(error) throw Object.assign(new Error('Password gagal diperbarui.'),{status:400,code:'PASSWORD_UPDATE_FAILED',expose:true}); }

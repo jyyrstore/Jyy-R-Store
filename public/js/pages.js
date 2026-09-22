@@ -5,35 +5,135 @@
   const svg=name=>({plus:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',x:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',package:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16.5 9.4-9-5.1M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>'}[name]||'');
 
   async function ownerAction(url,body={},method='POST',ok='Selesai'){const r=await api.request(url,{method,body});toast.success(ok);return r;}
-  async function uploadOwnerFile(productId,file,{contentType='THUMBNAIL',progressEl=null,statusEl=null}={}){
-    if(!file) return null;
-    return await new Promise((resolve,reject)=>{
-      const x=new XMLHttpRequest();
-      x.open('POST','/api/owner/products/'+encodeURIComponent(productId)+'/upload');
-      x.withCredentials=true;
-      x.setRequestHeader('X-CSRF-Token',csrf());
-      x.upload.onprogress=e=>{
-        if(e.lengthComputable){
-          const pct=Math.round(e.loaded/e.total*100);
-          if(progressEl){progressEl.hidden=false;progressEl.value=pct;}
-          if(statusEl)statusEl.textContent=`Mengunggah thumbnail… ${pct}% · ${(e.loaded/1024/1024).toFixed(1)} / ${(e.total/1024/1024).toFixed(1)} MB`;
-        }
+  let tusLoaderPromise=null;
+
+  function loadTus(){
+    if(window.tus?.Upload)return Promise.resolve(window.tus);
+    if(tusLoaderPromise)return tusLoaderPromise;
+
+    tusLoaderPromise=new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src='https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js';
+      script.async=true;
+
+      script.onload=()=>{
+        if(window.tus?.Upload)resolve(window.tus);
+        else reject(new Error('Library upload resumable gagal dimuat.'));
       };
-      x.onload=()=>{
-        try{
-          const v=JSON.parse(x.responseText);
-          if(x.status>=200&&x.status<300&&v.success!==false) resolve(v);
-          else reject(new Error(v.error?.message||'Upload thumbnail gagal.'));
-        }catch{reject(new Error('Response upload thumbnail tidak valid.'))}
+
+      script.onerror=()=>{
+        reject(new Error('Library upload resumable gagal dimuat.'));
       };
-      x.onerror=()=>reject(new Error('Network error saat upload thumbnail.'));
-      x.onabort=()=>reject(new Error('Upload thumbnail dibatalkan.'));
-      const fd=new FormData();
-      fd.append('file',file);
-      fd.append('contentType',contentType);
-      x.send(fd);
+
+      document.head.appendChild(script);
     });
+
+    return tusLoaderPromise;
   }
+
+  async function uploadOwnerFile(productId,file,{contentType='THUMBNAIL',progressEl=null,statusEl=null,meta={}}={}){
+    if(!file)return null;
+
+    const init=await api.request(
+      '/api/owner/products/'+encodeURIComponent(productId)+'/upload-init',
+      {
+        method:'POST',
+        body:{
+          contentType,
+          originalName:file.name||'file',
+          mimeType:file.type||'application/octet-stream',
+          fileSize:file.size
+        }
+      }
+    );
+
+    const tus=await loadTus();
+
+    if(progressEl){
+      progressEl.hidden=false;
+      progressEl.value=0;
+    }
+
+    if(statusEl){
+      statusEl.textContent='Menyiapkan upload langsung ke Storage…';
+    }
+
+    await new Promise((resolve,reject)=>{
+      const upload=new tus.Upload(file,{
+        endpoint:init.uploadEndpoint,
+        retryDelays:[0,3000,5000,10000,20000],
+        headers:{
+          'x-signature':init.token
+        },
+        uploadDataDuringCreation:true,
+        removeFingerprintOnSuccess:true,
+        chunkSize:6*1024*1024,
+
+        metadata:{
+          bucketName:init.bucket,
+          objectName:init.path,
+          contentType:file.type||init.mimeType||'application/octet-stream'
+        },
+
+        onError:error=>{
+          reject(new Error(error?.message||'Upload Storage gagal.'));
+        },
+
+        onProgress:(uploaded,total)=>{
+          if(total>0){
+            const pct=Math.round(uploaded/total*100);
+
+            if(progressEl)progressEl.value=pct;
+
+            if(statusEl){
+              statusEl.textContent=
+                `Mengunggah… ${pct}% · `+
+                `${(uploaded/1024/1024).toFixed(1)} / `+
+                `${(total/1024/1024).toFixed(1)} MB`;
+            }
+          }
+        },
+
+        onSuccess:()=>{
+          if(progressEl)progressEl.value=100;
+
+          if(statusEl){
+            statusEl.textContent='Upload Storage selesai. Menyimpan metadata…';
+          }
+
+          resolve();
+        }
+      });
+
+      upload.start();
+    });
+
+    const completed=await api.request(
+      '/api/owner/products/'+encodeURIComponent(productId)+'/upload-complete',
+      {
+        method:'POST',
+        body:{
+          contentType,
+          path:init.path,
+          originalName:file.name||init.originalName,
+          mimeType:file.type||init.mimeType||'application/octet-stream',
+          fileSize:file.size,
+          title:meta.title,
+          description:meta.description,
+          sortOrder:Number(meta.sortOrder||0),
+          isPreview:Boolean(meta.isPreview),
+          accessType:meta.accessType||'PURCHASED'
+        }
+      }
+    );
+
+    if(statusEl){
+      statusEl.textContent='Upload berhasil disimpan.';
+    }
+
+    return completed;
+  }
+
   function open(html,onReady){window.JYYRModal.open(html);onReady?.();}
 
 
@@ -75,7 +175,7 @@
           <label class="field"><span>Text Content</span><textarea name="text_content" maxlength="50000"></textarea></label>
           <label class="field"><span>URL (untuk LINK)</span><input name="url" type="url"></label>
           <label class="field"><span>Access</span><select name="access_type"><option>PURCHASED</option><option>PREVIEW</option><option>PUBLIC</option></select></label>
-          <label class="field"><span>File</span><input name="file" type="file" accept="image/*,video/*,audio/*,.zip,.rar,.7z,.pdf"></label>
+          <label class="field"><span>File</span><input name="file" type="file" accept="image/*,video/*,audio/*,.zip,.pdf"></label>
           <progress data-upload-progress value="0" max="100" hidden></progress>
           <small class="muted" data-upload-status>FILE / IMAGE / VIDEO / AUDIO membutuhkan file.</small>
 
@@ -224,7 +324,7 @@
       faq:`<form data-owner-faq-form class="stack-form"><h2>Tambah FAQ</h2><label class="field"><span>Category</span><input name="category" required></label><label class="field"><span>Question</span><input name="question" required></label><label class="field"><span>Answer</span><textarea name="answer" required></textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" checked></label>${formButtons()}</form>`,
       information:`<form data-owner-info-form class="stack-form"><h2>Tambah Information</h2><label class="field"><span>Type</span><select name="type"><option>ANNOUNCEMENT</option><option>BANNER</option><option>PROMOTION</option><option>MAINTENANCE_NOTICE</option><option>SYSTEM_NOTICE</option></select></label><label class="field"><span>Title</span><input name="title" required></label><label class="field"><span>Body</span><textarea name="body" required></textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" checked></label>${formButtons()}</form>`}[section]; if(forms)open(forms)}
 
-    const ep=e.target.closest('[data-owner-edit-product]');if(ep){let d;try{d=JSON.parse(ep.dataset.ownerEditProduct)}catch{return}open(`<form data-owner-product-edit class="stack-form"><h2>Edit Produk</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Slug</span><input name="slug" value="${esc(d.slug)}"></label><label class="form-grid"><span class="field"><span>Harga</span><input name="price" type="number" min="0" value="${Number(d.price)||0}"></span><span class="field"><span>Stock</span><input name="stock" type="number" min="0" value="${Number(d.stock)||0}"></span></label><label class="field"><span>Description</span><textarea name="description">${esc(d.description||'')}</textarea></label><label class="field"><span>Thumbnail Produk</span>${d.thumbnail_url?`<img class="thumbnail-preview" data-current-thumbnail src="${esc(d.thumbnail_url)}" alt="Thumbnail saat ini">`:``}<input name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp" data-thumbnail-input><small class="muted">Pilih file baru untuk mengganti thumbnail.</small><img class="thumbnail-preview" data-thumbnail-preview alt="Preview thumbnail baru" hidden><progress data-thumbnail-progress value="0" max="100" hidden></progress><small class="muted" data-thumbnail-status>Belum ada thumbnail baru dipilih.</small></label><label class="field"><span>Status</span><select name="status"><option ${d.status==='DRAFT'?'selected':''}>DRAFT</option><option ${d.status==='PUBLISHED'?'selected':''}>PUBLISHED</option><option ${d.status==='ARCHIVED'?'selected':''}>ARCHIVED</option></select></label>${formButtons('Update Product')}</form>`)}
+    const ep=e.target.closest('[data-owner-edit-product]');if(ep){let d;try{d=JSON.parse(ep.dataset.ownerEditProduct)}catch{return}open(`<form data-owner-product-edit class="stack-form"><h2>Edit Produk</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Slug</span><input name="slug" value="${esc(d.slug)}"></label><label class="form-grid"><span class="field"><span>Harga</span><input name="price" type="number" min="0" value="${Number(d.price)||0}"></span><span class="field"><span>Stock</span><input name="stock" type="number" min="0" value="${Number(d.stock)||0}"></span></label><label class="field"><span>Description</span><textarea name="description">${esc(d.description||'')}</textarea></label><label class="field"><span>Thumbnail Produk</span>${d.thumbnail_url?`<img class="thumbnail-preview" data-current-thumbnail src="${esc(d.thumbnail_url)}" alt="Thumbnail saat ini">`:``}<input name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp" data-thumbnail-input><small class="muted">Pilih file baru untuk mengganti thumbnail.</small><img class="thumbnail-preview" data-thumbnail-preview alt="Preview thumbnail baru" hidden><progress data-thumbnail-progress value="0" max="100" hidden></progress><small class="muted" data-thumbnail-status>Belum ada thumbnail baru dipilih.</small></label>${formButtons('Update Product')}</form>`)}
 
     const content=e.target.closest('[data-owner-content]');if(content){await openOwnerContentManager(content.dataset.ownerContent,content.dataset.ownerProductName||'Produk',content.dataset.ownerProductStatus||'DRAFT');}
 
@@ -266,7 +366,7 @@
     const pfm=e.target.closest('[data-owner-product-form]');if(pfm){e.preventDefault();const formData=new FormData(pfm),thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);delete fd.thumbnail;delete fd.status;fd.status='DRAFT';fd.price=Number(fd.price);fd.stock=Number(fd.stock);if(!fd.category_id)fd.category_id=null;const btn=pfm.querySelector('button[type="submit"]');if(btn)btn.disabled=true;try{const created=await ownerAction('/api/owner/products',fd,'POST','Produk DRAFT dibuat.');if(thumbnail instanceof File&&thumbnail.size){const progress=pfm.querySelector('[data-thumbnail-progress]'),status=pfm.querySelector('[data-thumbnail-status]');await uploadOwnerFile(created.id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});}window.JYYRModal.close();await openOwnerContentManager(created.id,created.name||fd.name,'DRAFT')}catch(err){toast.error(err.message)}finally{if(btn)btn.disabled=false}}
 
     const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.price=Number(fd.price);fd.stock=Number(fd.stock);try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
-    const cfm=e.target.closest('[data-owner-content-form]');if(cfm){e.preventDefault();const fd=new FormData(cfm),type=fd.get('type'),id=fd.get('product_id')||cfm.dataset.productId,file=fd.get('file');const btn=cfm.querySelector('button[type="submit"]');if(btn)btn.disabled=true;try{if(file&&file.size&&['FILE','IMAGE','VIDEO','AUDIO'].includes(type)){fd.append('contentType',type);const progress=cfm.querySelector('[data-upload-progress]'),status=cfm.querySelector('[data-upload-status]');if(progress)progress.hidden=false;await new Promise((resolve,reject)=>{const x=new XMLHttpRequest();x.open('POST','/api/owner/products/'+encodeURIComponent(id)+'/upload');x.withCredentials=true;x.setRequestHeader('X-CSRF-Token',csrf());x.upload.onprogress=e=>{if(e.lengthComputable){const pct=Math.round(e.loaded/e.total*100);if(progress)progress.value=pct;if(status)status.textContent=`Uploading… ${pct}% · ${(e.loaded/1024/1024).toFixed(1)} / ${(e.total/1024/1024).toFixed(1)} MB`;}};x.onload=()=>{try{const v=JSON.parse(x.responseText);if(x.status>=200&&x.status<300&&v.success!==false)resolve(v);else reject(new Error(v.error?.message||'Upload gagal'))}catch{reject(new Error('Response upload tidak valid.'))}};x.onerror=()=>reject(new Error('Network error saat upload.'));x.onabort=()=>reject(new Error('Upload dibatalkan.'));x.send(fd)});toast.success('Content berhasil diupload')}else{const body=Object.fromEntries(fd);delete body.file;body.product_id=id;body.is_preview=fd.get('is_preview')==='on';await ownerAction('/api/owner/products/'+encodeURIComponent(id)+'/content',body,'POST','Content dibuat.');}await openOwnerContentManager(id,cfm.dataset.productName||'Produk',cfm.dataset.productStatus||'DRAFT')}catch(err){toast.error(err.message)}finally{if(btn)btn.disabled=false}}
+    const cfm=e.target.closest('[data-owner-content-form]');if(cfm){e.preventDefault();const fd=new FormData(cfm),type=fd.get('type'),id=fd.get('product_id')||cfm.dataset.productId,file=fd.get('file');const btn=cfm.querySelector('button[type="submit"]');if(btn)btn.disabled=true;try{if(file&&file.size&&['FILE','IMAGE','VIDEO','AUDIO'].includes(type)){const progress=cfm.querySelector('[data-upload-progress]'),status=cfm.querySelector('[data-upload-status]');await uploadOwnerFile(id,file,{contentType:type,progressEl:progress,statusEl:status,meta:{title:fd.get('title'),description:fd.get('description'),accessType:fd.get('access_type')||'PURCHASED',isPreview:fd.get('is_preview')==='on',sortOrder:fd.get('sort_order')||0}});toast.success('Content berhasil diupload')}else{const body=Object.fromEntries(fd);delete body.file;body.product_id=id;body.is_preview=fd.get('is_preview')==='on';await ownerAction('/api/owner/products/'+encodeURIComponent(id)+'/content',body,'POST','Content dibuat.')}await openOwnerContentManager(id,cfm.dataset.productName||'Produk',cfm.dataset.productStatus||'DRAFT')}catch(err){toast.error(err.message)}finally{if(btn)btn.disabled=false}}
 
     const sem=e.target.closest('[data-owner-service-form], [data-owner-service-edit]');if(sem){e.preventDefault();const fd=Object.fromEntries(new FormData(sem));fd.price=Number(fd.price||0);fd.sort_order=Number(fd.sort_order||0);fd.is_active=fd.is_active==='on';try{fd.requirements=fd.requirements?JSON.parse(fd.requirements):{};}catch{toast.error('Requirements harus JSON valid.');return}const id=fd.id;delete fd.id;if(id)await ownerAction('/api/owner/services/'+id,fd,'PUT','Service diperbarui.');else await ownerAction('/api/owner/services',fd,'POST','Service dibuat.');location.reload()}
     const ff=e.target.closest('[data-owner-faq-form], [data-owner-faq-edit]');if(ff){e.preventDefault();const fd=Object.fromEntries(new FormData(ff));fd.is_published=fd.is_published==='on';const id=fd.id;delete fd.id;try{if(id)await ownerAction('/api/owner/faq/'+id,fd,'PUT','FAQ diperbarui.');else await ownerAction('/api/owner/faq',fd,'POST','FAQ dibuat.');location.reload()}catch(err){toast.error(err.message)}}

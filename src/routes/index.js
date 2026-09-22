@@ -4,10 +4,10 @@ const {requireAuth}=require('../middleware/auth.middleware');
 const {requireOwner}=require('../middleware/role.middleware');
 const page=require('../controllers/page.controller');
 const api=require('../controllers/api.controller');
-const {upload}=require('../middleware/upload.middleware');
 const {validate}=require('../middleware/validation.middleware');
 const {z}=require('zod');
 const {loadEnv}=require('../config/env');
+const {ok}=require('../utils/response');
 
 const zBool=z.preprocess(
   v=>typeof v==='string' ? ['true','1','on','yes'].includes(v.toLowerCase()) : v,
@@ -37,6 +37,41 @@ const ownerFaqSchema=z.object({
   is_published:zBool.optional(),
   sort_order:z.coerce.number().int().min(0).max(10000).optional()
 });
+const ownerProductContentSchema=z.object({
+  type:z.enum(['FILE','IMAGE','VIDEO','AUDIO','TEXT','LINK']),
+  title:z.string().trim().min(1).max(160),
+  description:z.string().max(2000).optional(),
+  text_content:z.string().max(50000).optional(),
+  url:z.string().url().optional(),
+  sort_order:z.coerce.number().int().min(0).max(10000).optional(),
+  is_preview:zBool.optional(),
+  access_type:z.enum(['PUBLIC','PREVIEW','PURCHASED']).optional()
+}).superRefine((v,ctx)=>{
+  if(v.type==='TEXT'&&!String(v.text_content||'').trim()){
+    ctx.addIssue({
+      code:z.ZodIssueCode.custom,
+      path:['text_content'],
+      message:'Text content wajib diisi untuk tipe TEXT.'
+    });
+  }
+
+  if(v.type==='LINK'&&!v.url){
+    ctx.addIssue({
+      code:z.ZodIssueCode.custom,
+      path:['url'],
+      message:'URL wajib diisi untuk tipe LINK.'
+    });
+  }
+
+  if(['FILE','IMAGE','VIDEO','AUDIO'].includes(v.type)){
+    ctx.addIssue({
+      code:z.ZodIssueCode.custom,
+      path:['type'],
+      message:'Gunakan upload endpoint untuk tipe content berbasis file.'
+    });
+  }
+});
+
 const ownerInformationSchema=z.object({
   type:z.string().trim().min(1).max(40),
   title:z.string().trim().min(2).max(240),
@@ -175,7 +210,25 @@ ownerApi.post('/products/:id/duplicate',asyncHandler(api.ownerController.product
 ownerApi.delete('/products/:id/delete',asyncHandler(api.ownerController.productDelete));
 ownerApi.post('/products/:id/content',validate(z.object({type:z.enum(['FILE','IMAGE','VIDEO','AUDIO','TEXT','LINK']),title:z.string().min(1).max(160),description:z.string().max(2000).optional(),text_content:z.string().max(50000).optional(),url:z.string().url().optional(),sort_order:z.coerce.number().int().min(0).max(10000).optional(),is_preview:z.boolean().optional(),access_type:z.enum(['PUBLIC','PREVIEW','PURCHASED']).optional()})),asyncHandler(api.ownerController.productContent));ownerApi.get('/products/:id/content',asyncHandler(api.ownerController.productContents));
 ownerApi.delete('/products/:id/content/:contentId',asyncHandler(api.ownerController.productContentDelete));
-ownerApi.post('/products/:id/upload',upload.single('file'),asyncHandler(api.ownerUpload));
+ownerApi.post('/products/:id/upload-init',validate(z.object({
+  contentType:z.enum(['THUMBNAIL','FILE','IMAGE','VIDEO','AUDIO']),
+  originalName:z.string().trim().min(1).max(255),
+  mimeType:z.string().trim().min(1).max(160),
+  fileSize:z.coerce.number().int().positive()
+})),asyncHandler(api.ownerUploadInit));
+
+ownerApi.post('/products/:id/upload-complete',validate(z.object({
+  contentType:z.enum(['THUMBNAIL','FILE','IMAGE','VIDEO','AUDIO']),
+  path:z.string().min(1).max(500),
+  originalName:z.string().trim().min(1).max(255),
+  mimeType:z.string().trim().min(1).max(160),
+  fileSize:z.coerce.number().int().positive(),
+  title:z.string().max(160).optional(),
+  description:z.string().max(2000).optional(),
+  sortOrder:z.coerce.number().int().min(0).max(10000).optional(),
+  isPreview:zBool.optional(),
+  accessType:z.enum(['PUBLIC','PREVIEW','PURCHASED']).optional()
+})),asyncHandler(api.ownerUploadComplete));
 ownerApi.get('/categories',asyncHandler(api.ownerController.categories));
 ownerApi.post('/categories',validate(ownerCategorySchema),asyncHandler(api.ownerController.categoryCreate));
 ownerApi.put('/categories/:id',validate(ownerCategorySchema),asyncHandler(api.ownerController.categoryUpdate));
