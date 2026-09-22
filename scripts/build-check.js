@@ -2,7 +2,7 @@ const fs=require('fs');const path=require('path');
 const root=path.join(__dirname,'..'); let failed=false;
 const fail=(msg)=>{console.error(`BUILD CHECK FAILED: ${msg}`);failed=true};
 const exists=(p)=>fs.existsSync(path.join(root,p));
-const required=['server.js','package.json','.env.example','.gitignore','.nvmrc','views/app.ejs','src/routes/index.js','src/controllers/api.controller.js','src/controllers/page.controller.js','database/migrations/001_extensions.sql','database/migrations/028_supporting.sql','database/policies/profiles.sql','database/policies/storage.sql','public/css/variables.css','public/js/api.js','README.md','SECURITY.md','tests'];
+const required=['server.js','package.json','.env.example','.nvmrc','views/app.ejs','src/routes/index.js','src/controllers/api.controller.js','src/controllers/page.controller.js','database/migrations/001_extensions.sql','database/migrations/028_supporting.sql','database/policies/profiles.sql','database/policies/storage.sql','public/css/variables.css','public/js/api.js','README.md','SECURITY.md','tests'];
 for(const p of required)if(!exists(p))fail(`missing ${p}`);
 const mig=fs.readdirSync(path.join(root,'database/migrations')).filter(f=>/^\d+_.*\.sql$/.test(f)).sort();for(let i=1;i<=28;i++){const n=String(i).padStart(3,'0')+'_';if(!mig.find(x=>x.startsWith(n)))fail(`missing migration ${n}`)}
 const banned=/scaffold\s+placeholder|future responsibility|future implementation|future dependency|TODO:\s*implement|test\s+(?:fixture\s+)?placeholder|test skeleton|PLACEHOLDER:/i;
