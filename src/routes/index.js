@@ -1,5 +1,5 @@
 const express=require('express');
-const {asyncHandler}=require('../utils/async-handler');
+const asyncHandler=require('../utils/async-handler');
 const {requireAuth}=require('../middleware/auth.middleware');
 const {requireOwner}=require('../middleware/role.middleware');
 const page=require('../controllers/page.controller');
@@ -19,6 +19,21 @@ pageRouter.get('/faq',asyncHandler(page.faq));
 pageRouter.get('/security',asyncHandler(page.security)); pageRouter.get('/privacy',asyncHandler(page.legal)); pageRouter.get('/terms',asyncHandler(page.legal)); pageRouter.get('/refund',asyncHandler(page.legal));
 pageRouter.get('/auth/login',asyncHandler(page.login));
 pageRouter.get('/auth/register',asyncHandler(page.register));
+pageRouter.post('/auth/register',
+  validate(z.object({
+    email:z.string().email(),
+    password:z.string().min(8),
+    username:z.string().min(3).max(32).regex(/^[a-zA-Z0-9._-]+$/)
+  })),
+  asyncHandler(async(req,res)=>{
+    await require('../services/auth/auth.service').register(req.body);
+    return res.redirect(
+      '/auth/login?error=' +
+      encodeURIComponent('Registrasi berhasil. Silakan masuk.')
+    );
+  })
+);
+
 pageRouter.get('/auth/forgot-password',asyncHandler(page.forgotPassword));
 pageRouter.get('/auth/reset-password',asyncHandler(page.resetPassword));
 pageRouter.get('/auth/callback',asyncHandler(page.authCallback));
@@ -40,7 +55,7 @@ pageRouter.get('/payment/:id',requireAuth,asyncHandler(page.paymentStatus));
 pageRouter.get('/delivery',requireAuth,asyncHandler(page.delivery));
 
 const owner=express.Router(); owner.use(requireAuth,requireOwner);
-const ownerSections=['dashboard','products','categories','orders','payments','deposits','users','tickets','activity','services','settings','maintenance','notifications','reports','security','faq','information','refunds'];
+const ownerSections=['dashboard','products','categories','orders','payments','deposits','users','roles','tickets','messages','services','information','faq','notifications','maintenance','storage','activity','login-history','reports','top-orders','security','refunds','settings','system'];
 for(const s of ownerSections){ owner.get('/'+s,asyncHandler(page.ownerPage(s))); }
 owner.get('/products/create',(req,res)=>res.redirect('/owner/products?create=1'));
 owner.get('/',asyncHandler(page.ownerPage('dashboard')));

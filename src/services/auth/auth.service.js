@@ -11,14 +11,14 @@ async function register({email,password,username}){
 }
 async function login({email,password},{ip,userAgent}={}){
   const {data,error}=await supabase().auth.signInWithPassword({email,password});
-  if(error){ await query("insert into login_history(user_id,email,ip,device,browser,status,created_at) values(null,$1,$2,$3,$4,'FAILED',now())",[email,ip||null,'Unknown',userAgent||null]).catch(()=>{}); throw Object.assign(new Error('Email atau password tidak valid.'),{status:401,code:'INVALID_CREDENTIALS',expose:true}); }
+  if(error){ await query("insert into login_history(user_id,device,browser,masked_ip,status,created_at) values(null,$1,$2,$3,'FAILED',now())",['Unknown',userAgent||null,ip||null]).catch(()=>{}); throw Object.assign(new Error('Email atau password tidak valid.'),{status:401,code:'INVALID_CREDENTIALS',expose:true}); }
   const profile=await profiles.findById(data.user.id);
-  if(profile?.status==='BANNED'){ await query("insert into login_history(user_id,email,ip,device,browser,status,created_at) values($1,$2,$3,$4,$5,'FAILED',now())",[data.user.id,email,ip||null,'Unknown',userAgent||null]).catch(()=>{}); throw Object.assign(new Error('Akun dinonaktifkan.'),{status:403,code:'ACCOUNT_BANNED',expose:true}); }
-  if(profile?.status==='SUSPENDED'){ await query("insert into login_history(user_id,email,ip,device,browser,status,created_at) values($1,$2,$3,$4,$5,'FAILED',now())",[data.user.id,email,ip||null,'Unknown',userAgent||null]).catch(()=>{}); throw Object.assign(new Error('Akun sedang ditangguhkan.'),{status:403,code:'ACCOUNT_SUSPENDED',expose:true}); }
+  if(profile?.status==='BANNED'){ await query("insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",[data.user.id,'Unknown',userAgent||null,ip||null]).catch(()=>{}); throw Object.assign(new Error('Akun dinonaktifkan.'),{status:403,code:'ACCOUNT_BANNED',expose:true}); }
+  if(profile?.status==='SUSPENDED'){ await query("insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",[data.user.id,'Unknown',userAgent||null,ip||null]).catch(()=>{}); throw Object.assign(new Error('Akun sedang ditangguhkan.'),{status:403,code:'ACCOUNT_SUSPENDED',expose:true}); }
   if(!profile) await profiles.create({id:data.user.id,username:data.user.email.split('@')[0].slice(0,32),email:data.user.email});
   await query('update profiles set last_login_at=now() where id=$1',[data.user.id]);
   await query('insert into wallets(user_id) values($1) on conflict do nothing',[data.user.id]);
-  await query("insert into login_history(user_id,email,ip,device,browser,status,created_at) values($1,$2,$3,$4,$5,'SUCCESS',now())",[data.user.id,email,ip||null,'Unknown',userAgent||null]);
+  await query("insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'SUCCESS',now())",[data.user.id,'Unknown',userAgent||null,ip||null]);
   return data;
 }
 async function logout(){ try{await supabase().auth.signOut();}catch{} }

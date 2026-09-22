@@ -1,1 +1,1 @@
-<div class="empty-state"><div class="empty-icon"><%- icon('package') %></div><h3><%= title %></h3><p><%= description %></p><% if(cta){ %><a class="button button-secondary button-small" href="<%= cta %>"><%= ctaText || 'Kembali' %></a><% } %></div>
+<div class="empty-state"><div class="empty-icon"><%- icon('package') %></div><h3><%= title %></h3><p><%= description %></p><% if(typeof cta !== 'undefined' && cta){ %><a class="button button-secondary button-small" href="<%= cta %>"><%= (typeof ctaText !== 'undefined' && ctaText) ? ctaText : 'Kembali' %></a><% } %></div>

@@ -9,6 +9,7 @@ function securityHeaders(req,res,next){ res.setHeader('Permissions-Policy','came
 function csrfMiddleware(req,res,next){
   const safe=['GET','HEAD','OPTIONS'];
   const token=csrfForSession(req.session || {});
+  req.csrfToken = () => token;
   res.locals.csrfToken=token;
   if (!safe.includes(req.method) && req.path !== '/api/payment/webhook') {
     const sent=req.get('x-csrf-token') || req.body?._csrf;

@@ -3,7 +3,7 @@ function periodRange(period='30d'){const now=new Date();if(period==='today'){con
 async function dashboard(){ const r=await query(`select json_build_object('users',(select count(*) from profiles where deleted_at is null),'orders',(select count(*) from orders),'revenue',(select coalesce(sum(total),0) from orders where status in ('PAID','PROCESSING','COMPLETED')),'deposit',(select coalesce(sum(amount),0) from deposits where status='SUCCESS'),'products',(select count(*) from products where status!='ARCHIVED'),'tickets',(select count(*) from tickets where status!='CLOSED'),'ordersToday',(select count(*) from orders where created_at::date=current_date),'revenueToday',(select coalesce(sum(total),0) from orders where created_at::date=current_date and status in ('PAID','PROCESSING','COMPLETED')),'depositToday',(select coalesce(sum(amount),0) from deposits where created_at::date=current_date and status='SUCCESS'),'newUsersToday',(select count(*) from profiles where created_at::date=current_date)) as data`); return r.rows[0].data; }
 async function periodAnalytics(from,to){ const [daily,status,top]=await Promise.all([
   query(`with days as (select generate_series(date_trunc('day',$1::timestamptz),date_trunc('day',$2::timestamptz),interval '1 day') as day)
-    select d.day::date day,
+    select d.day::date AS day,
       coalesce(count(o.id) filter(where o.status in ('PAID','PROCESSING','COMPLETED')),0)::int completed_orders,
       coalesce(sum(o.total) filter(where o.status in ('PAID','PROCESSING','COMPLETED')),0) revenue,
       count(o.id)::int orders,

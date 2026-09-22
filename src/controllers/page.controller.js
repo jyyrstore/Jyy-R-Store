@@ -74,6 +74,7 @@ function ownerPage(section){
       else if(section==='orders'){ data.items=await require('../repositories/orders.repository').adminList(req.query); }
       else if(section==='payments'){ data.items=await require('../repositories/payments.repository').list(req.query); }
       else if(section==='deposits'){ data.items=await require('../repositories/deposits.repository').adminList(req.query); }
+      else if(section==='refunds'){ data.items=await require('../repositories/refunds.repository').list(); }
       else if(section==='users'){ data.items=await require('../repositories/profiles.repository').list(req.query); }
       else if(section==='roles'){ data.items=await require('../repositories/roles.repository').list(); }
       else if(section==='messages'){ data.items=await require('../repositories/messages.repository').listAll(); }
