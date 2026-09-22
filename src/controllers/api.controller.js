@@ -320,6 +320,16 @@ async function ownerUploadComplete(req,res){
     });
   }
 
+  const actualFileInfo=await storage.fileInfo(expectedBucket,path);
+  const actualFileSize=Number(actualFileInfo?.size||0);
+
+  if(!Number.isSafeInteger(actualFileSize)||actualFileSize!==fileSize){
+    await storage.remove(expectedBucket,path).catch(()=>{});
+    throw Object.assign(new Error('Ukuran file di Storage tidak cocok dengan ukuran upload.'),{
+      status:400,code:'UPLOAD_SIZE_MISMATCH',expose:true
+    });
+  }
+
   try{
     if(contentType==='THUMBNAIL'){
       const updated=await repo.update(productId,{thumbnail_path:path});

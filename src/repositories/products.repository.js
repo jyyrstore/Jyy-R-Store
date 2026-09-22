@@ -1,6 +1,18 @@
 const { query, withTransaction } = require('../config/database');
+
+function safeIntRange(value,fallback,min=0,max=1000000){
+  const n=Number(value);
+  if(!Number.isSafeInteger(n)) return fallback;
+  return Math.max(min,Math.min(max,n));
+}
 function filters({search='',category='',sort='newest',minPrice=null,maxPrice=null,status='PUBLISHED'}){ const args=[status,search||'',category||'',minPrice==null?null:Number(minPrice),maxPrice==null?null:Number(maxPrice)]; let order='p.created_at desc'; if(sort==='popular') order='p.purchase_count desc,p.created_at desc'; if(sort==='price_asc') order='p.price asc,p.created_at desc'; if(sort==='price_desc') order='p.price desc,p.created_at desc'; return {args,where:`p.status=$1 and ($2='' or p.name ilike '%'||$2||'%' or p.description ilike '%'||$2||'%') and ($3='' or c.slug=$3) and ($4::numeric is null or p.price >= $4::numeric) and ($5::numeric is null or p.price <= $5::numeric)`,order}; }
-async function list(opts={}){ const f=filters(opts); const limit=Math.min(100,Number(opts.limit||20)); const offset=Number(opts.offset||0); const sql=`select p.*,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`; return (await query(sql,f.args)).rows; }
+async function list(opts={}){
+  const f=filters(opts);
+  const limit=safeIntRange(opts.limit,20,1,100);
+  const offset=safeIntRange(opts.offset,0,0,1000000);
+  const sql=`select p.*,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
+  return (await query(sql,f.args)).rows;
+}
 async function adminList({search='',status='',sort='newest',limit=100,offset=0}={}){ let where=[],args=[]; if(search){args.push(`%${search}%`);where.push(`(p.name ilike $${args.length} or p.slug ilike $${args.length})`)} if(status){args.push(status);where.push(`p.status=$${args.length}`)} else { where.push(`p.status <> 'ARCHIVED'`) } let order='p.created_at desc'; if(sort==='popular') order='p.purchase_count desc,p.created_at desc'; if(sort==='price_asc') order='p.price asc,p.created_at desc'; if(sort==='price_desc') order='p.price desc,p.created_at desc'; args.push(Math.min(100,Number(limit||100))); args.push(Number(offset||0)); return (await query(`select p.*,c.name category_name,c.slug category_slug,coalesce((select count(*) from product_contents pc where pc.product_id=p.id),0)::int content_count from products p left join categories c on c.id=p.category_id where ${where.join(' and ')} order by ${order} limit $${args.length-1} offset $${args.length}`,args)).rows; }
 async function count(opts={}){ const f=filters(opts); return Number((await query(`select count(*)::int count from products p left join categories c on c.id=p.category_id where ${f.where}`,f.args)).rows[0].count); }
 async function findBySlug(slug){ return (await query(`select p.*,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where p.slug=$1`,[slug])).rows[0]||null; }

@@ -208,7 +208,7 @@ ownerApi.post('/products/:id/unpublish',asyncHandler(api.ownerController.product
 ownerApi.post('/products/:id/archive',asyncHandler(api.ownerController.productArchive));
 ownerApi.post('/products/:id/duplicate',asyncHandler(api.ownerController.productDuplicate));
 ownerApi.delete('/products/:id/delete',asyncHandler(api.ownerController.productDelete));
-ownerApi.post('/products/:id/content',validate(z.object({type:z.enum(['FILE','IMAGE','VIDEO','AUDIO','TEXT','LINK']),title:z.string().min(1).max(160),description:z.string().max(2000).optional(),text_content:z.string().max(50000).optional(),url:z.string().url().optional(),sort_order:z.coerce.number().int().min(0).max(10000).optional(),is_preview:z.boolean().optional(),access_type:z.enum(['PUBLIC','PREVIEW','PURCHASED']).optional()})),asyncHandler(api.ownerController.productContent));ownerApi.get('/products/:id/content',asyncHandler(api.ownerController.productContents));
+ownerApi.post('/products/:id/content',validate(ownerProductContentSchema),asyncHandler(api.ownerController.productContent));ownerApi.get('/products/:id/content',asyncHandler(api.ownerController.productContents));
 ownerApi.delete('/products/:id/content/:contentId',asyncHandler(api.ownerController.productContentDelete));
 ownerApi.post('/products/:id/upload-init',validate(z.object({
   contentType:z.enum(['THUMBNAIL','FILE','IMAGE','VIDEO','AUDIO']),

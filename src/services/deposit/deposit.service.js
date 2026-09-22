@@ -1,5 +1,20 @@
 const { withTransaction, query }=require('../../config/database'); const deposits=require('../../repositories/deposits.repository'); const payments=require('../../repositories/payments.repository'); const notifications=require('../../repositories/notification.repository'); const provider=()=>require('../../config/payment').paymentProvider(); const {loadEnv}=require('../../config/env'); const {badRequest}=require('../../utils/error');
 async function create(userId,{amount,idempotencyKey,returnUrl}){ if(!Number.isInteger(amount)||amount<1000) throw badRequest('INVALID_DEPOSIT','Minimum deposit adalah Rp 1.000.'); const existing=idempotencyKey?(await query('select * from deposits where user_id=$1 and idempotency_key=$2',[userId,idempotencyKey])).rows[0]:null; if(existing) return {deposit:existing,duplicate:true}; return withTransaction(async(client)=>{ const deposit=await deposits.create({user_id:userId,amount,provider:loadEnv().PAYMENT_PROVIDER||'generic-json',status:'PENDING',idempotency_key:idempotencyKey||null,expires_at:new Date(Date.now()+30*60*1000)},client); return {deposit,createProviderPayment:async()=>{}}; }); }
-async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){ const made=await create(userId,{amount,idempotencyKey,returnUrl}); if(made.duplicate) return made; try{ const providerPayment=await provider().createPayment({orderId:`DEPOSIT-${made.deposit.id}`,amount,customer:{userId},returnUrl}); const payment=await payments.create({order_id:null,user_id:userId,provider:loadEnv().PAYMENT_PROVIDER||'generic-json',reference:providerPayment.reference,amount,status:'PENDING',raw_reference:providerPayment.raw,expires_at:providerPayment.expiresAt}); await query('update deposits set payment_id=$2,reference=$3 where id=$1',[made.deposit.id,payment.id,providerPayment.reference]); return {deposit:{...made.deposit,reference:providerPayment.reference},payment,paymentUrl:providerPayment.paymentUrl}; }catch(e){await query("update deposits set status='FAILED' where id=$1",[made.deposit.id]); throw e;}}
+async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
+  const paymentProvider=provider();
+
+  if(typeof paymentProvider.configured==='function'&&!paymentProvider.configured()){
+    throw Object.assign(new Error('Payment provider belum dikonfigurasi.'),{
+      status:503,
+      code:'PAYMENT_PROVIDER_NOT_CONFIGURED',
+      expose:true
+    });
+  } const made=await create(userId,{amount,idempotencyKey,returnUrl}); if(made.duplicate) return made; try{ const providerPayment=await paymentProvider.createPayment({
+    orderId:`DEPOSIT-${made.deposit.id}`,
+    amount,
+    customer:{userId},
+    returnUrl,
+    idempotencyKey
+  }); const payment=await payments.create({order_id:null,user_id:userId,provider:loadEnv().PAYMENT_PROVIDER||'generic-json',reference:providerPayment.reference,amount,status:'PENDING',raw_reference:{...(providerPayment.raw||{}),paymentUrl:providerPayment.paymentUrl||null},idempotency_key:idempotencyKey,expires_at:providerPayment.expiresAt}); await query('update deposits set payment_id=$2,reference=$3,updated_at=now() where id=$1',[made.deposit.id,payment.id,providerPayment.reference]); return {deposit:{...made.deposit,reference:providerPayment.reference},payment,paymentUrl:providerPayment.paymentUrl}; }catch(e){await query("update deposits set status='FAILED' where id=$1",[made.deposit.id]); throw e;}}
 async function list(userId){return deposits.listForUser(userId)}
 module.exports={createAndPay,list};

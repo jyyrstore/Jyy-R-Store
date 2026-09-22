@@ -29,6 +29,7 @@ async function createApp() {
   initEmail(env);
 
   const app = express();
+  app.disable('x-powered-by');
   app.set('trust proxy', 1);
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));

@@ -63,7 +63,16 @@ function resumableUploadUrl(){
 
   return `https://${projectRef}.storage.supabase.co/storage/v1/upload/resumable`;
 }
+async function fileInfo(bucket,path){
+  const {data,error}=await supabase()
+    .storage
+    .from(bucket)
+    .info(path);
+
+  if(error) throw error;
+  return data || null;
+}
 async function remove(bucket, path) { const { error } = await supabase().storage.from(bucket).remove([path]); if (error) throw error; }
 function publicUrl(bucket, path) { return supabase().storage.from(bucket).getPublicUrl(path).data.publicUrl; }
 async function signedUrl(bucket, path, expiresIn) { const { data, error } = await supabase().storage.from(bucket).createSignedUrl(path, expiresIn); if (error) throw error; return data.signedUrl; }
-module.exports = { initStorage, uploadBuffer, createSignedUploadUrl, fileExists, resumableUploadUrl, remove, publicUrl, signedUrl, getBucket };
+module.exports = { initStorage, uploadBuffer, createSignedUploadUrl, fileExists, fileInfo, resumableUploadUrl, remove, publicUrl, signedUrl, getBucket };
