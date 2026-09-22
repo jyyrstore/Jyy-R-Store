@@ -15,6 +15,14 @@ function loadEnv() {
     APP_URL: process.env.APP_URL || 'http://localhost:3000',
     APP_NAME: process.env.APP_NAME || "Jyy'R Store",
     SUPABASE_URL: process.env.SUPABASE_URL || '',
+    SUPABASE_PUBLISHABLE_KEY:
+      process.env.SUPABASE_PUBLISHABLE_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      '',
+    SUPABASE_SECRET_KEY:
+      process.env.SUPABASE_SECRET_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      '',
     SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     DATABASE_URL: process.env.DATABASE_URL || '',
@@ -66,7 +74,12 @@ function loadEnv() {
   };
   const required = ['SESSION_SECRET', 'COOKIE_SECRET', 'CSRF_SECRET'];
   if (nodeEnv === 'production') {
-    required.push('SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL', 'PAYMENT_WEBHOOK_SECRET');
+    required.push(
+      'SUPABASE_URL',
+      'SUPABASE_SECRET_KEY',
+      'DATABASE_URL',
+      'PAYMENT_WEBHOOK_SECRET'
+    );
     const missing = required.filter((key) => !env[key]);
     if (missing.length) throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
   } else if (!env.SESSION_SECRET && !env.ALLOW_INCOMPLETE_DEV_CONFIG) {
