@@ -105,5 +105,21 @@ async function start() {
   }
 }
 
-if (require.main === module || process.env.VERCEL) start();
-module.exports = { createApp };
+let vercelAppPromise;
+
+async function vercelHandler(req, res) {
+  if (!vercelAppPromise) {
+    vercelAppPromise = createApp();
+  }
+
+  const app = await vercelAppPromise;
+  return app(req, res);
+}
+
+if (require.main === module) start();
+
+if (process.env.VERCEL) {
+  module.exports = vercelHandler;
+} else {
+  module.exports = { createApp };
+}
