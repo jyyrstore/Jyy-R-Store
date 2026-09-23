@@ -115,7 +115,7 @@ class XenditProvider{
       .slice(0,50);
 
     const xenditCustomer={
-      reference_id:`JYRUSER${String(customer?.userId||orderId).replace(/[^A-Za-z0-9]/g,'').slice(-32)}`,
+      reference_id:`JYRUSER${String(orderId).replace(/[^A-Za-z0-9]/g,'').slice(-48)}`,
       type:'INDIVIDUAL',
       individual_detail:{
         given_names:givenNames,
