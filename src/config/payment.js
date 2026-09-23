@@ -97,6 +97,40 @@ class XenditProvider{
 
     const auth=Buffer.from(`${this.env.XENDIT_SECRET_KEY}:`).toString('base64');
 
+    const rawGivenNames=String(
+      customer?.givenNames||
+      customer?.username||
+      customer?.email?.split('@')[0]||
+      'Customer'
+    );
+
+    const givenNames=rawGivenNames
+      .normalize('NFKD')
+      .replace(/[^A-Za-z0-9]/g,'')
+      .slice(0,50)||'Customer';
+
+    const rawSurname=String(customer?.surname||'')
+      .normalize('NFKD')
+      .replace(/[^A-Za-z0-9]/g,'')
+      .slice(0,50);
+
+    const xenditCustomer={
+      reference_id:`JYRUSER${String(customer?.userId||orderId).replace(/[^A-Za-z0-9]/g,'').slice(-32)}`,
+      type:'INDIVIDUAL',
+      individual_detail:{
+        given_names:givenNames,
+        ...(rawSurname?{surname:rawSurname}:{})
+      }
+    };
+
+    if(customer?.email){
+      xenditCustomer.email=String(customer.email).slice(0,50);
+    }
+
+    if(customer?.mobileNumber){
+      xenditCustomer.mobile_number=String(customer.mobileNumber);
+    }
+
     const body={
       reference_id:String(orderId),
       session_type:'PAY',
@@ -105,10 +139,7 @@ class XenditProvider{
       currency:'IDR',
       country:'ID',
       locale:'id',
-      customer:{
-        reference_id:`JYRUSER${String(customer?.userId||orderId).replace(/[^A-Za-z0-9]/g,'').slice(-32)}`,
-        type:'INDIVIDUAL'
-      },
+      customer:xenditCustomer,
       success_return_url:returnUrl,
       cancel_return_url:this.env.XENDIT_CANCEL_RETURN_URL||returnUrl,
       description:`Jyy'R Store payment ${orderId}`,

@@ -4,6 +4,7 @@ const delivery=require('../../repositories/delivery.repository');
 const notifications=require('../../repositories/notification.repository');
 const { badRequest, notFound, forbidden }=require('../../utils/error');
 const {loadEnv}=require('../../config/env');
+const profiles=require('../../repositories/profiles.repository');
 
 const PAYMENT_CREATABLE_ORDER_STATUSES=new Set(['PENDING']);
 
@@ -17,6 +18,19 @@ const PAYMENT_TRANSITIONS={
 };
 
 async function createForOrder(userId,order,returnUrl){
+  const profile=await profiles.findById(userId).catch(()=>null);
+
+  const customerName=String(
+    profile?.full_name||
+    profile?.display_name||
+    profile?.name||
+    profile?.username||
+    profile?.email?.split('@')[0]||
+    'Customer'
+  );
+
+  const customerEmail=profile?.email||null;
+
   return withTransaction(async(client)=>{
     const locked=(await client.query('select * from orders where id=$1 for update',[order.id])).rows[0];
     if(!locked) throw notFound('Order not found.');
@@ -42,7 +56,11 @@ async function createForOrder(userId,order,returnUrl){
     const result=await provider().createPayment({
       orderId:locked.id,
       amount:locked.total,
-      customer:{userId},
+      customer:{
+        userId,
+        givenNames:customerName,
+        email:customerEmail
+      },
       returnUrl,
       idempotencyKey
     });
