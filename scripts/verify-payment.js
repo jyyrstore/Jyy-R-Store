@@ -1,1 +1,39 @@
-const {loadEnv}=require('../src/config/env');const {initPaymentProvider}=require('../src/config/payment');(async()=>{const env=loadEnv();initPaymentProvider(env);console.log(`PAYMENT_PROVIDER = ${env.PAYMENT_PROVIDER}`);console.log(`PAYMENT_API_BASE_URL = ${env.PAYMENT_API_BASE_URL?'configured':'missing'}`);console.log(`PAYMENT_WEBHOOK_SECRET = ${env.PAYMENT_WEBHOOK_SECRET?'configured':'missing'}`);if(!env.PAYMENT_API_BASE_URL||!env.PAYMENT_API_KEY||!env.PAYMENT_WEBHOOK_SECRET)process.exitCode=1})().catch(e=>{console.error('Payment verification failed:',e.message);process.exitCode=1});
+const {loadEnv}=require('../src/config/env');
+const {initPaymentProvider}=require('../src/config/payment');
+
+(async()=>{
+  const env=loadEnv();
+  initPaymentProvider(env);
+
+  console.log(`PAYMENT_PROVIDER = ${env.PAYMENT_PROVIDER}`);
+  console.log(`PAYMENT_ENVIRONMENT = ${env.PAYMENT_ENVIRONMENT}`);
+
+  if(String(env.PAYMENT_PROVIDER||'').toLowerCase()==='xendit'){
+    console.log(`XENDIT_API_BASE_URL = ${env.XENDIT_API_BASE_URL?'configured':'missing'}`);
+    console.log(`XENDIT_SECRET_KEY = ${env.XENDIT_SECRET_KEY?'configured':'missing'}`);
+    console.log(`XENDIT_WEBHOOK_TOKEN = ${env.XENDIT_WEBHOOK_TOKEN?'configured':'missing'}`);
+    console.log(`XENDIT_RETURN_URL = ${env.XENDIT_RETURN_URL?'configured':'missing'}`);
+
+    if(
+      !env.XENDIT_SECRET_KEY ||
+      !env.XENDIT_WEBHOOK_TOKEN ||
+      !env.XENDIT_RETURN_URL
+    ){
+      process.exitCode=1;
+    }
+  }else{
+    console.log(`PAYMENT_API_BASE_URL = ${env.PAYMENT_API_BASE_URL?'configured':'missing'}`);
+    console.log(`PAYMENT_WEBHOOK_SECRET = ${env.PAYMENT_WEBHOOK_SECRET?'configured':'missing'}`);
+
+    if(
+      !env.PAYMENT_API_BASE_URL ||
+      !env.PAYMENT_API_KEY ||
+      !env.PAYMENT_WEBHOOK_SECRET
+    ){
+      process.exitCode=1;
+    }
+  }
+})().catch(e=>{
+  console.error('Payment verification failed:',e.message);
+  process.exitCode=1;
+});

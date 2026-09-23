@@ -250,6 +250,7 @@ ownerApi.get('/activity',asyncHandler(api.ownerController.activity)); ownerApi.g
 apiRouter.use('/owner',ownerApi);
 
 const webhookRouter=express.Router();
-webhookRouter.post('/',express.raw({type:'application/json',limit:'1mb'}),asyncHandler(async(req,res)=>{const raw=req.body;const signature=req.headers['x-signature']||req.headers[loadEnv().PAYMENT_WEBHOOK_SIGNATURE_HEADER.toLowerCase()];let payload;try{payload=JSON.parse(raw.toString('utf8'))}catch{throw Object.assign(new Error('Invalid webhook JSON'),{status:400,code:'INVALID_WEBHOOK_JSON',expose:true})}const out=await require('../services/payment/payment.service').processWebhook(raw,signature,payload);return ok(res,out)}));
+webhookRouter.post('/',express.raw({type:'application/json',limit:'1mb'}),asyncHandler(async(req,res)=>{const raw=req.body;const configuredHeader=loadEnv().PAYMENT_WEBHOOK_SIGNATURE_HEADER.toLowerCase();
+const signature=req.headers['x-callback-token']||req.headers[configuredHeader];let payload;try{payload=JSON.parse(raw.toString('utf8'))}catch{throw Object.assign(new Error('Invalid webhook JSON'),{status:400,code:'INVALID_WEBHOOK_JSON',expose:true})}const out=await require('../services/payment/payment.service').processWebhook(raw,signature,payload);return ok(res,out)}));
 
 module.exports={apiRouter,pageRouter,webhookRouter};

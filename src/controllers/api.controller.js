@@ -64,7 +64,20 @@ const orderController={
 };
 const paymentController={
  create:async(req,res)=>{const order=await require('../repositories/orders.repository').findForUser(req.body.orderId,req.user.id);if(!order)throw Object.assign(new Error('Order not found.'),{status:404,code:'ORDER_NOT_FOUND',expose:true});return ok(res,await payment.createForOrder(req.user.id,order,req.body.returnUrl),201)},
- status:async(req,res)=>ok(res,await payment.getStatus(req.params.id,req.user.id))
+ status:async(req,res)=>{
+    const p=await payment.getStatus(req.params.id,req.user.id);
+    return ok(res,{
+      id:p.id,
+      provider:p.provider,
+      reference:p.reference,
+      amount:Number(p.amount),
+      status:p.status,
+      expires_at:p.expires_at||null,
+      paid_at:p.paid_at||null,
+      created_at:p.created_at||null,
+      updated_at:p.updated_at||null
+    });
+  }
 };
 const depositController={
  create:async(req,res)=>ok(res,await deposit.createAndPay(req.user.id,{amount:Number(req.body.amount),idempotencyKey:req.body.idempotencyKey||crypto.randomUUID(),returnUrl:req.body.returnUrl}),201),

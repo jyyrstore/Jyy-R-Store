@@ -21,7 +21,8 @@
     "verify:db": "node scripts/verify-database.js",
     "verify:storage": "node scripts/verify-storage.js",
     "verify:payment": "node scripts/verify-payment.js",
-    "migrate": "node scripts/migrate.js"
+    "migrate": "node scripts/migrate.js",
+    "test:security": "node --test tests/security/*.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.116.0",

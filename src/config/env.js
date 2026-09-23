@@ -41,9 +41,14 @@ function loadEnv() {
     PAYMENT_API_KEY: process.env.PAYMENT_API_KEY || '',
     PAYMENT_SECRET_KEY: process.env.PAYMENT_SECRET_KEY || '',
     PAYMENT_WEBHOOK_SECRET: process.env.PAYMENT_WEBHOOK_SECRET || '',
-    PAYMENT_WEBHOOK_SIGNATURE_HEADER: process.env.PAYMENT_WEBHOOK_SIGNATURE_HEADER || 'x-signature',
+    PAYMENT_WEBHOOK_SIGNATURE_HEADER: process.env.PAYMENT_WEBHOOK_SIGNATURE_HEADER || (String(process.env.PAYMENT_PROVIDER||'').toLowerCase()==='xendit' ? 'x-callback-token' : 'x-signature'),
     PAYMENT_WEBHOOK_SIGNATURE_ALGORITHM: process.env.PAYMENT_WEBHOOK_SIGNATURE_ALGORITHM || 'sha256',
     PAYMENT_ENVIRONMENT: process.env.PAYMENT_ENVIRONMENT || 'sandbox',
+    XENDIT_API_BASE_URL: process.env.XENDIT_API_BASE_URL || 'https://api.xendit.co',
+    XENDIT_SECRET_KEY: process.env.XENDIT_SECRET_KEY || '',
+    XENDIT_WEBHOOK_TOKEN: process.env.XENDIT_WEBHOOK_TOKEN || '',
+    XENDIT_RETURN_URL: process.env.XENDIT_RETURN_URL || '',
+    XENDIT_CANCEL_RETURN_URL: process.env.XENDIT_CANCEL_RETURN_URL || '',
     EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || 'smtp',
     EMAIL_FROM: process.env.EMAIL_FROM || '',
     EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "Jyy'R Store",
@@ -78,9 +83,13 @@ function loadEnv() {
     required.push(
       'SUPABASE_URL',
       'SUPABASE_SECRET_KEY',
-      'DATABASE_URL',
-      'PAYMENT_WEBHOOK_SECRET'
+      'DATABASE_URL'
     );
+    if(String(env.PAYMENT_PROVIDER||'').toLowerCase()==='xendit'){
+      required.push('XENDIT_SECRET_KEY','XENDIT_WEBHOOK_TOKEN','XENDIT_RETURN_URL');
+    }else{
+      required.push('PAYMENT_WEBHOOK_SECRET');
+    }
     const missing = required.filter((key) => !env[key]);
     if (missing.length) throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
   } else if (!env.SESSION_SECRET && !env.ALLOW_INCOMPLETE_DEV_CONFIG) {
