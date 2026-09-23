@@ -38,6 +38,25 @@ async function update(id,data){
   const current=await products.findById(id);
   if(!current) throw notFound('Product not found.');
 
+  if(Object.prototype.hasOwnProperty.call(data,'stock')){
+    const nextStock=Number(data.stock);
+    const reservedStock=Number(current.reserved_stock||0);
+
+    if(!Number.isSafeInteger(nextStock)||nextStock<0){
+      throw badRequest(
+        'INVALID_STOCK',
+        'Stock produk harus berupa bilangan bulat >= 0.'
+      );
+    }
+
+    if(nextStock<reservedStock){
+      throw badRequest(
+        'INVALID_STOCK',
+        'Stock tidak boleh lebih kecil dari reserved_stock.'
+      );
+    }
+  }
+
   let candidate=await uniqueSlug(data.slug||data.name||current.slug,id);
 
   for(let attempt=0;attempt<5;attempt++){

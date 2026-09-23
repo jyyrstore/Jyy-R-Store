@@ -73,6 +73,19 @@ async function fileInfo(bucket,path){
   return data || null;
 }
 async function remove(bucket, path) { const { error } = await supabaseAdmin().storage.from(bucket).remove([path]); if (error) throw error; }
+async function copy(bucket, fromPath, toPath) {
+  const storageBucket = supabaseAdmin().storage.from(bucket);
+
+  if (typeof storageBucket.copy !== 'function') {
+    throw new Error('Supabase Storage copy API is unavailable.');
+  }
+
+  const { data, error } = await storageBucket.copy(fromPath, toPath);
+
+  if (error) throw error;
+
+  return data;
+}
 function publicUrl(bucket, path) { return supabaseAdmin().storage.from(bucket).getPublicUrl(path).data.publicUrl; }
 async function signedUrl(bucket, path, expiresIn) { const { data, error } = await supabaseAdmin().storage.from(bucket).createSignedUrl(path, expiresIn); if (error) throw error; return data.signedUrl; }
-module.exports = { initStorage, uploadBuffer, createSignedUploadUrl, fileExists, fileInfo, resumableUploadUrl, remove, publicUrl, signedUrl, getBucket };
+module.exports = { initStorage, uploadBuffer, createSignedUploadUrl, fileExists, fileInfo, resumableUploadUrl, remove, copy, publicUrl, signedUrl, getBucket };

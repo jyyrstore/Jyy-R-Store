@@ -91,7 +91,7 @@ async function getStatus(id,userId){
 async function processWebhook(rawBody,signature,payload){
   const ok=provider().verifyWebhook(rawBody,signature);
   if(!ok) throw Object.assign(new Error('Invalid webhook signature'),{status:401,code:'WEBHOOK_SIGNATURE_INVALID',expose:true});
-  const parsed=provider().parseWebhook(payload);
+  const parsed=provider().parseWebhook(payload,rawBody);
   if(!parsed.eventId||!parsed.reference)throw badRequest('INVALID_WEBHOOK','Webhook payload is incomplete.');
   return withTransaction(async(client)=>{
     const prior=(await client.query('select id from payment_events where provider_event_id=$1',[parsed.eventId])).rows[0];

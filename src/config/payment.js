@@ -38,10 +38,14 @@ class GenericJsonProvider {
     const a = Buffer.from(expected); const b = Buffer.from(String(signature));
     return a.length === b.length && crypto.timingSafeEqual(a, b);
   }
-  parseWebhook(payload) {
+  parseWebhook(payload, rawBody) {
     const p = payload || {};
+    const fallbackEventId = rawBody !== undefined && rawBody !== null
+      ? `sha256:${crypto.createHash('sha256').update(rawBody).digest('hex')}`
+      : '';
+
     return {
-      eventId: String(p.eventId || p.id || p.reference || ''),
+      eventId: String(p.eventId || p.id || fallbackEventId),
       orderId: p.orderId ? String(p.orderId) : null,
       reference: p.reference ? String(p.reference) : '',
       amount: Number(p.amount || 0),

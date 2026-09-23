@@ -106,7 +106,7 @@ const ownerController={
  productDelete:async(req,res)=>{const p=await require('../repositories/products.repository').remove(req.params.id);if(!p)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});await require('../services/audit.service').record(req,{action:'DELETE_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
  productPublish:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat dipublish.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});if(!current.thumbnail_path)throw Object.assign(new Error('Tambahkan thumbnail sebelum publish produk.'),{status:400,code:'PRODUCT_THUMBNAIL_REQUIRED',expose:true});const contents=await repo.contents(req.params.id);if(!contents.length)throw Object.assign(new Error('Tambahkan minimal satu content sebelum publish produk.'),{status:400,code:'PRODUCT_CONTENT_REQUIRED',expose:true});const invalid=contents.find(c=>(['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)&&!c.storage_path)||(c.type==='TEXT'&&!String(c.text_content||'').trim())||(c.type==='LINK'&&!String(c.url||'').trim()));if(invalid)throw Object.assign(new Error('Ada content yang belum lengkap. Pastikan file, text, atau URL sudah benar.'),{status:400,code:'PRODUCT_CONTENT_INVALID',expose:true});const p=await product.update(req.params.id,{status:'PUBLISHED'});await require('../services/audit.service').record(req,{action:'PUBLISH_PRODUCT',entityType:'product',entityId:p.id,metadata:{contentCount:contents.length}});return ok(res,p)},
  productContent:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat diubah.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});const p=await repo.addContent({...req.body,product_id:req.params.id});await require('../services/audit.service').record(req,{action:'CREATE_PRODUCT_CONTENT',entityType:'product_content',entityId:p.id,metadata:{productId:req.params.id,type:p.type}});return ok(res,p,201)},productContents:async(req,res)=>ok(res,await require('../repositories/products.repository').contents(req.params.id)),
- productContentDelete:async(req,res)=>{const repo=require('../repositories/products.repository');const deleted=await repo.deleteContent(req.params.contentId,req.params.id);if(!deleted)throw Object.assign(new Error('Content tidak ditemukan pada product tersebut.'),{status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true});await require('../services/audit.service').record(req,{action:'DELETE_PRODUCT_CONTENT',entityType:'product_content',entityId:req.params.contentId,metadata:{productId:req.params.id}});return ok(res,{})},
+ productContentDelete:async(req,res)=>{const repo=require('../repositories/products.repository');const deleted=await repo.deleteContent(req.params.contentId,req.params.id);if(!deleted)throw Object.assign(new Error('Content tidak ditemukan pada product tersebut.'),{status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true});if(deleted.storage_path){const ref=(await query('select 1 from product_contents where storage_path=$1 limit 1',[deleted.storage_path])).rowCount;if(!ref)await storage.remove(loadEnv().PRIVATE_PRODUCT_BUCKET,deleted.storage_path).catch(()=>{});}await require('../services/audit.service').record(req,{action:'DELETE_PRODUCT_CONTENT',entityType:'product_content',entityId:req.params.contentId,metadata:{productId:req.params.id}});return ok(res,{})},
  categories:async(req,res)=>ok(res,await categories.list(false)),
  categoryCreate:async(req,res)=>ok(res,await categories.create({...req.body,slug:makeSlug(req.body.slug||req.body.name)}),201),
  categoryUpdate:async(req,res)=>ok(res,await categories.update(req.params.id,{...req.body,slug:makeSlug(req.body.slug||req.body.name)})),
@@ -448,7 +448,22 @@ async function ownerUploadComplete(req,res){
 
   try{
     if(contentType==='THUMBNAIL'){
+      const previousThumbnailPath=current.thumbnail_path||null;
       const updated=await repo.update(productId,{thumbnail_path:path});
+
+      if(previousThumbnailPath && previousThumbnailPath!==path){
+        const ref=(await query(
+          'select 1 from products where thumbnail_path=$1 limit 1',
+          [previousThumbnailPath]
+        )).rowCount;
+
+        if(!ref){
+          await storage.remove(
+            env.PUBLIC_ASSET_BUCKET,
+            previousThumbnailPath
+          ).catch(()=>{});
+        }
+      }
 
       await require('../services/audit.service').record(req,{
         action:'UPLOAD_PRODUCT_THUMBNAIL',
