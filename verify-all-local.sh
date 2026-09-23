@@ -359,6 +359,105 @@ else
 fi
 
 echo
+echo "=== NAVIGATION ICON SCALE ==="
+
+node - <<'NODE'
+const fs = require('fs');
+
+const nav = fs.readFileSync('public/css/navigation.css', 'utf8');
+const responsive = fs.readFileSync('public/css/responsive.css', 'utf8');
+const components = fs.readFileSync('public/css/components.css', 'utf8');
+
+if (!/\.nav-link svg\{width:32px;height:32px;max-width:32px;max-height:32px;min-width:32px;min-height:32px;flex:0 0 32px/.test(nav)) {
+  console.error('❌ Sidebar navigation icon belum 32px atau masih ter-clamp.');
+  process.exit(1);
+}
+
+if (!/\.bottom-item svg\{width:32px;height:32px;max-width:32px;max-height:32px;min-width:32px;min-height:32px;flex:0 0 32px/.test(responsive)) {
+  console.error('❌ Bottom navigation icon belum 32px atau masih ter-clamp.');
+  process.exit(1);
+}
+
+if (!/\.icon\{[^}]*max-width:none;max-height:none/.test(components)) {
+  console.error('❌ Base .icon masih membatasi max-size.');
+  process.exit(1);
+}
+
+console.log('✅ Navigation icons explicitly scalable to 32px');
+NODE
+
+if [ $? -eq 0 ]; then
+  pass "Navigation icon scale"
+else
+  fail "Navigation icon scale"
+fi
+
+echo
+echo "=== STATIC ASSET CACHE-BUSTING ==="
+
+node - <<'NODE'
+const fs = require('fs');
+
+const server = fs.readFileSync('server.js', 'utf8');
+const app = fs.readFileSync('views/app.ejs', 'utf8');
+
+if (!server.includes('VERCEL_GIT_COMMIT_SHA')) {
+  console.error('❌ Asset version belum memakai VERCEL_GIT_COMMIT_SHA.');
+  process.exit(1);
+}
+
+if (!server.includes('app.locals.staticAsset = staticAsset')) {
+  console.error('❌ staticAsset belum tersedia untuk EJS.');
+  process.exit(1);
+}
+
+if (/href="\/css\/[^"]+\.css(?:\?[^"]*)?"/.test(app)) {
+  console.error('❌ Raw CSS reference masih ditemukan.');
+  process.exit(1);
+}
+
+if (/src="\/js\/[^"]+\.js(?:\?[^"]*)?"/.test(app)) {
+  console.error('❌ Raw JS reference masih ditemukan.');
+  process.exit(1);
+}
+
+if (/href="\/favicon\/[^"]+\.svg(?:\?[^"]*)?"/.test(app)) {
+  console.error('❌ Raw favicon reference masih ditemukan.');
+  process.exit(1);
+}
+
+for (const name of [
+  'reset','variables','layout','components','navigation',
+  'store','pages','animations','responsive'
+]) {
+  if (!app.includes("staticAsset('/css/" + name + ".css')")) {
+    console.error('❌ CSS tidak memakai staticAsset: ' + name);
+    process.exit(1);
+  }
+}
+
+for (const name of ['app','api','navigation','modal','toast','pages']) {
+  if (!app.includes("staticAsset('/js/" + name + ".js')")) {
+    console.error('❌ JS tidak memakai staticAsset: ' + name);
+    process.exit(1);
+  }
+}
+
+if (!app.includes("staticAsset('/favicon/favicon.svg')")) {
+  console.error('❌ Favicon tidak memakai staticAsset.');
+  process.exit(1);
+}
+
+console.log('✅ Centralized static asset cache-busting');
+NODE
+
+if [ $? -eq 0 ]; then
+  pass "Static asset cache-busting"
+else
+  fail "Static asset cache-busting"
+fi
+
+echo
 echo "=== SERVICE WORKER REFERENCES ==="
 
 if grep -RniE \

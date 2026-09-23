@@ -20,6 +20,43 @@ const { generalRateLimit, sensitiveRateLimit } = require('./src/middleware/secur
 const { icon } = require('./src/utils/icons');
 const { apiRouter, pageRouter, webhookRouter } = require('./src/routes');
 
+const PACKAGE_VERSION = require('./package.json').version;
+
+function resolveAssetVersion() {
+  const candidates = [
+    process.env.VERCEL_GIT_COMMIT_SHA,
+    process.env.VERCEL_DEPLOYMENT_ID,
+    PACKAGE_VERSION
+  ];
+
+  for (const candidate of candidates) {
+    const value = String(candidate || '').trim();
+    if (value) {
+      return value.replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 48);
+    }
+  }
+
+  return 'dev';
+}
+
+const ASSET_VERSION = resolveAssetVersion();
+
+function staticAsset(assetPath) {
+  const value = String(assetPath || '').trim();
+
+  if (
+    !value.startsWith('/') ||
+    value.includes('\n') ||
+    value.includes('\r')
+  ) {
+    throw new Error('Invalid static asset path.');
+  }
+
+  const separator = value.includes('?') ? '&' : '?';
+  return value + separator + 'v=' + encodeURIComponent(ASSET_VERSION);
+}
+
+
 async function createApp() {
   const env = loadEnv();
   await initDatabase(env);
@@ -35,6 +72,8 @@ async function createApp() {
   app.set('views', path.join(__dirname, 'views'));
 
   app.locals.appName = env.APP_NAME;
+  app.locals.assetVersion = ASSET_VERSION;
+  app.locals.staticAsset = staticAsset;
   app.locals.appUrl = env.APP_URL;
   app.locals.icon = icon;
   app.locals.assetUrl = (bucket, filePath) => filePath ? storage.publicUrl(bucket, filePath) : null;
