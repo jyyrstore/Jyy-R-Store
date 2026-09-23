@@ -192,7 +192,7 @@ async function processWebhook(rawBody,signature,payload){
     );
 
     await client.query(
-      'update payments set status=$2,raw_reference=$3,paid_at=case when $2=\'PAID\' then coalesce(paid_at,now()) else paid_at end,updated_at=now() where id=$1',
+      'update payments set status=$2::payment_status,raw_reference=$3,paid_at=case when $2::payment_status=\'PAID\' then coalesce(paid_at,now()) else paid_at end,updated_at=now() where id=$1',
       [payment.id,next,payload]
     );
 
