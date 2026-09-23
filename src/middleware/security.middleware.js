@@ -3,8 +3,10 @@ const {csrfForSession,safeEqual}=require('../config/security');
 const {log}=require('../config/logging');
 const {rateLimit}=require('express-rate-limit');
 const {loadEnv}=require('../config/env');
+const {requestPath}=require('../utils/request-path');
 
 const limiterCache=new Map();
+
 
 const sensitiveApiPrefixes=[
   '/auth',
@@ -18,7 +20,7 @@ const sensitiveApiPrefixes=[
 ];
 
 function isSensitiveApiPath(req){
-  const path=req.path||'';
+  const path=requestPath(req)||'';
   return sensitiveApiPrefixes.some(
     prefix=>path===prefix || path.startsWith(prefix+'/')
   );
@@ -86,7 +88,7 @@ function sharedOrLocalRateLimit(kind){
     standardHeaders:'draft-8',
     legacyHeaders:false,
     skip:req=>
-      req.path==='/api/payment/webhook' ||
+      requestPath(req)==='/api/payment/webhook' ||
       (
         kind==='general' &&
         isSensitiveApiPath(req)
@@ -94,7 +96,7 @@ function sharedOrLocalRateLimit(kind){
   });
 
   return async function sharedLimiter(req,res,next){
-    if(req.path==='/api/payment/webhook'){
+    if(requestPath(req)==='/api/payment/webhook'){
       return next();
     }
 
@@ -196,7 +198,7 @@ function loggingMiddleware(req,res,next){
       {
         requestId:req.id,
         method:req.method,
-        path:req.path,
+        path:requestPath(req),
         status:res.statusCode,
         durationMs:Date.now()-start,
         userId:req.user?.id||null
@@ -252,7 +254,7 @@ function csrfMiddleware(req,res,next){
 
   if(
     !safe.includes(req.method) &&
-    req.path!=='/api/payment/webhook'
+    requestPath(req)!=='/api/payment/webhook'
   ){
     const sent=
       req.get('x-csrf-token') ||

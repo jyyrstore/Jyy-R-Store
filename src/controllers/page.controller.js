@@ -1,3 +1,4 @@
+const {requestPath}=require('../utils/request-path');
 const products = require('../services/product/product.service');
 const categories = require('../repositories/categories.repository');
 const services = require('../services/service/service.service');
@@ -55,7 +56,7 @@ async function servicesPage(req,res,next){try{res.render('app',base(req,{view:'p
 async function topOrder(req,res,next){try{const data=(await analytics.period('30d')).top;res.render('app',base(req,{view:'pages/top-order',items:data}));}catch(e){next(e)}}
 async function faq(req,res,next){try{res.render('app',base(req,{view:'pages/faq',faqs:await faqRepo.listPublic()}));}catch(e){next(e)}}
 async function security(req,res){res.render('app',base(req,{view:'pages/security'}))}
-async function legal(req,res){const titles={privacy:'Privacy Policy',terms:'Terms of Service',refund:'Refund Policy'}; res.render('app',base(req,{view:'pages/legal',legalKey:req.path.slice(1),legalTitle:titles[req.path.slice(1)]||'Policy'}))}
+async function legal(req,res){const titles={privacy:'Privacy Policy',terms:'Terms of Service',refund:'Refund Policy'}; res.render('app',base(req,{view:'pages/legal',legalKey:requestPath(req).slice(1),legalTitle:titles[requestPath(req).slice(1)]||'Policy'}))}
 async function search(req,res,next){try{res.render('app',base(req,{view:'pages/search',q:req.query.q||'',results:null}));}catch(e){next(e)}}
 async function login(req,res){res.render('app',base(req,{view:'pages/auth',mode:'login',error:req.query.error||''}))}
 async function register(req,res){res.render('app',base(req,{view:'pages/auth',mode:'register',error:req.query.error||''}))}
