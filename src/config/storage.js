@@ -2,7 +2,7 @@ const { supabaseAdmin } = require('./supabase');
 let envRef;
 async function initStorage(env) {
   envRef = env;
-  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) return;
+  if (!env.SUPABASE_URL || !(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY)) return;
   const client = supabaseAdmin();
   const existing = await client.storage.listBuckets();
   if (existing.error) throw existing.error;

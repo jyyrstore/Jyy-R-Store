@@ -26,6 +26,7 @@ function loadEnv() {
     SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     DATABASE_URL: process.env.DATABASE_URL || '',
+    DATABASE_SSL_CA: process.env.DATABASE_SSL_CA || '',
     PUBLIC_ASSET_BUCKET: process.env.PUBLIC_ASSET_BUCKET || 'public-assets',
     PRIVATE_PRODUCT_BUCKET: process.env.PRIVATE_PRODUCT_BUCKET || 'private-products',
     USER_UPLOAD_BUCKET: process.env.USER_UPLOAD_BUCKET || 'user-uploads',

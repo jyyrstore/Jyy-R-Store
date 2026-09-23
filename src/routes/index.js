@@ -5,6 +5,7 @@ const {requireOwner}=require('../middleware/role.middleware');
 const page=require('../controllers/page.controller');
 const api=require('../controllers/api.controller');
 const {validate}=require('../middleware/validation.middleware');
+const {sensitiveRateLimit}=require('../middleware/security.middleware');
 const {z}=require('zod');
 const {loadEnv}=require('../config/env');
 const {ok}=require('../utils/response');
@@ -108,6 +109,7 @@ pageRouter.get('/security',asyncHandler(page.security)); pageRouter.get('/privac
 pageRouter.get('/auth/login',asyncHandler(page.login));
 pageRouter.get('/auth/register',asyncHandler(page.register));
 pageRouter.post('/auth/register',
+  sensitiveRateLimit(),
   validate(z.object({
     email:z.string().email(),
     password:z.string().min(8),

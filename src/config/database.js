@@ -30,6 +30,13 @@ function normalizeConnectionString(env) {
       url.port = '6543';
     }
 
+    // Keep SSL policy in the explicit pg Pool config below.
+    // node-postgres can let sslmode in DATABASE_URL replace the ssl object.
+    url.searchParams.delete('sslmode');
+    url.searchParams.delete('sslcert');
+    url.searchParams.delete('sslkey');
+    url.searchParams.delete('sslrootcert');
+
     return url.toString();
   } catch {
     return raw;
@@ -58,7 +65,14 @@ function createPool(env) {
     connectionTimeoutMillis: 5000,
     keepAlive: true,
     ssl: env.NODE_ENV === 'production'
-      ? { rejectUnauthorized: false }
+      ? {
+          rejectUnauthorized: true,
+          ...(env.DATABASE_SSL_CA
+            ? {
+                ca: String(env.DATABASE_SSL_CA).replace(/\\n/g, '\n')
+              }
+            : {})
+        }
       : undefined
   });
 }

@@ -7,6 +7,15 @@ const {loadEnv}=require('../../config/env');
 
 const PAYMENT_CREATABLE_ORDER_STATUSES=new Set(['PENDING']);
 
+const PAYMENT_TRANSITIONS={
+  PENDING:new Set(['PENDING','PAID','FAILED','EXPIRED','CANCELLED']),
+  PAID:new Set(['PAID']),
+  FAILED:new Set(['FAILED']),
+  EXPIRED:new Set(['EXPIRED']),
+  CANCELLED:new Set(['CANCELLED']),
+  REFUNDED:new Set(['REFUNDED'])
+};
+
 async function createForOrder(userId,order,returnUrl){
   return withTransaction(async(client)=>{
     const locked=(await client.query('select * from orders where id=$1 for update',[order.id])).rows[0];
@@ -90,10 +99,78 @@ async function processWebhook(rawBody,signature,payload){
     const payment=(await client.query('select * from payments where reference=$1 for update',[parsed.reference])).rows[0];
     if(!payment)throw notFound('Payment reference not found.');
     if(Number(parsed.amount)!==Number(payment.amount))throw badRequest('PAYMENT_AMOUNT_MISMATCH','Payment amount does not match transaction amount.');
-    await client.query('insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,now())',[payment.id,loadEnv().PAYMENT_PROVIDER||'generic-json',parsed.eventId,payload]);
-    const statusMap={PAID:'PAID',SUCCESS:'PAID',FAILED:'FAILED',EXPIRED:'EXPIRED',CANCELLED:'CANCELLED',REFUNDED:'REFUNDED',PENDING:'PENDING'};
-    const next=statusMap[parsed.status]||'PENDING';
-    await client.query('update payments set status=$2,raw_reference=$3,paid_at=case when $2=\'PAID\' then coalesce(paid_at,now()) else paid_at end,updated_at=now() where id=$1',[payment.id,next,payload]);
+    const statusMap={
+      PAID:'PAID',
+      SUCCESS:'PAID',
+      FAILED:'FAILED',
+      EXPIRED:'EXPIRED',
+      CANCELLED:'CANCELLED',
+      REFUNDED:'REFUNDED',
+      PENDING:'PENDING'
+    };
+
+    const next=statusMap[String(parsed.status||'').toUpperCase()];
+
+    if(!next){
+      throw badRequest(
+        'INVALID_PAYMENT_STATUS',
+        'Webhook payment status tidak dikenal.'
+      );
+    }
+
+    const current=String(payment.status||'PENDING').toUpperCase();
+    const allowed=PAYMENT_TRANSITIONS[current];
+
+    if(!allowed || !allowed.has(next)){
+      await client.query(
+        'insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,now())',
+        [
+          payment.id,
+          loadEnv().PAYMENT_PROVIDER||'generic-json',
+          parsed.eventId,
+          payload
+        ]
+      );
+
+      await client.query(
+        'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
+        [
+          'PAYMENT_WEBHOOK_IGNORED',
+          'payment',
+          payment.id,
+          {
+            reference:parsed.reference,
+            currentStatus:current,
+            requestedStatus:next,
+            reason:'INVALID_STATE_TRANSITION'
+          }
+        ]
+      );
+
+      return {
+        duplicate:false,
+        ignored:true,
+        paymentStatus:current,
+        requestedStatus:next,
+        paymentId:payment.id
+      };
+    }
+
+    await client.query(
+      'insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,now())',
+      [
+        payment.id,
+        loadEnv().PAYMENT_PROVIDER||'generic-json',
+        parsed.eventId,
+        payload
+      ]
+    );
+
+    await client.query(
+      'update payments set status=$2,raw_reference=$3,paid_at=case when $2=\'PAID\' then coalesce(paid_at,now()) else paid_at end,updated_at=now() where id=$1',
+      [payment.id,next,payload]
+    );
+
     if(!payment.order_id){
       const dep=(await client.query('select * from deposits where payment_id=$1 for update',[payment.id])).rows[0];
       if(dep && next==='PAID' && dep.status!=='SUCCESS'){

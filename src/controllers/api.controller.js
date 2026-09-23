@@ -26,7 +26,7 @@ const categories=require('../repositories/categories.repository');
 const storage=require('../config/storage');
 const { loadEnv }=require('../config/env');
 const makeSlug=require('../utils/slug');
-const { validateUploadDescriptor }=require('../utils/file');
+const { validateUploadDescriptor, validateFile }=require('../utils/file');
 const crypto=require('crypto');
 const {safeNextPath}=require('../utils/url');
 const {setAuthSession}=require('../utils/auth-session');
@@ -72,7 +72,7 @@ const depositController={
  wallet:async(req,res)=>ok(res,await wallet.get(req.user.id)),
  mutations:async(req,res)=>ok(res,await wallet.mutations(req.user.id))
 };
-const deliveryController={ access:async(req,res)=>ok(res,await delivery.access(req.user.id,req.params.contentId)) };
+const deliveryController={ access:async(req,res)=>ok(res,await delivery.access(req.user.id,req.params.contentId,{ip:req.ip,userAgent:req.get('user-agent')})) };
 const profileController={
  get:async(req,res)=>ok(res,await profile.get(req.user.id)),
  update:async(req,res)=>ok(res,await profile.update(req.user.id,req.body)),
@@ -153,6 +153,107 @@ const ownerController={
  refunds:async(req,res)=>ok(res,await require('../repositories/refunds.repository').list()),
  refund:async(req,res)=>ok(res,await require('../services/refund.service').refund(req.user.id,req.params.id,req.body.reason))
 };
+
+
+const UPLOAD_PROBE_BYTES=64*1024;
+
+async function readUploadProbe(bucket,path){
+  const url=await storage.signedUrl(bucket,path,120);
+
+  const response=await fetch(url,{
+    method:'GET',
+    headers:{
+      Range:`bytes=0-${UPLOAD_PROBE_BYTES-1}`
+    },
+    redirect:'error'
+  });
+
+  if(!response.ok){
+    throw Object.assign(
+      new Error('Tidak dapat membaca file upload dari Storage.'),
+      {status:400,code:'UPLOAD_PROBE_FAILED',expose:true}
+    );
+  }
+
+  if(!response.body||typeof response.body.getReader!=='function'){
+    throw Object.assign(
+      new Error('Storage upload probe tidak menyediakan body stream.'),
+      {status:400,code:'UPLOAD_PROBE_FAILED',expose:true}
+    );
+  }
+
+  const reader=response.body.getReader();
+  const chunks=[];
+  let total=0;
+
+  try{
+    while(total<UPLOAD_PROBE_BYTES){
+      const {done,value}=await reader.read();
+      if(done) break;
+
+      const remaining=UPLOAD_PROBE_BYTES-total;
+      const take=Math.min(value.byteLength,remaining);
+
+      if(take>0){
+        chunks.push(value.subarray(0,take));
+        total+=take;
+      }
+
+      if(take<value.byteLength) break;
+    }
+  }finally{
+    await reader.cancel().catch(()=>{});
+  }
+
+  if(total===0){
+    throw Object.assign(
+      new Error('File upload kosong atau tidak dapat dibaca.'),
+      {status:400,code:'UPLOAD_EMPTY',expose:true}
+    );
+  }
+
+  return Buffer.concat(chunks,total);
+}
+
+async function validateUploadedObject({
+  bucket,
+  path,
+  contentType,
+  originalName,
+  mimeType,
+  fileSize
+}){
+  const normalized=contentType==='THUMBNAIL'
+    ?'THUMBNAIL'
+    :contentType;
+
+  const probe=await readUploadProbe(bucket,path);
+
+  const detected=await validateFile({
+    buffer:probe,
+    originalname:originalName,
+    mimetype:mimeType,
+    size:fileSize
+  },normalized);
+
+  const declared=String(mimeType||'').toLowerCase();
+
+  if(
+    declared!=='application/octet-stream' &&
+    detected.mime!==declared
+  ){
+    throw Object.assign(
+      new Error('MIME file di Storage tidak cocok dengan MIME yang dideklarasikan.'),
+      {
+        status:400,
+        code:'UPLOAD_CONTENT_MISMATCH',
+        expose:true
+      }
+    );
+  }
+
+  return detected;
+}
 
 async function ownerUploadInit(req,res){
   const repo=require('../repositories/products.repository');
@@ -319,6 +420,20 @@ async function ownerUploadComplete(req,res){
     throw Object.assign(new Error('File belum ditemukan di Storage. Upload mungkin belum selesai.'),{
       status:400,code:'UPLOAD_NOT_FOUND',expose:true
     });
+  }
+
+  try{
+    await validateUploadedObject({
+      bucket:expectedBucket,
+      path,
+      contentType,
+      originalName:descriptor.originalName,
+      mimeType:descriptor.mime,
+      fileSize
+    });
+  }catch(error){
+    await storage.remove(expectedBucket,path).catch(()=>{});
+    throw error;
   }
 
   const actualFileInfo=await storage.fileInfo(expectedBucket,path);
