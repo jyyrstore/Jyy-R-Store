@@ -106,16 +106,25 @@ async function getStatus(id,userId){
   return p;
 }
 
+async function recordWebhookEvent(client,{paymentId,providerName,eventId,payload}){
+  const inserted=(await client.query(
+    'insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,now()) on conflict (provider_event_id) do nothing returning id',
+    [paymentId||null,providerName,eventId,payload]
+  )).rows[0];
+  return Boolean(inserted);
+}
+
 async function processWebhook(rawBody,signature,payload){
   const ok=provider().verifyWebhook(rawBody,signature);
   if(!ok) throw Object.assign(new Error('Invalid webhook signature'),{status:401,code:'WEBHOOK_SIGNATURE_INVALID',expose:true});
   const parsed=provider().parseWebhook(payload,rawBody);
   if(!parsed.eventId||!parsed.reference)throw badRequest('INVALID_WEBHOOK','Webhook payload is incomplete.');
   return withTransaction(async(client)=>{
-    const prior=(await client.query('select id from payment_events where provider_event_id=$1',[parsed.eventId])).rows[0];
-    if(prior)return {duplicate:true};
+    const providerName=loadEnv().PAYMENT_PROVIDER||'generic-json';
     const payment=(await client.query('select * from payments where reference=$1 for update',[parsed.reference])).rows[0];
     if(!payment){
+      const recorded=await recordWebhookEvent(client,{paymentId:null,providerName,eventId:parsed.eventId,payload});
+      if(!recorded)return {duplicate:true};
       return {
         duplicate:false,
         ignored:true,
@@ -123,6 +132,9 @@ async function processWebhook(rawBody,signature,payload){
         reference:parsed.reference
       };
     }
+
+    const recorded=await recordWebhookEvent(client,{paymentId:payment.id,providerName,eventId:parsed.eventId,payload});
+    if(!recorded)return {duplicate:true};
     if(Number(parsed.amount)!==Number(payment.amount))throw badRequest('PAYMENT_AMOUNT_MISMATCH','Payment amount does not match transaction amount.');
     const statusMap={
       PAID:'PAID',
@@ -148,16 +160,6 @@ async function processWebhook(rawBody,signature,payload){
 
     if(!allowed || !allowed.has(next)){
       await client.query(
-        'insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,now())',
-        [
-          payment.id,
-          loadEnv().PAYMENT_PROVIDER||'generic-json',
-          parsed.eventId,
-          payload
-        ]
-      );
-
-      await client.query(
         'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
         [
           'PAYMENT_WEBHOOK_IGNORED',
@@ -180,16 +182,6 @@ async function processWebhook(rawBody,signature,payload){
         paymentId:payment.id
       };
     }
-
-    await client.query(
-      'insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,now())',
-      [
-        payment.id,
-        loadEnv().PAYMENT_PROVIDER||'generic-json',
-        parsed.eventId,
-        payload
-      ]
-    );
 
     await client.query(
       'update payments set status=$2::payment_status,raw_reference=$3,paid_at=case when $2::payment_status=\'PAID\' then coalesce(paid_at,now()) else paid_at end,updated_at=now() where id=$1',

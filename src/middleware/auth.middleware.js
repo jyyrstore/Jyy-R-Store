@@ -1,11 +1,11 @@
-const { supabase } = require('../config/supabase');
+const { supabasePublic } = require('../config/supabase');
 const { query } = require('../config/database');
 async function authMiddleware(req,res,next){
   try {
     req.user = null; req.profile = null;
     if (!req.session?.auth) { res.locals.currentUser=null; res.locals.profile=null; return next(); }
     const session = req.session.auth;
-    const client = supabase();
+    const client = supabasePublic();
     const set = await client.auth.setSession({ access_token: session.accessToken, refresh_token: session.refreshToken });
     if (set.error || !set.data?.user) { delete req.session.auth; res.locals.currentUser=null; return next(); }
     if (set.data.session && set.data.session.access_token !== session.accessToken) {

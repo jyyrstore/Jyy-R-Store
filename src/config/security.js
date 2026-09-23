@@ -2,7 +2,10 @@ const crypto = require('crypto');
 const { loadEnv } = require('./env');
 function csrfForSession(session) {
   const env = loadEnv();
-  if (!session.csrfToken) session.csrfToken = crypto.createHmac('sha256', env.CSRF_SECRET || 'dev-csrf').update(crypto.randomBytes(24)).digest('hex');
+  if (!env.CSRF_SECRET) {
+    throw new Error('CSRF_SECRET is required before CSRF tokens can be generated.');
+  }
+  if (!session.csrfToken) session.csrfToken = crypto.createHmac('sha256', env.CSRF_SECRET).update(crypto.randomBytes(24)).digest('hex');
   return session.csrfToken;
 }
 function safeEqual(a, b) {

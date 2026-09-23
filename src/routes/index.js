@@ -9,6 +9,7 @@ const {sensitiveRateLimit}=require('../middleware/security.middleware');
 const {z}=require('zod');
 const {loadEnv}=require('../config/env');
 const {ok}=require('../utils/response');
+const cron=require('../controllers/cron.controller');
 
 const zBool=z.preprocess(
   v=>typeof v==='string' ? ['true','1','on','yes'].includes(v.toLowerCase()) : v,
@@ -43,7 +44,7 @@ const ownerProductContentSchema=z.object({
   title:z.string().trim().min(1).max(160),
   description:z.string().max(2000).optional(),
   text_content:z.string().max(50000).optional(),
-  url:z.string().url().optional(),
+  url:z.string().url().refine((value)=>/^https?:\/\//i.test(value),{message:'URL harus menggunakan HTTP atau HTTPS.'}).optional(),
   sort_order:z.coerce.number().int().min(0).max(10000).optional(),
   is_preview:zBool.optional(),
   access_type:z.enum(['PUBLIC','PREVIEW','PURCHASED']).optional()
@@ -249,8 +250,11 @@ ownerApi.get('/storage',asyncHandler(api.ownerController.storage)); ownerApi.get
 ownerApi.get('/activity',asyncHandler(api.ownerController.activity)); ownerApi.get('/reports',asyncHandler(api.ownerController.reports)); ownerApi.get('/security',asyncHandler(api.ownerController.security)); ownerApi.get('/faq',asyncHandler(api.ownerController.faq)); ownerApi.post('/faq',validate(ownerFaqSchema),asyncHandler(api.ownerController.faqCreate)); ownerApi.put('/faq/:id',validate(ownerFaqSchema),asyncHandler(api.ownerController.faqUpdate)); ownerApi.get('/information',asyncHandler(api.ownerController.information)); ownerApi.post('/information',validate(ownerInformationSchema),asyncHandler(api.ownerController.informationCreate)); ownerApi.put('/information/:id',validate(ownerInformationSchema),asyncHandler(api.ownerController.informationUpdate)); ownerApi.get('/notifications',asyncHandler(api.ownerController.notifications)); ownerApi.post('/notifications',validate(z.object({user_id:z.string().uuid().nullable().optional(),type:z.enum(['ORDER','PAYMENT','DEPOSIT','TICKET','SYSTEM','PROMOTION']),title:z.string().min(2).max(160),body:z.string().min(2).max(5000),link:z.string().max(500).nullable().optional()})),asyncHandler(api.ownerController.notificationCreate)); ownerApi.post('/notifications/broadcast',validate(z.object({type:z.enum(['SYSTEM','PROMOTION','ORDER','PAYMENT','DEPOSIT','TICKET']),title:z.string().min(2).max(160),body:z.string().min(2).max(5000),link:z.string().max(500).nullable().optional()})),asyncHandler(api.ownerController.notificationBroadcast)); ownerApi.get('/refunds',asyncHandler(api.ownerController.refunds)); ownerApi.post('/refunds/:id',validate(z.object({reason:z.string().min(5).max(500)})),asyncHandler(api.ownerController.refund));
 apiRouter.use('/owner',ownerApi);
 
+const cronRouter=express.Router();
+cronRouter.get('/expire',cron.requireCronSecret,asyncHandler(cron.expire));
+
 const webhookRouter=express.Router();
 webhookRouter.post('/',express.raw({type:'application/json',limit:'1mb'}),asyncHandler(async(req,res)=>{const raw=req.body;const configuredHeader=loadEnv().PAYMENT_WEBHOOK_SIGNATURE_HEADER.toLowerCase();
 const signature=req.headers['x-callback-token']||req.headers[configuredHeader];let payload;try{payload=JSON.parse(raw.toString('utf8'))}catch{throw Object.assign(new Error('Invalid webhook JSON'),{status:400,code:'INVALID_WEBHOOK_JSON',expose:true})}const out=await require('../services/payment/payment.service').processWebhook(raw,signature,payload);return ok(res,out)}));
 
-module.exports={apiRouter,pageRouter,webhookRouter};
+module.exports={apiRouter,pageRouter,cronRouter,webhookRouter};

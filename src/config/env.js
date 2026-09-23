@@ -83,7 +83,8 @@ function loadEnv() {
     required.push(
       'SUPABASE_URL',
       'SUPABASE_SECRET_KEY',
-      'DATABASE_URL'
+      'DATABASE_URL',
+      'CRON_SECRET'
     );
     if(String(env.PAYMENT_PROVIDER||'').toLowerCase()==='xendit'){
       required.push('XENDIT_SECRET_KEY','XENDIT_WEBHOOK_TOKEN','XENDIT_RETURN_URL');

@@ -18,7 +18,7 @@ const { notFound } = require('./src/middleware/not-found.middleware');
 const { errorHandler } = require('./src/middleware/error.middleware');
 const { generalRateLimit, sensitiveRateLimit } = require('./src/middleware/security.middleware');
 const { icon } = require('./src/utils/icons');
-const { apiRouter, pageRouter, webhookRouter } = require('./src/routes');
+const { apiRouter, pageRouter, cronRouter, webhookRouter } = require('./src/routes');
 
 const PACKAGE_VERSION = require('./package.json').version;
 
@@ -98,6 +98,9 @@ async function createApp() {
 
   // Webhook must see the raw body for signature verification.
   app.use('/api/payment/webhook', webhookRouter);
+
+  // Vercel Cron calls this protected endpoint; keep it outside session/CSRF.
+  app.use('/api/cron', cronRouter);
 
   app.use(express.json({ limit: '2mb' }));
   app.use('/api', generalRateLimit());

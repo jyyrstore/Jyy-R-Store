@@ -75,15 +75,23 @@ class XenditProvider{
     return Boolean(this.env.XENDIT_SECRET_KEY);
   }
 
-  normalizeReturnUrl(){
-    const value=this.env.XENDIT_RETURN_URL||'';
-    if(!value)throw Object.assign(new Error('XENDIT_RETURN_URL belum dikonfigurasi.'),{status:503,code:'XENDIT_RETURN_URL_NOT_CONFIGURED',expose:true});
+  normalizeHttpsUrl(value,name,{required=false}={}){
+    const input=String(value||'');
+    if(!input){
+      if(required)throw Object.assign(new Error(`${name} belum dikonfigurasi.`),{status:503,code:`${name}_NOT_CONFIGURED`,expose:true});
+      return null;
+    }
+
     let u;
-    try{u=new URL(value);}catch{throw Object.assign(new Error('XENDIT_RETURN_URL tidak valid.'),{status:500,code:'XENDIT_RETURN_URL_INVALID',expose:true});}
+    try{u=new URL(input);}catch{throw Object.assign(new Error(`${name} tidak valid.`),{status:500,code:`${name}_INVALID`,expose:true});}
     if(u.protocol!=='https:'){
-      throw Object.assign(new Error('XENDIT_RETURN_URL harus HTTPS.'),{status:500,code:'XENDIT_RETURN_URL_MUST_BE_HTTPS',expose:true});
+      throw Object.assign(new Error(`${name} harus HTTPS.`),{status:500,code:`${name}_MUST_BE_HTTPS`,expose:true});
     }
     return u.toString();
+  }
+
+  normalizeReturnUrl(){
+    return this.normalizeHttpsUrl(this.env.XENDIT_RETURN_URL,'XENDIT_RETURN_URL',{required:true});
   }
 
   async createPayment({orderId,amount,customer,idempotencyKey}){
@@ -141,7 +149,7 @@ class XenditProvider{
       locale:'id',
       customer:xenditCustomer,
       success_return_url:returnUrl,
-      cancel_return_url:this.env.XENDIT_CANCEL_RETURN_URL||returnUrl,
+      cancel_return_url:this.normalizeHttpsUrl(this.env.XENDIT_CANCEL_RETURN_URL,'XENDIT_CANCEL_RETURN_URL')||returnUrl,
       description:`Jyy'R Store payment ${orderId}`,
       metadata:{
         order_id:String(orderId)
@@ -227,7 +235,7 @@ class XenditProvider{
       eventId,
       orderId:data.metadata?.order_id?String(data.metadata.order_id):null,
       reference,
-      amount:Number(data.amount??data.request_amount??data.request_amount??0),
+      amount:Number(data.amount??data.request_amount??0),
       status,
       paidAt:event==='payment_session.completed'?p.created||null:null,
       metadata:p

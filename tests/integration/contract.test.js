@@ -278,3 +278,16 @@ test('owner content UI has single active submit state',()=>{
     /Mengunggah…/
   );
 });
+
+
+test('scheduled expiry route is protected and configured for Vercel Cron',()=>{
+  const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
+  const routes=fs.readFileSync(path.join(root,'src/routes/index.js'),'utf8');
+  const cron=fs.readFileSync(path.join(root,'src/controllers/cron.controller.js'),'utf8');
+  const vercel=JSON.parse(fs.readFileSync(path.join(root,'vercel.json'),'utf8'));
+  assert.match(server,/app\.use\('\/api\/cron',\s*cronRouter\)/);
+  assert.match(routes,/cronRouter\.get\('\/expire',cron\.requireCronSecret/);
+  assert.match(cron,/CRON_SECRET/);
+  assert.equal(vercel.crons[0].path,'/api/cron/expire');
+  assert.equal(vercel.crons[0].schedule,'*/5 * * * *');
+});
