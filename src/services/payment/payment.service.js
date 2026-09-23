@@ -115,7 +115,14 @@ async function processWebhook(rawBody,signature,payload){
     const prior=(await client.query('select id from payment_events where provider_event_id=$1',[parsed.eventId])).rows[0];
     if(prior)return {duplicate:true};
     const payment=(await client.query('select * from payments where reference=$1 for update',[parsed.reference])).rows[0];
-    if(!payment)throw notFound('Payment reference not found.');
+    if(!payment){
+      return {
+        duplicate:false,
+        ignored:true,
+        reason:'PAYMENT_REFERENCE_NOT_FOUND',
+        reference:parsed.reference
+      };
+    }
     if(Number(parsed.amount)!==Number(payment.amount))throw badRequest('PAYMENT_AMOUNT_MISMATCH','Payment amount does not match transaction amount.');
     const statusMap={
       PAID:'PAID',
