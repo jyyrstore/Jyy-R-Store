@@ -1092,7 +1092,101 @@
 
   document.addEventListener('submit',async e=>{
     const auth=e.target.closest('[data-auth-form]'); if(auth){e.preventDefault();const type=auth.dataset.authForm;const body=Object.fromEntries(new FormData(auth));const path=type==='login'?'/api/auth/login':type==='register'?'/api/auth/register':type==='forgot'?'/api/auth/forgot-password':'/api/auth/reset-password';const btn=auth.querySelector('button');btn.disabled=true;try{const r=await api.request(path,{method:'POST',body});if(type==='login')location.href='/dashboard';else if(type==='register')location.href='/auth/login?error=Registrasi berhasil. Periksa email jika verification aktif.';else toast.success(r.message||'Request diterima.')}catch(err){toast.error(err.message)}finally{btn.disabled=false}}
-    const pf=e.target.closest('#profile-form');if(pf){e.preventDefault();try{await api.request('/api/profile',{method:'PUT',body:Object.fromEntries(new FormData(pf))});toast.success('Profil diperbarui.')}catch(err){toast.error(err.message)}}
+    const pf=e.target.closest('#profile-form');
+    if(pf){
+      e.preventDefault();
+
+      if(pf.dataset.submitting==='1'){
+        return;
+      }
+
+      pf.dataset.submitting='1';
+
+      const btn=pf.querySelector('#profile-save, button[type="submit"]');
+      const originalText=btn?.textContent||'Simpan perubahan';
+
+      if(btn){
+        btn.disabled=true;
+        btn.setAttribute('aria-busy','true');
+        btn.textContent='Menyimpan…';
+      }
+
+      try{
+        const formData=new FormData(pf);
+
+        const updated=await api.request(
+          '/api/profile',
+          {
+            method:'PUT',
+            body:Object.fromEntries(formData)
+          }
+        );
+
+        const nextProfile=updated||{};
+
+        if(window.JYYR){
+          window.JYYR.user={
+            ...(window.JYYR.user||{}),
+            ...nextProfile
+          };
+        }
+
+        const username=
+          nextProfile.username||
+          formData.get('username')||
+          'Akun';
+
+        const displayName=
+          nextProfile.display_name||
+          formData.get('display_name')||
+          username;
+
+        document
+          .querySelectorAll('[data-profile-name]')
+          .forEach(el=>{
+            el.textContent=username;
+          });
+
+        document
+          .querySelectorAll('[data-profile-avatar]')
+          .forEach(el=>{
+            el.textContent=
+              String(displayName)
+                .trim()
+                .slice(0,1)
+                .toUpperCase()||
+              'U';
+          });
+
+        document
+          .querySelectorAll('[data-profile-display]')
+          .forEach(el=>{
+            el.textContent=displayName;
+          });
+
+        document
+          .querySelectorAll('[data-profile-username]')
+          .forEach(el=>{
+            el.textContent=username;
+          });
+
+        toast.success('Profil diperbarui.');
+      }catch(err){
+        toast.error(
+          err.message||
+          'Profil gagal diperbarui.'
+        );
+      }finally{
+        if(btn){
+          btn.disabled=false;
+          btn.removeAttribute('aria-busy');
+          btn.textContent=originalText;
+        }
+
+        delete pf.dataset.submitting;
+      }
+    }
+
     const reply=e.target.closest('[data-ticket-reply]');if(reply){e.preventDefault();const body=new FormData(reply).get('body');try{await api.request('/api/tickets/'+reply.dataset.ticketReply+'/messages',{method:'POST',body:{body}});location.reload()}catch(err){toast.error(err.message)}}
     const msg=e.target.closest('[data-message-form]');if(msg){e.preventDefault();const body=new FormData(msg).get('body');const btn=msg.querySelector('button');btn.disabled=true;try{await api.request('/api/messages',{method:'POST',body:{body}});toast.success('Pesan terkirim.');location.reload()}catch(err){toast.error(err.message)}finally{btn.disabled=false}}
     const maint=e.target.closest('[data-owner-maintenance]');if(maint){e.preventDefault();const fd=new FormData(maint);const body={enabled:fd.get('enabled')==='on',title:fd.get('title'),message:fd.get('message'),scheduled_start:fd.get('scheduled_start')||null,scheduled_end:fd.get('scheduled_end')||null,allow_owner_access:fd.get('allow_owner_access')==='on'};try{await api.request('/api/owner/maintenance',{method:'PUT',body});toast.success('Maintenance setting tersimpan.')}catch(err){toast.error(err.message)}}

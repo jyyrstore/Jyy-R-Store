@@ -1,1 +1,363 @@
-<section class="page-shell"><div class="page-header"><div><div class="eyebrow">Akun</div><h1>Profil & Keamanan</h1><p>Peran: <strong><%= labelStatus(profile.role) %></strong> · Status: <strong><%= labelStatus(profile.status) %></strong></p></div></div><div class="two-column"><section class="panel"><h2>Data akun</h2><form id="profile-form" class="form-grid"><label class="field"><span>Username</span><input name="username" value="<%= profile.username %>"></label><label class="field"><span>Nama tampilan</span><input name="display_name" value="<%= profile.display_name||'' %>"></label><label class="field"><span>Nomor telepon</span><input name="phone" value="<%= profile.phone||'' %>"></label><label class="field full"><span>Bio</span><textarea name="bio" rows="4"><%= profile.bio||'' %></textarea></label><button class="button button-primary" type="submit">Simpan perubahan</button></form></section><section class="panel"><h2>Riwayat login</h2><div class="stack-list compact"><% loginHistory.forEach(l=>{ %><div class="list-card"><div><strong><%= labelStatus(l.status) %></strong><span><%= l.device||'Perangkat tidak diketahui' %> · <%= l.browser||'Browser tidak diketahui' %></span></div><span><%= formatDate(l.created_at) %></span></div><% }) %><% if(!loginHistory.length){ %><%- include('../partials/empty',{title:'Belum ada riwayat',description:'Riwayat login akan tampil setelah proses autentikasi.'}) %><% } %></div></section></div></section>
+<%
+  const formatIdr = value => new Intl.NumberFormat(
+    'id-ID',
+    {
+      style:'currency',
+      currency:'IDR',
+      maximumFractionDigits:0
+    }
+  ).format(Number(value || 0));
+
+  const profileName =
+    profile.display_name ||
+    profile.username ||
+    'Pengguna';
+
+  const profileUsername =
+    profile.username ||
+    'user';
+
+  const profileInitial =
+    String(profileName).trim().slice(0,1).toUpperCase() || 'U';
+
+  const profileStatus =
+    String(profile.status || '').toUpperCase();
+
+  const profileRole =
+    String(profile.role || '').toUpperCase();
+%>
+
+<section class="page-shell profile-page">
+
+  <div class="page-header profile-page-header">
+    <div>
+      <div class="eyebrow">Akun</div>
+      <h1>Profil</h1>
+      <p>Kelola informasi akun dan aktivitas login Anda.</p>
+    </div>
+
+    <div class="header-actions">
+      <a
+        class="button button-secondary button-small"
+        href="/security"
+      >
+        <%- icon('shield') %>
+        Keamanan akun
+      </a>
+    </div>
+  </div>
+
+  <section
+    class="profile-hero panel"
+    aria-labelledby="profile-identity-title"
+  >
+    <div class="profile-identity">
+
+      <div class="profile-avatar" aria-hidden="true">
+        <span data-profile-avatar>
+          <%= profileInitial %>
+        </span>
+      </div>
+
+      <div class="profile-identity-copy">
+        <div class="eyebrow">Akun Anda</div>
+
+        <h2
+          id="profile-identity-title"
+          data-profile-display
+        >
+          <%= profileName %>
+        </h2>
+
+        <p>
+          @<span data-profile-username><%= profileUsername %></span>
+
+          <% if (profile.email) { %>
+            <span class="profile-dot" aria-hidden="true">·</span>
+            <span data-profile-email><%= profile.email %></span>
+          <% } %>
+        </p>
+
+        <div
+          class="profile-badges"
+          aria-label="Status akun"
+        >
+          <span
+            class="badge profile-badge profile-badge-role"
+            data-profile-role="<%= profileRole %>"
+          >
+            <%= labelStatus(profile.role) %>
+          </span>
+
+          <span
+            class="badge profile-badge profile-badge-status"
+            data-profile-status="<%= profileStatus %>"
+          >
+            <%= labelStatus(profile.status) %>
+          </span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section
+    class="profile-stat-grid"
+    aria-label="Ringkasan akun"
+  >
+    <article class="profile-stat-card">
+      <div class="profile-stat-icon">
+        <%- icon('history') %>
+      </div>
+
+      <div>
+        <span>Pesanan</span>
+        <strong><%= Number(profile.total_orders || 0) %></strong>
+      </div>
+    </article>
+
+    <article class="profile-stat-card">
+      <div class="profile-stat-icon">
+        <%- icon('wallet') %>
+      </div>
+
+      <div>
+        <span>Saldo</span>
+        <strong><%= formatIdr(profile.balance) %></strong>
+      </div>
+    </article>
+
+    <article class="profile-stat-card">
+      <div class="profile-stat-icon">
+        <%- icon('download') %>
+      </div>
+
+      <div>
+        <span>Total deposit</span>
+        <strong><%= formatIdr(profile.total_deposit) %></strong>
+      </div>
+    </article>
+  </section>
+
+  <div class="two-column profile-content-grid">
+
+    <section
+      class="panel profile-account-panel"
+      aria-labelledby="profile-account-title"
+    >
+      <div class="profile-section-heading">
+        <div>
+          <div class="eyebrow">Informasi</div>
+          <h2 id="profile-account-title">Data akun</h2>
+          <p>
+            Perbarui informasi profil yang ingin ditampilkan pada akun Anda.
+          </p>
+        </div>
+      </div>
+
+      <form
+        id="profile-form"
+        class="form-grid profile-form"
+      >
+
+        <label class="field">
+          <span>Username</span>
+
+          <input
+            name="username"
+            value="<%= profile.username || '' %>"
+            autocomplete="username"
+            minlength="3"
+            maxlength="32"
+            spellcheck="false"
+            required
+          />
+
+          <small class="field-help">
+            Username digunakan sebagai identitas publik akun.
+          </small>
+        </label>
+
+        <label class="field">
+          <span>Nama tampilan</span>
+
+          <input
+            name="display_name"
+            value="<%= profile.display_name || '' %>"
+            autocomplete="name"
+            maxlength="80"
+          />
+
+          <small class="field-help">
+            Nama yang digunakan untuk menyapa Anda di dalam aplikasi.
+          </small>
+        </label>
+
+        <label class="field full">
+          <span>Email</span>
+
+          <input
+            type="email"
+            value="<%= profile.email || '' %>"
+            readonly
+            aria-readonly="true"
+            autocomplete="email"
+          />
+
+          <small class="field-help">
+            Email autentikasi dikelola melalui sistem akun dan tidak
+            diubah dari halaman ini.
+          </small>
+        </label>
+
+        <label class="field">
+          <span>Nomor telepon</span>
+
+          <input
+            name="phone"
+            type="tel"
+            inputmode="tel"
+            value="<%= profile.phone || '' %>"
+            autocomplete="tel"
+            maxlength="30"
+          />
+        </label>
+
+        <label class="field full">
+          <span>Bio</span>
+
+          <textarea
+            name="bio"
+            rows="5"
+            maxlength="500"
+            placeholder="Ceritakan sedikit tentang Anda..."
+          ><%= profile.bio || '' %></textarea>
+
+          <small class="field-help">
+            Maksimal 500 karakter.
+          </small>
+        </label>
+
+        <div class="profile-form-actions full">
+          <button
+            class="button button-primary"
+            id="profile-save"
+            type="submit"
+          >
+            Simpan perubahan
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+    <div class="profile-side-column">
+
+      <section
+        class="profile-security-card"
+        aria-labelledby="profile-security-title"
+      >
+        <div class="profile-security-icon">
+          <%- icon('shield') %>
+        </div>
+
+        <div class="profile-security-copy">
+          <div class="eyebrow">Proteksi akun</div>
+
+          <h2 id="profile-security-title">
+            Keamanan akun
+          </h2>
+
+          <p>
+            Kelola keamanan dan perlindungan akun Anda.
+          </p>
+        </div>
+
+        <a
+          class="button button-secondary button-small profile-security-action"
+          href="/security"
+        >
+          Lihat keamanan
+        </a>
+      </section>
+
+      <section
+        class="panel profile-login-panel"
+        aria-labelledby="profile-login-title"
+      >
+        <div class="profile-section-heading">
+          <div>
+            <div class="eyebrow">Aktivitas</div>
+
+            <h2 id="profile-login-title">
+              Riwayat login
+            </h2>
+
+            <p>
+              Aktivitas autentikasi terbaru pada akun Anda.
+            </p>
+          </div>
+        </div>
+
+        <div class="profile-login-list">
+
+          <% if (loginHistory.length) { %>
+
+            <% loginHistory.forEach(l => { %>
+
+              <article
+                class="profile-login-item"
+                data-login-status="<%= String(l.status || '').toUpperCase() %>"
+              >
+                <div
+                  class="profile-login-icon"
+                  aria-hidden="true"
+                >
+                  <%- icon(
+                    String(l.status || '').toUpperCase() === 'SUCCESS'
+                      ? 'check'
+                      : 'shield'
+                  ) %>
+                </div>
+
+                <div class="profile-login-copy">
+                  <strong>
+                    <%= labelStatus(l.status) %>
+                  </strong>
+
+                  <span>
+                    <%= l.device || 'Perangkat tidak diketahui' %>
+                  </span>
+
+                  <small>
+                    <%= l.browser || 'Browser tidak diketahui' %>
+                  </small>
+                </div>
+
+                <time
+                  class="profile-login-time"
+                  datetime="<%= l.created_at %>"
+                >
+                  <%= formatDate(l.created_at) %>
+                </time>
+              </article>
+
+            <% }) %>
+
+          <% } else { %>
+
+            <%- include('../partials/empty',{
+              title:'Belum ada riwayat login',
+              description:'Aktivitas login akan tampil setelah proses autentikasi.'
+            }) %>
+
+          <% } %>
+
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+
+</section>

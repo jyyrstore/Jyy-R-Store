@@ -84,3 +84,83 @@ test('CI requires lint',()=>{
   assert.match(deployWorkflow,/npm run lint/);
   assert.match(securityWorkflow,/npm run lint/);
 });
+
+// PROFILE UI/UX FINAL TESTS
+
+test('profile page contains final identity and account summary',()=>{
+  const source=read('views/pages/profile.ejs');
+
+  assert.match(source,/class="profile-hero panel"/);
+  assert.match(source,/data-profile-display/);
+  assert.match(source,/data-profile-username/);
+  assert.match(source,/data-profile-email/);
+  assert.match(source,/class="profile-stat-grid"/);
+  assert.match(source,/profile\.total_orders/);
+  assert.match(source,/profile\.total_deposit/);
+  assert.match(source,/profile\.balance/);
+});
+
+test('profile form has account-friendly controls',()=>{
+  const source=read('views/pages/profile.ejs');
+
+  assert.match(source,/id="profile-form"/);
+  assert.match(source,/autocomplete="username"/);
+  assert.match(source,/autocomplete="name"/);
+  assert.match(source,/autocomplete="email"/);
+  assert.match(source,/type="tel"/);
+  assert.match(source,/inputmode="tel"/);
+  assert.match(source,/maxlength="500"/);
+  assert.match(source,/readonly/);
+});
+
+test('profile exposes security entry points',()=>{
+  const source=read('views/pages/profile.ejs');
+
+  assert.ok(
+    (source.match(/href="\/security"/g)||[]).length>=2
+  );
+
+  assert.match(source,/Keamanan akun/);
+});
+
+test('profile login activity has responsive structure',()=>{
+  const source=read('views/pages/profile.ejs');
+
+  assert.match(source,/profile-login-list/);
+  assert.match(source,/profile-login-item/);
+  assert.match(source,/data-login-status=/);
+  assert.match(source,/profile-login-time/);
+});
+
+test('profile save prevents duplicate submission',()=>{
+  const source=read('public/js/pages.js');
+
+  assert.match(source,/pf\.dataset\.submitting==='1'/);
+  assert.match(source,/aria-busy/);
+  assert.match(source,/Profil diperbarui/);
+});
+
+test('profile save updates identity without reload',()=>{
+  const source=read('public/js/pages.js');
+
+  assert.match(source,/data-profile-name/);
+  assert.match(source,/data-profile-avatar/);
+  assert.match(source,/data-profile-display/);
+  assert.match(source,/data-profile-username/);
+});
+
+test('header exposes profile update hooks',()=>{
+  const source=read('views/partials/header.ejs');
+
+  assert.match(source,/data-profile-avatar/);
+  assert.match(source,/data-profile-name/);
+});
+
+test('profile CSS is responsive',()=>{
+  const source=read('public/css/pages.css');
+
+  assert.match(source,/PROFILE PAGE FINAL UIUX START/);
+  assert.match(source,/\.profile-stat-grid/);
+  assert.match(source,/\.profile-login-item/);
+  assert.match(source,/@media\(max-width:600px\)/);
+});
