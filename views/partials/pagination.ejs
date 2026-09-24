@@ -8,7 +8,7 @@
     typeof label!=='undefined' && label
       ? label
       : 'Pagination';
-  const build=page=>paginationUrl(req,param,page,queryParams);
+  const build=page=>paginationUrl(param,page,queryParams);
 %>
 
 <% if(p && p.totalPages>1){ %>
