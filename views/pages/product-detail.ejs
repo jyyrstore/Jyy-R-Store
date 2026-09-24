@@ -58,7 +58,7 @@
       </div>
       <div class="detail-actions" aria-label="Aksi produk">
         <% if(currentUser && product.stock>0){ %>
-          <button class="button button-secondary" data-add-cart="<%= product.id %>"><%- icon('cart') %> Tambah ke Keranjang</button>
+          <button class="button button-secondary" data-add-cart="<%= product.id %>"><%- icon('cart') %> Keranjang</button>
           <button class="button button-primary" data-buy-now="<%= product.id %>"><%- icon('check') %> Beli Sekarang</button>
         <% } else if (!currentUser){ %><a class="button button-primary" href="/auth/login?next=<%= encodeURIComponent(req.originalUrl) %>">Masuk untuk membeli</a><% } %>
       </div>
@@ -75,21 +75,66 @@
     <% if(product.contents.length===0){ %><%- include('../partials/empty',{title:'Belum ada isi produk',description:'Belum ada isi produk yang ditambahkan untuk produk ini.'}) %><% } %>
     <% product.contents.forEach(c=>{ %>
       <article class="content-card">
-        <div class="content-icon"><%- icon(c.type==='VIDEO'?'play':c.type==='AUDIO'?'music':c.type==='IMAGE'?'image':c.type==='LINK'?'external':c.type==='TEXT'?'note':'package') %></div>
-        <div class="content-body"><strong><%= c.title %></strong><small><%= contentTypeLabels[c.type] || 'Konten' %> · <%= accessTypeLabels[c.access_type] || 'Akses terbatas' %></small>
-          <% if(c.description){ %><p><%= c.description %></p><% } %>
-          <% if(c.type==='TEXT' && c.allowed){ %><div class="content-text"><%= c.text_content || '' %></div><% } else if(c.type==='TEXT'){ %><div class="muted">Konten tersedia setelah pembayaran terverifikasi.</div><% } %>
-          <% if(c.type==='LINK' && c.url && c.allowed){ %><a class="button button-secondary button-small" href="<%= c.url %>" target="_blank" rel="noopener noreferrer"><%- icon('external') %> Buka Link</a><% } %>
-          <% if(c.preview_url && c.type==='IMAGE'){ %><button class="button button-secondary button-small content-action" data-open-content-url="<%= c.preview_url %>">Pratinjau penuh</button><img class="content-preview" src="<%= c.preview_url %>" alt="Preview <%= c.title %>" loading="lazy" data-image-fallback-hide><% } %>
-          <% if(c.preview_url && c.type==='VIDEO'){ %><video class="content-preview" controls preload="metadata"><source src="<%= c.preview_url %>" type="<%= c.mime_type || 'video/mp4' %>"></video><% } %>
-          <% if(c.preview_url && c.type==='AUDIO'){ %><audio controls preload="metadata"><source src="<%= c.preview_url %>" type="<%= c.mime_type || 'audio/mpeg' %>"></audio><% } %>
-          <% if(c.type==='FILE'){ %><div class="file-meta"><span><%= c.mime_type || 'File' %></span><span><%= c.file_size ? (Number(c.file_size)/1024/1024).toFixed(2)+' MB' : '—' %></span></div><% } %><% if(c.allowed && ['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)){ %><button class="button button-primary button-small content-action" data-download-content="<%= c.id %>"><%- icon('download') %> Akses aman</button><% } else if(!c.allowed){ %><span class="muted small">Pembelian diperlukan</span><% } %>
+        <div class="content-icon">
+          <%- icon(c.type==='VIDEO'?'play':c.type==='AUDIO'?'music':c.type==='IMAGE'?'image':c.type==='LINK'?'external':c.type==='TEXT'?'note':'package') %>
         </div>
-        <span class="badge">
-          <%= c.allowed
-            ? (c.is_preview ? 'Pratinjau' : 'Tersedia')
-            : 'Terkunci' %>
-        </span>
+
+        <div class="content-body">
+          <div class="content-inline">
+            <strong><%= c.title %></strong>
+            <small><%= contentTypeLabels[c.type] || 'Konten' %> · <%= accessTypeLabels[c.access_type] || 'Akses terbatas' %></small>
+            <% if(c.description){ %>
+              <p><%= c.description %></p>
+            <% } %>
+          </div>
+
+          <% if(c.type==='TEXT' && c.allowed){ %>
+            <div class="content-text"><%= c.text_content || '' %></div>
+          <% } else if(c.type==='TEXT'){ %>
+            <div class="muted content-lock-note">Konten tersedia setelah pembayaran terverifikasi.</div>
+          <% } %>
+
+          <% if(c.type==='FILE'){ %>
+            <div class="file-meta content-extra-meta">
+              <span><%= c.mime_type || 'File' %></span>
+              <span><%= c.file_size ? (Number(c.file_size)/1024/1024).toFixed(2)+' MB' : '—' %></span>
+            </div>
+          <% } %>
+        </div>
+
+        <div class="content-side">
+          <span class="badge">
+            <%= c.allowed
+              ? (c.is_preview ? 'Pratinjau' : 'Tersedia')
+              : 'Terkunci' %>
+          </span>
+
+          <% if(c.type==='LINK' && c.url && c.allowed){ %>
+            <a
+              class="button button-secondary button-small"
+              href="<%= c.url %>"
+              target="_blank"
+              rel="noopener noreferrer">
+              Buka
+            </a>
+          <% } else if(c.preview_url && ['IMAGE','VIDEO','AUDIO'].includes(c.type)){ %>
+            <button
+              class="button button-secondary button-small"
+              type="button"
+              data-open-content-url="<%= c.preview_url %>">
+              Pratinjau
+            </button>
+          <% } else if(c.allowed && ['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)){ %>
+            <button
+              class="button button-primary button-small"
+              type="button"
+              data-download-content="<%= c.id %>">
+              Akses
+            </button>
+          <% } else if(!c.allowed){ %>
+            <span class="muted small content-side-note">Pembelian diperlukan</span>
+          <% } %>
+        </div>
       </article>
     <% }) %>
   </div></div>
