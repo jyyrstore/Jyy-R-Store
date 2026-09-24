@@ -1,7 +1,8 @@
 (() => {
   const state = {
     previousFocus: null,
-    onKeydown: null
+    onKeydown: null,
+    pendingConfirm: null
   };
 
   function focusables(root) {
@@ -33,15 +34,23 @@
     document.head.appendChild(style);
   }
 
-  function close() {
+  function close(result=false) {
     const root=document.getElementById('modal-root');
     if(!root) return;
+
     if(state.onKeydown) document.removeEventListener('keydown',state.onKeydown,true);
     state.onKeydown=null;
     root.innerHTML='';
     document.body.classList.remove('no-scroll');
+
     const target=state.previousFocus;
     state.previousFocus=null;
+
+    const pending=state.pendingConfirm;
+    state.pendingConfirm=null;
+
+    if(pending) pending(Boolean(result));
+
     if(target && target.isConnected && typeof target.focus==='function'){
       requestAnimationFrame(()=>target.focus({preventScroll:true}));
     }
@@ -102,8 +111,56 @@
     (items[0]||dialog)?.focus?.();
   }
 
-  window.JYYRModal={open,close};
+
+  function escapeHtml(value){
+    return String(value??'').replace(/[&<>"']/g,char=>({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[char]));
+  }
+
+  function confirm(message){
+    return new Promise(resolve=>{
+      open(`
+        <div class="stack-form">
+          <h2>Konfirmasi</h2>
+          <p class="muted">${escapeHtml(message)}</p>
+          <div class="inline-actions">
+            <button
+              class="button button-secondary"
+              type="button"
+              data-jyyr-confirm-cancel
+            >Batal</button>
+            <button
+              class="button button-primary"
+              type="button"
+              data-jyyr-confirm-ok
+            >Lanjutkan</button>
+          </div>
+        </div>
+      `);
+
+      state.pendingConfirm=resolve;
+    });
+  }
+
+  window.JYYRModal={open,close,confirm};
   document.addEventListener('click',e=>{
-    if(e.target.closest('[data-modal-close]')) close();
+    if(e.target.closest('[data-jyyr-confirm-ok]')){
+      close(true);
+      return;
+    }
+
+    if(e.target.closest('[data-jyyr-confirm-cancel]')){
+      close(false);
+      return;
+    }
+
+    if(e.target.closest('[data-modal-close]')){
+      close(false);
+    }
   });
 })();
