@@ -1,11 +1,18 @@
 <%
-  const p=pagination;
-  const queryParams=query||{};
+  const p=typeof pagination!=='undefined' ? pagination : null;
+  const queryParams=
+    typeof query!=='undefined' && query
+      ? query
+      : {};
+  const paginationLabel=
+    typeof label!=='undefined' && label
+      ? label
+      : 'Pagination';
   const build=page=>paginationUrl(req,param,page,queryParams);
 %>
 
 <% if(p && p.totalPages>1){ %>
-  <nav class="pagination" aria-label="<%= label||'Pagination' %>">
+  <nav class="pagination" aria-label="<%= paginationLabel %>">
 
     <% if(p.showPrevious){ %>
       <a

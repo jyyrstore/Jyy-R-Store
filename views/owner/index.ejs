@@ -121,12 +121,14 @@
       <% } %>
     </div>
 
+<% if(ownerSection==='refunds'){ %>
 <%- include('../partials/pagination',{
   pagination:ownerPagination,
   param:'page',
   query:req.query,
   label:'Pagination refund'
 }) %>
+<% } %>
 </div>
 </section>
 
