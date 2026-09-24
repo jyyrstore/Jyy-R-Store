@@ -22,6 +22,15 @@ const {setAuthSession}=require('../utils/auth-session');
 const {pageParams,paginationUrl}=require('../utils/pagination');
 const {paginationMeta}=require('../utils/pagination-meta');
 
+const OWNER_PAGE_SIZE=10;
+
+function ownerPager(req){
+  return pageParams({
+    page:req.query.page,
+    limit:OWNER_PAGE_SIZE
+  });
+}
+
 function base(req, extra={}) {
   return {
     title:"Jyy'R Store",
@@ -46,7 +55,41 @@ async function home(req,res,next){
     res.render('app', base(req,{view:'pages/home',categories:cat,products:latest.items,services:service.slice(0,6),announcements:ann.slice(0,5)}));
   } catch(e){ next(e); }
 }
-async function store(req,res,next){ try { const data=await products.catalog(req.query); data.items=data.items.map(p=>({...p,thumbnail_url:p.thumbnail_path?storage.publicUrl(loadEnv().PUBLIC_ASSET_BUCKET,p.thumbnail_path):null})); res.render('app',base(req,{view:'pages/store',...data})); } catch(e){next(e)} }
+async function store(req,res,next){
+  try{
+    const data=await products.catalog({
+      ...req.query,
+      limit:20
+    });
+
+    data.items=data.items.map(p=>({
+      ...p,
+      thumbnail_url:p.thumbnail_path
+        ? storage.publicUrl(
+            loadEnv().PUBLIC_ASSET_BUCKET,
+            p.thumbnail_path
+          )
+        : null
+    }));
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/store',
+        ...data,
+        storePagination:
+          paginationMeta(
+            data.total,
+            data.page,
+            data.limit
+          )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
+
 async function productDetail(req,res,next){ try { const product=await products.detailBySlug(req.params.slug,req.user?.id); if(product.thumbnail_path) product.thumbnail_url=storage.publicUrl(loadEnv().PUBLIC_ASSET_BUCKET,product.thumbnail_path); let entitlement=null; if(req.user?.id) entitlement=await require('../repositories/delivery.repository').entitlement(req.user.id,product.id); for(const c of (product.contents||[])){ c.allowed=c.access_type!=='PURCHASED'||!!entitlement; if(c.allowed && c.storage_path){ const bucket=c.storage_path.startsWith('public-assets/')?loadEnv().PUBLIC_ASSET_BUCKET:loadEnv().PRIVATE_PRODUCT_BUCKET; c.preview_url=await storage.signedUrl(bucket,c.storage_path.replace(/^public-assets\//,''),loadEnv().SIGNED_URL_EXPIRATION).catch(()=>null); } } res.render('app',base(req,{view:'pages/product-detail',product,purchased:!!entitlement})); } catch(e){next(e)} }
 async function dashboard(req,res,next){ try { const [p,n,c,o,s] = await Promise.all([profile.get(req.user.id),notifications.list(req.user.id),cart.get(req.user.id),orderService.getUserOrders(req.user.id,{limit:5}),services.list(true)]); const mut=await wallet.mutations(req.user.id); res.render('app',base(req,{view:'pages/dashboard',profile:p,notifications:n.slice(0,6),cart:c,orders:o,mutations:mut.slice(0,6),services:s.slice(0,4)})); } catch(e){next(e)} }
 async function cartPage(req,res,next){ try { res.render('app',base(req,{view:'pages/cart',cart:await cart.get(req.user.id)})); } catch(e){next(e)} }
@@ -80,7 +123,44 @@ async function checkout(req,res,next){
     next(e);
   }
 }
-async function orders(req,res,next){ try{res.render('app',base(req,{view:'pages/orders',orders:await orderService.getUserOrders(req.user.id,{limit:100})}));}catch(e){next(e)} }
+async function orders(req,res,next){
+  try{
+    const pager=pageParams({
+      page:req.query.page,
+      limit:5
+    });
+
+    const ordersRepo=require('../repositories/orders.repository');
+
+    const [items,total]=await Promise.all([
+      orderService.getUserOrders(
+        req.user.id,
+        {
+          limit:pager.limit,
+          offset:pager.offset
+        }
+      ),
+      ordersRepo.countForUser(req.user.id)
+    ]);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/orders',
+        orders:items,
+        ordersPagination:
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
+
 async function orderDetail(req,res,next){ try{const order=await require('../repositories/orders.repository').findForUser(req.params.id,req.user.id); if(!order){const err=new Error('Order not found.');err.status=404;err.expose=true;throw err;} res.render('app',base(req,{view:'pages/order-detail',order}));}catch(e){next(e)} }
 async function history(req,res,next){
   try{
@@ -147,7 +227,47 @@ async function history(req,res,next){
     next(e);
   }
 }
-async function deposit(req,res,next){try{const w=await wallet.get(req.user.id); const deposits=await require('../repositories/deposits.repository').listForUser(req.user.id); res.render('app',base(req,{view:'pages/deposit',wallet:w,deposits}));}catch(e){next(e)}}
+async function deposit(req,res,next){
+  try{
+    const pager=pageParams({
+      page:req.query.page,
+      limit:5
+    });
+
+    const depositsRepo=require('../repositories/deposits.repository');
+    const depositService=require('../services/deposit/deposit.service');
+
+    const [w,deposits,total]=await Promise.all([
+      wallet.get(req.user.id),
+      depositService.list(
+        req.user.id,
+        {
+          limit:pager.limit,
+          offset:pager.offset
+        }
+      ),
+      depositsRepo.countForUser(req.user.id)
+    ]);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/deposit',
+        wallet:w,
+        deposits,
+        depositsPagination:
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
+
 async function profilePage(req,res,next){
   try{
     const pager=pageParams({
@@ -191,9 +311,83 @@ async function profilePage(req,res,next){
     next(e);
   }
 }
-async function messagesPage(req,res,next){try{res.render('app',base(req,{view:'pages/messages',messages:await messages.list(req.user.id)}));}catch(e){next(e)}}
+async function messagesPage(req,res,next){
+  try{
+    const pager=pageParams({
+      page:req.query.page,
+      limit:5
+    });
+
+    const messageRepo=require('../repositories/messages.repository');
+
+    const [items,total]=await Promise.all([
+      messages.list(
+        req.user.id,
+        {
+          limit:pager.limit,
+          offset:pager.offset
+        }
+      ),
+      messageRepo.countForUser(req.user.id)
+    ]);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/messages',
+        messages:items,
+        messagesPagination:
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
+
 async function messageDetail(req,res,next){try{const m=await messages.detail(req.params.id,req.user.id);if(!m){const e=new Error('Message not found.');e.status=404;e.expose=true;throw e;}res.render('app',base(req,{view:'pages/message-detail',message:m}));}catch(e){next(e)}}
-async function ticketsPage(req,res,next){try{res.render('app',base(req,{view:'pages/tickets',tickets:await tickets.list(req.user.id)}));}catch(e){next(e)}}
+async function ticketsPage(req,res,next){
+  try{
+    const pager=pageParams({
+      page:req.query.page,
+      limit:5
+    });
+
+    const ticketRepo=require('../repositories/tickets.repository');
+
+    const [items,total]=await Promise.all([
+      tickets.list(
+        req.user.id,
+        {
+          limit:pager.limit,
+          offset:pager.offset
+        }
+      ),
+      ticketRepo.countForUser(req.user.id)
+    ]);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/tickets',
+        tickets:items,
+        ticketsPagination:
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
+
 async function ticketDetail(req,res,next){try{const t=await tickets.detail(req.params.id,req.user.id);if(!t){const e=new Error('Ticket not found.');e.status=404;e.expose=true;throw e;}res.render('app',base(req,{view:'pages/ticket-detail',ticket:t}));}catch(e){next(e)}}
 async function notificationsPage(req,res,next){
   try{
@@ -247,31 +441,286 @@ async function forgotPassword(req,res){res.render('app',base(req,{view:'pages/au
 async function resetPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'reset',error:req.query.error||''}))}
 async function authCallback(req,res,next){ try { if(!req.query.code) return res.redirect('/auth/login?error=Kode autentikasi tidak tersedia.'); const d=await auth.exchangeCode(req.query.code); await setAuthSession(req,d); return res.redirect(safeNextPath(req.query.next)); } catch(e){ return next(e); } }
 async function paymentStatus(req,res,next){try{const p=await require('../services/payment/payment.service').getStatus(req.params.id,req.user.id);res.render('app',base(req,{view:'pages/payment',payment:p}));}catch(e){next(e)}}
-async function delivery(req,res,next){try{const ent=(await require('../repositories/delivery.repository').entitlements(req.user.id))||[];res.render('app',base(req,{view:'pages/delivery',entitlements:ent}));}catch(e){next(e)}}
+async function delivery(req,res,next){
+  try{
+    const pager=pageParams({
+      page:req.query.page,
+      limit:5
+    });
+
+    const deliveryRepo=require('../repositories/delivery.repository');
+
+    const [entitlements,total]=await Promise.all([
+      deliveryRepo.entitlements(
+        req.user.id,
+        {
+          limit:pager.limit,
+          offset:pager.offset
+        }
+      ),
+      deliveryRepo.countEntitlements(req.user.id)
+    ]);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/delivery',
+        entitlements:entitlements||[],
+        deliveryPagination:
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
 
 function ownerPage(section){
   return async (req,res,next)=>{
     try{
       let data={};
       if(section==='dashboard'){ data.dashboard=await analytics.dashboard(); data.analytics=await analytics.period(req.query.period||'30d',req.query.from,req.query.to); }
-      else if(section==='products'){ data.items=await require('../repositories/products.repository').adminList({status:req.query.status||'',search:req.query.search||'',sort:req.query.sort||'newest',limit:100}); data.categories=await categories.list(false); }
+      else if(section==='products'){
+        const repo=require('../repositories/products.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.adminList({
+          ...req.query,
+          limit:pager.limit,
+          offset:pager.offset
+        });
+
+        const total=await repo.countAdmin(req.query);
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+
+        data.categories=await categories.list(false);
+      }
+
       else if(section==='categories'){ data.items=await categories.list(false); }
-      else if(section==='orders'){ data.items=await require('../repositories/orders.repository').adminList(req.query); }
-      else if(section==='payments'){ data.items=await require('../repositories/payments.repository').list(req.query); }
-      else if(section==='deposits'){ data.items=await require('../repositories/deposits.repository').adminList(req.query); }
-      else if(section==='refunds'){ data.items=await require('../repositories/refunds.repository').list(); }
-      else if(section==='users'){ data.items=await require('../repositories/profiles.repository').list(req.query); }
+      else if(section==='orders'){
+        const repo=require('../repositories/orders.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.adminList({
+          ...req.query,
+          limit:pager.limit,
+          offset:pager.offset
+        });
+
+        const total=await repo.countAdmin(req.query);
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
+      else if(section==='payments'){
+        const repo=require('../repositories/payments.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.list({
+          ...req.query,
+          limit:pager.limit,
+          offset:pager.offset
+        });
+
+        const total=await repo.countAdmin(req.query);
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
+      else if(section==='deposits'){
+        const repo=require('../repositories/deposits.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.adminList({
+          ...req.query,
+          limit:pager.limit,
+          offset:pager.offset
+        });
+
+        const total=await repo.countAdmin(req.query);
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
+      else if(section==='refunds'){
+        const repo=require('../repositories/refunds.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.list({
+          limit:pager.limit,
+          offset:pager.offset
+        });
+
+        const total=await repo.count();
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
+      else if(section==='users'){
+        const repo=require('../repositories/profiles.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.list({
+          ...req.query,
+          limit:pager.limit,
+          offset:pager.offset
+        });
+
+        const total=await repo.count({
+          search:req.query.search||''
+        });
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
       else if(section==='roles'){ data.items=await require('../repositories/roles.repository').list(); }
-      else if(section==='messages'){ data.items=await require('../repositories/messages.repository').listAll(); }
-      else if(section==='tickets'){ data.items=await tickets.adminList(req.query.status); }
-      else if(section==='activity'){ data.items=await require('../repositories/audit.repository').list(200); }
+      else if(section==='messages'){
+        const repo=require('../repositories/messages.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.listAll({
+          limit:pager.limit,
+          offset:pager.offset
+        });
+
+        const total=await repo.countAll();
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
+      else if(section==='tickets'){
+        const repo=require('../repositories/tickets.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.adminList(
+          req.query.status,
+          {
+            limit:pager.limit,
+            offset:pager.offset
+          }
+        );
+
+        const total=await repo.countAdmin(
+          req.query.status
+        );
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
+      else if(section==='activity'){
+        const repo=require('../repositories/audit.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.list(
+          pager.limit,
+          pager.offset
+        );
+
+        const total=await repo.count();
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
       else if(section==='services'){ data.items=await services.list(false); }
       else if(section==='settings'){ data.items=await settings.ownerSettings(); data.maintenance=await settings.maintenance(); }
       else if(section==='maintenance'){ data.maintenance=await settings.maintenance(); }
-      else if(section==='notifications'){ data.items=await notifications.adminList(); }
+      else if(section==='notifications'){
+        const repo=require('../repositories/notification.repository');
+        const pager=ownerPager(req);
+
+        data.items=await repo.adminList({
+          limit:pager.limit,
+          offset:pager.offset
+        });
+
+        const total=await repo.countAdmin();
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
       else if(section==='reports'){ data.analytics=await analytics.period(req.query.period||'30d',req.query.from,req.query.to); }
       else if(section==='top-orders'){ data.items=(await analytics.period(req.query.period||'30d',req.query.from,req.query.to)).top; }
-      else if(section==='security'||section==='login-history'){ data.logins=await query("select * from login_history order by created_at desc limit 200").then(r=>r.rows); }
+      else if(section==='security'||section==='login-history'){
+        const pager=ownerPager(req);
+
+        data.logins=(
+          await query(
+            'select * from login_history order by created_at desc limit $1 offset $2',
+            [pager.limit,pager.offset]
+          )
+        ).rows;
+
+        const total=Number(
+          (
+            await query(
+              'select count(*)::int count from login_history'
+            )
+          ).rows[0].count
+        );
+
+        data.ownerPagination=
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          );
+      }
+
       else if(section==='storage'){ data.storage={publicBucket:loadEnv().PUBLIC_ASSET_BUCKET,privateBucket:loadEnv().PRIVATE_PRODUCT_BUCKET,userBucket:loadEnv().USER_UPLOAD_BUCKET}; }
       else if(section==='system'){ data.system={node:process.version,environment:loadEnv().NODE_ENV,uptime:process.uptime(),configured:isConfigured()}; }
       else if(section==='faq'){ data.items=await faqRepo.listAll(); }

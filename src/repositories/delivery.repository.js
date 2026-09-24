@@ -3,5 +3,45 @@ async function entitlement(userId,productId){ return (await query('select * from
 async function createEntitlement({userId,productId,orderId},client){ const c=client||require('../config/database').db(); return (await c.query("insert into entitlements(user_id,product_id,order_id,status) values($1,$2,$3,'ACTIVE') on conflict(user_id,product_id,order_id) do nothing returning *",[userId,productId,orderId])).rows[0]||null; }
 async function revokeByOrder(orderId,client){ const c=client||require('../config/database').db(); await c.query("update entitlements set status='REVOKED',revoked_at=now() where order_id=$1 and status='ACTIVE'",[orderId]); }
 async function logDownload(data,client){ const c=client||require('../config/database').db(); return (await c.query('insert into download_logs(user_id,content_id,order_id,ip,user_agent) values($1,$2,$3,$4,$5) returning *',[data.user_id,data.content_id,data.order_id||null,data.ip||null,data.user_agent||null])).rows[0]; }
-async function entitlements(userId){ return (await query(`select e.*,p.name product_name,p.slug from entitlements e join products p on p.id=e.product_id where e.user_id=$1 order by e.granted_at desc`,[userId])).rows; }
-module.exports={entitlement,entitlements,createEntitlement,revokeByOrder,logDownload};
+async function entitlements(userId,options={}){
+  const limit=Math.min(
+    100,
+    Math.max(1,Number(options.limit)||100)
+  );
+
+  const offset=Math.max(
+    0,
+    Number(options.offset)||0
+  );
+
+  return (
+    await query(
+      `select
+         e.*,
+         p.name product_name,
+         p.slug
+       from entitlements e
+       join products p on p.id=e.product_id
+       where e.user_id=$1
+       order by e.granted_at desc
+       limit $2
+       offset $3`,
+      [userId,limit,offset]
+    )
+  ).rows;
+}
+
+async function countEntitlements(userId){
+  return Number(
+    (
+      await query(
+        'select count(*)::int count from entitlements where user_id=$1',
+        [userId]
+      )
+    ).rows[0].count
+  );
+}
+
+module.exports={entitlement,entitlements,createEntitlement,revokeByOrder,logDownload,
+  countEntitlements
+};

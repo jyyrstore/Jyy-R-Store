@@ -1,15 +1,12 @@
 <%
   const p=pagination;
   const queryParams=query||{};
-  const build=page=>
-    paginationUrl(param,page,queryParams);
+  const build=page=>paginationUrl(req,param,page,queryParams);
 %>
 
 <% if(p && p.totalPages>1){ %>
-  <nav
-    class="pagination"
-    aria-label="<%= label||'Pagination' %>"
-  >
+  <nav class="pagination" aria-label="<%= label||'Pagination' %>">
+
     <% if(p.showPrevious){ %>
       <a
         class="pagination-link pagination-icon"
@@ -50,5 +47,6 @@
         aria-label="Halaman terakhir"
       >&gt;&gt;</a>
     <% } %>
+
   </nav>
 <% } %>

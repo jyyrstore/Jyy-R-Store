@@ -20,5 +20,10 @@
     <% if(!entitlements.length){ %>
       <%- include('../partials/empty',{title:'Belum ada akses produk',description:'Setelah pesanan berhasil, akses produk akan muncul di sini.',cta:'/store',ctaText:'Jelajahi Store'}) %>
     <% } %>
-  </div>
+
+<%- include('../partials/pagination',{
+  pagination:deliveryPagination,
+  param:'page'
+}) %>
+</div>
 </section>

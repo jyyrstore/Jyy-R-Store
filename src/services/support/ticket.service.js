@@ -46,8 +46,14 @@ async function ownerSetStatus(ticketId,status){
 }
 
 module.exports={
-  create,reply,ownerReply,setStatus,ownerSetStatus,
-  list:repo.listForUser,
+  create,
+  reply,
+  ownerReply,
+  setStatus,
+  ownerSetStatus,
+  list:(userId,options={})=>repo.listForUser(userId,options),
+  count:(userId)=>repo.countForUser(userId),
   detail:repo.detail,
-  adminList:repo.adminList
+  adminList:(status,options={})=>repo.adminList(status,options),
+  countAdmin:(status)=>repo.countAdmin(status)
 };

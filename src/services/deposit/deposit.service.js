@@ -124,5 +124,19 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
     paymentUrl:payment.raw_reference?.paymentUrl||payment.raw_reference?.payment_url||providerPayment.paymentUrl
   };
 }
-async function list(userId){return deposits.listForUser(userId)}
-module.exports={createAndPay,list};
+async function list(userId,options={}){
+  return deposits.listForUser(
+    userId,
+    options
+  );
+}
+
+async function count(userId){
+  return deposits.countForUser(userId);
+}
+
+module.exports={
+  createAndPay,
+  list,
+  count
+};

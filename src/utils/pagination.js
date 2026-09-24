@@ -28,6 +28,7 @@ function paginationUrl(req,param,page,extra={}){
   url.searchParams.set(param,String(page));
 
   for(const [key,value] of Object.entries(extra)){
+    if(key===param) continue;
     if(value===undefined||value===null||value===''){
       url.searchParams.delete(key);
     }else{

@@ -87,13 +87,18 @@
 
   <% if(items.length){ %>
     <div class="product-grid"><% items.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>
-    <% const pages=Math.max(1,Math.ceil(total/Math.max(1,limit||20))); const current=Number(page||1); if(pages>1){ %>
-      <nav class="pagination" aria-label="Pagination">
-        <% if(current>1){ %><a class="button button-secondary button-small" href="<%= paginationUrl(req.query,current-1) %>">Sebelumnya</a><% } %>
-        <span>Halaman <strong><%= current %></strong> / <%= pages %></span>
-        <% if(current<pages){ %><a class="button button-secondary button-small" href="<%= paginationUrl(req.query,current+1) %>">Berikutnya</a><% } %>
-      </nav>
-    <% } %>
+    <%- include('../partials/pagination',{
+  pagination:storePagination,
+  param:'page',
+  query:{
+    search:req.query.search,
+    category:req.query.category,
+    minPrice:req.query.minPrice,
+    maxPrice:req.query.maxPrice,
+    sort:req.query.sort
+  },
+  label:'Pagination produk store'
+}) %>
   <% } else { %>
     <%- include('../partials/empty',{title:'Belum ada produk tersedia',description:'Coba kata kunci atau filter lain.',actionUrl:'/store',actionLabel:'Reset Filter'}) %>
   <% } %>

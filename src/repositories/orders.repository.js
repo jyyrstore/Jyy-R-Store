@@ -49,7 +49,8 @@ async function findById(id){
 }
 
 async function adminList(filters={}){
-  let where=['1=1'],args=[];
+  let where=['1=1'];
+  let args=[];
 
   if(filters.status){
     args.push(filters.status);
@@ -58,18 +59,58 @@ async function adminList(filters={}){
 
   if(filters.search){
     args.push(`%${filters.search}%`);
-    where.push(`(o.order_number ilike $${args.length} or p.username ilike $${args.length})`);
+    where.push(
+      `(o.order_number ilike $${args.length} or p.username ilike $${args.length})`
+    );
   }
 
   const lim=safeLimit(filters.limit,50);
+  const off=safeOffset(filters.offset);
+
   args.push(lim);
+  args.push(off);
 
   return (
     await query(
-      `select o.*,p.username,p.email from orders o join profiles p on p.id=o.user_id where ${where.join(' and ')} order by o.created_at desc limit $${args.length}`,
+      `select o.*,p.username,p.email
+       from orders o
+       join profiles p on p.id=o.user_id
+       where ${where.join(' and ')}
+       order by o.created_at desc
+       limit $${args.length-1}
+       offset $${args.length}`,
       args
     )
   ).rows;
+}
+
+async function countAdmin(filters={}){
+  let where=['1=1'];
+  let args=[];
+
+  if(filters.status){
+    args.push(filters.status);
+    where.push(`o.status=$${args.length}`);
+  }
+
+  if(filters.search){
+    args.push(`%${filters.search}%`);
+    where.push(
+      `(o.order_number ilike $${args.length} or p.username ilike $${args.length})`
+    );
+  }
+
+  return Number(
+    (
+      await query(
+        `select count(*)::int count
+         from orders o
+         join profiles p on p.id=o.user_id
+         where ${where.join(' and ')}`,
+        args
+      )
+    ).rows[0].count
+  );
 }
 
 module.exports={
@@ -78,5 +119,6 @@ module.exports={
   findForUser,
   findById,
   adminList,
-  withTransaction
+  withTransaction,
+  countAdmin
 };

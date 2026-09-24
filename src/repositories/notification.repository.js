@@ -88,7 +88,21 @@ async function count(userId){
   );
 }
 
-async function adminList(limit=200){
+async function adminList(options={}){
+  if(typeof options==='number'){
+    options={limit:options};
+  }
+
+  const limit=Math.min(
+    500,
+    Math.max(1,Number(options.limit)||200)
+  );
+
+  const offset=Math.max(
+    0,
+    Number(options.offset)||0
+  );
+
   return (
     await query(
       `
@@ -99,8 +113,9 @@ async function adminList(limit=200){
         left join profiles p on p.id=n.user_id
         order by n.created_at desc
         limit $1
+        offset $2
       `,
-      [Math.min(500,Number(limit||200))]
+      [limit,offset]
     )
   ).rows;
 }
@@ -233,11 +248,22 @@ async function markRead(id,userId){
   }
 }
 
+async function countAdmin(){
+  return Number(
+    (
+      await query(
+        'select count(*)::int count from notifications'
+      )
+    ).rows[0].count
+  );
+}
+
 module.exports={
   create,
   list,
   count,
   adminList,
   unreadCount,
-  markRead
+  markRead,
+  countAdmin
 };
