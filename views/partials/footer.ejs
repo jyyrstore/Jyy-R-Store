@@ -1,6 +1,6 @@
 <footer class="site-footer">
   <div><strong>Jyy'R Store</strong><p>Digital store untuk produk, service, pembayaran, dan delivery yang aman.</p></div>
-  <div class="footer-links"><a href="/services">Services</a><a href="/faq">FAQ</a><a href="/security">Security</a><a href="/">Terms</a></div>
-  <div class="footer-links"><% socialLinks.forEach(([key,label,v])=>{ if(v){ %><a href="<%= v %>" target="_blank" rel="noopener noreferrer"><%= label %></a><% }}) %></div>
+  <div class="footer-links"><a href="/services">Services</a><a href="/faq">FAQ</a><a href="/security">Security</a><a href="/terms">Terms</a></div>
+  <% if (socialLinks.some(([, , v]) => v)) { %><div class="footer-links"><% socialLinks.forEach(([key,label,v])=>{ if(v){ %><a href="<%= v %>" target="_blank" rel="noopener noreferrer"><%= label %></a><% }}) %></div><% } %>
   <small>© <%= new Date().getFullYear() %> Jyy'R Store</small>
 </footer>
