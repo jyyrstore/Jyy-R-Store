@@ -140,7 +140,7 @@
   }
 
   .home-page .hero h1{
-    font-size:28px;
+    font-size:20px !important;
     line-height:1.08;
     letter-spacing:-.025em;
     max-width:420px;
@@ -156,7 +156,7 @@
 
 @media(max-width:480px){
   .home-page .hero h1{
-    font-size:24px;
+    font-size:20px !important;
     line-height:1.1;
     max-width:340px;
   }
@@ -169,7 +169,7 @@
 
 @media(max-width:380px){
   .home-page .hero h1{
-    font-size:22px;
+    font-size:20px !important;
     line-height:1.12;
     max-width:300px;
   }
