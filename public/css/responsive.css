@@ -135,10 +135,6 @@
     color:var(--muted);
   }
 
-  .home-page{
-    padding-bottom:4px;
-  }
-
   .home-page .hero h1{
     font-size:20px;
     line-height:1.08;
