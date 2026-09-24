@@ -106,6 +106,28 @@
     >
       <article class="profile-stat-card">
         <div class="profile-stat-icon">
+          <%- icon('shield') %>
+        </div>
+
+        <div>
+          <span>Role</span>
+          <strong><%= labelStatus(profile.role) %></strong>
+        </div>
+      </article>
+
+      <article class="profile-stat-card">
+        <div class="profile-stat-icon">
+          <%- icon('check') %>
+        </div>
+
+        <div>
+          <span>Status</span>
+          <strong><%= labelStatus(profile.status) %></strong>
+        </div>
+      </article>
+
+      <article class="profile-stat-card">
+        <div class="profile-stat-icon">
           <%- icon('history') %>
         </div>
 
