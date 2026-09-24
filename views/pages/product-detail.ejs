@@ -81,7 +81,10 @@
 
         <div class="content-body">
           <div class="content-inline">
-            <strong><%= c.title %></strong>
+            <div class="content-title-block">
+              <strong><%= c.title %></strong>
+              <span class="content-category"><%= product.category_name || 'Produk' %></span>
+            </div>
             <small><%= contentTypeLabels[c.type] || 'Konten' %> · <%= accessTypeLabels[c.access_type] || 'Akses terbatas' %></small>
             <% if(c.description){ %>
               <p><%= c.description %></p>
@@ -109,29 +112,37 @@
               : 'Terkunci' %>
           </span>
 
-          <% if(c.type==='LINK' && c.url && c.allowed){ %>
-            <a
-              class="button button-secondary button-small"
-              href="<%= c.url %>"
-              target="_blank"
-              rel="noopener noreferrer">
-              Buka
-            </a>
-          <% } else if(c.preview_url && ['IMAGE','VIDEO','AUDIO'].includes(c.type)){ %>
-            <button
-              class="button button-secondary button-small"
-              type="button"
-              data-open-content-url="<%= c.preview_url %>">
-              Pratinjau
-            </button>
-          <% } else if(c.allowed && ['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)){ %>
-            <button
-              class="button button-primary button-small"
-              type="button"
-              data-download-content="<%= c.id %>">
-              Akses
-            </button>
-          <% } else if(!c.allowed){ %>
+          <div class="content-side-actions">
+            <% if(c.type==='LINK' && c.url && c.allowed){ %>
+              <a
+                class="button button-secondary button-small"
+                href="<%= c.url %>"
+                target="_blank"
+                rel="noopener noreferrer">
+                Buka
+              </a>
+            <% } %>
+
+            <% if(c.preview_url && ['IMAGE','VIDEO','AUDIO'].includes(c.type)){ %>
+              <button
+                class="button button-secondary button-small"
+                type="button"
+                data-open-content-url="<%= c.preview_url %>">
+                Pratinjau
+              </button>
+            <% } %>
+
+            <% if(c.allowed && ['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)){ %>
+              <button
+                class="button button-primary button-small"
+                type="button"
+                data-download-content="<%= c.id %>">
+                Akses
+              </button>
+            <% } %>
+          </div>
+
+          <% if(!c.allowed && !(c.type==='LINK' && c.url)){ %>
             <span class="muted small content-side-note">Pembelian diperlukan</span>
           <% } %>
         </div>
