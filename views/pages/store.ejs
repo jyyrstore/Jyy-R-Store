@@ -5,17 +5,85 @@
       <h1>Katalog produk</h1>
       <p><%= total %> produk tersedia. Gunakan filter untuk mempersempit pilihan.</p>
     </div>
-    <% if (currentUser) { %><a class="button button-secondary" href="/cart"><%- icon('cart') %> Keranjang</a><% } %>
+    <% if (currentUser) { %>
+      <a class="button button-secondary" href="/cart" data-cart-link>
+        <%- icon('cart') %>
+        <span>Keranjang</span>
+        <span class="cart-count" data-cart-badge hidden></span>
+      </a>
+    <% } %>
   </div>
 
+  <%
+    const activeFilters = [
+      String(req.query.search||'').trim(),
+      String(req.query.category||'').trim(),
+      String(req.query.minPrice||'').trim(),
+      String(req.query.maxPrice||'').trim(),
+      String(req.query.sort||'').trim() && req.query.sort !== 'newest' ? req.query.sort : ''
+    ].filter(Boolean);
+    const activeFilterCount = activeFilters.length;
+  %>
+
   <form class="filter-bar" method="get" action="/store">
-    <label class="field-inline"><span class="sr-only">Cari produk</span><input name="search" value="<%= req.query.search||'' %>" placeholder="Cari produk..." aria-label="Cari produk"></label>
-    <select name="category" aria-label="Kategori"><option value="">Semua kategori</option><% categories.forEach(c=>{ %><option value="<%= c.slug %>" <%= req.query.category===c.slug?'selected':'' %>><%= c.name %></option><% }) %></select>
-    <input name="minPrice" value="<%= req.query.minPrice||'' %>" type="number" min="0" placeholder="Harga min" aria-label="Harga minimum">
-    <input name="maxPrice" value="<%= req.query.maxPrice||'' %>" type="number" min="0" placeholder="Harga max" aria-label="Harga maksimum">
-    <select name="sort" aria-label="Urutkan"><option value="newest">Terbaru</option><option value="popular" <%= req.query.sort==='popular'?'selected':'' %>>Populer</option><option value="price_asc" <%= req.query.sort==='price_asc'?'selected':'' %>>Harga rendah</option><option value="price_desc" <%= req.query.sort==='price_desc'?'selected':'' %>>Harga tinggi</option></select>
-    <button class="button button-primary button-small" type="submit">Terapkan</button>
+    <label class="field-inline filter-search">
+      <span class="sr-only">Cari produk</span>
+      <input
+        name="search"
+        value="<%= req.query.search||'' %>"
+        type="search"
+        placeholder="Cari produk..."
+        aria-label="Cari produk"
+      >
+    </label>
+
+    <select class="filter-category" name="category" aria-label="Kategori">
+      <option value="">Semua kategori</option>
+      <% categories.forEach(c=>{ %>
+        <option value="<%= c.slug %>" <%= req.query.category===c.slug?'selected':'' %>><%= c.name %></option>
+      <% }) %>
+    </select>
+
+    <input
+      class="filter-min"
+      name="minPrice"
+      value="<%= req.query.minPrice||'' %>"
+      type="number"
+      min="0"
+      placeholder="Harga min"
+      aria-label="Harga minimum"
+    >
+
+    <input
+      class="filter-max"
+      name="maxPrice"
+      value="<%= req.query.maxPrice||'' %>"
+      type="number"
+      min="0"
+      placeholder="Harga max"
+      aria-label="Harga maksimum"
+    >
+
+    <select class="filter-sort" name="sort" aria-label="Urutkan">
+      <option value="newest">Terbaru</option>
+      <option value="popular" <%= req.query.sort==='popular'?'selected':'' %>>Populer</option>
+      <option value="price_asc" <%= req.query.sort==='price_asc'?'selected':'' %>>Harga rendah</option>
+      <option value="price_desc" <%= req.query.sort==='price_desc'?'selected':'' %>>Harga tinggi</option>
+    </select>
+
+    <button class="button button-primary button-small filter-submit" type="submit">
+      Terapkan Filter
+    </button>
   </form>
+
+  <div class="filter-status" aria-live="polite">
+    <span>
+      <%= activeFilterCount ? `${activeFilterCount} filter aktif` : 'Menampilkan semua produk' %>
+    </span>
+    <% if(activeFilterCount){ %>
+      <a href="/store">Hapus filter</a>
+    <% } %>
+  </div>
 
   <% if(items.length){ %>
     <div class="product-grid"><% items.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>

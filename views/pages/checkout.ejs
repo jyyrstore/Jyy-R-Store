@@ -1,41 +1,112 @@
 <section class="page-shell">
   <div class="page-header">
-    <div><div class="eyebrow">Checkout</div><h1>Konfirmasi pembelian</h1><p>Pastikan item dan metode pembayaran sudah sesuai sebelum konfirmasi.</p></div>
+    <div>
+      <div class="eyebrow">Checkout</div>
+      <h1>Konfirmasi pembelian</h1>
+      <p>Periksa item, saldo, dan metode pembayaran sebelum melanjutkan.</p>
+    </div>
   </div>
 
   <div class="checkout-layout">
     <div class="stack-list">
-      <div class="section-header"><div><div class="eyebrow">Review</div><h2>Item pesanan</h2></div></div>
-
-      <% preview.items.forEach(i=>{ %>
-        <div class="list-card">
-          <div><strong><%= i.name %></strong><span><%= i.quantity %> × <%= formatIDR(i.price) %></span></div>
-          <b><%= formatIDR(i.lineTotal) %></b>
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Review</div>
+          <h2>Item pesanan</h2>
         </div>
-      <% }) %>
+      </div>
+
+      <% if(preview.items.length){ %>
+        <% preview.items.forEach(i=>{ %>
+          <div class="list-card">
+            <div>
+              <strong><%= i.name %></strong>
+              <span><%= i.quantity %> × <%= formatIDR(i.price) %></span>
+            </div>
+            <b><%= formatIDR(i.lineTotal) %></b>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <%- include('../partials/empty',{
+          title:'Tidak ada item',
+          description:'Keranjang kosong. Tambahkan produk sebelum checkout.',
+          actionUrl:'/store',
+          actionLabel:'Buka Store'
+        }) %>
+      <% } %>
     </div>
 
     <aside class="summary-card">
-      <div class="eyebrow">Payment</div>
-      <div class="summary-row"><span>Subtotal</span><b><%= preview.total %></b></div>
+      <div class="eyebrow">Pembayaran</div>
 
-      <label class="field">
-        <span>Metode pembayaran</span>
-        <select id="payment-method">
-          <option value="BALANCE" <%= selectedPaymentMethod==='BALANCE'?'selected':'' %>>Saldo Wallet</option>
-          <option value="GATEWAY" <%= selectedPaymentMethod==='GATEWAY'?'selected':'' %>>Payment Gateway</option>
-        </select>
-      </label>
+      <div class="summary-row">
+        <span>Subtotal</span>
+        <b><%= formatIDR(preview.subtotal) %></b>
+      </div>
+
+      <fieldset class="payment-group">
+        <legend>Metode pembayaran</legend>
+
+        <div class="payment-options">
+          <label class="payment-option <%= selectedPaymentMethod==='BALANCE' ? 'is-selected' : '' %> <%= walletSufficient ? '' : 'is-unavailable' %>">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="BALANCE"
+              <%= selectedPaymentMethod==='BALANCE' ? 'checked' : '' %>
+              <%= walletSufficient ? '' : 'disabled' %>
+            >
+            <span class="payment-option__copy">
+              <strong>Saldo Wallet</strong>
+              <small>
+                <% if(walletSufficient){ %>
+                  Saldo tersedia <%= formatIDR(wallet.balance) %>
+                <% } else { %>
+                  Saldo <%= formatIDR(wallet.balance) %> · kurang <%= formatIDR(Number(preview.total)-Number(wallet.balance)) %>
+                <% } %>
+              </small>
+            </span>
+          </label>
+
+          <label class="payment-option <%= selectedPaymentMethod==='GATEWAY' ? 'is-selected' : '' %>">
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="GATEWAY"
+              <%= selectedPaymentMethod==='GATEWAY' ? 'checked' : '' %>
+            >
+            <span class="payment-option__copy">
+              <strong>Payment Gateway</strong>
+              <small>Bayar melalui provider pembayaran.</small>
+            </span>
+          </label>
+        </div>
+      </fieldset>
 
       <hr>
 
-      <div class="summary-row total"><span>Total</span><strong><%= preview.total %></strong></div>
+      <div class="summary-row total">
+        <span>Total</span>
+        <strong><%= formatIDR(preview.total) %></strong>
+      </div>
 
-      <button class="button button-primary button-block" data-checkout-confirm>
-        <%- icon('check') %> Konfirmasi & Bayar
+      <button
+        class="button button-primary button-block"
+        data-checkout-confirm
+        <%= preview.items.length ? '' : 'disabled' %>
+      >
+        <%- icon('check') %>
+        <span
+          data-checkout-label
+          data-balance-label="Bayar <%= formatIDR(preview.total) %>"
+        ><%= selectedPaymentMethod==='BALANCE'
+          ? `Bayar ${formatIDR(preview.total)}`
+          : 'Lanjut ke Pembayaran' %></span>
       </button>
 
-      <p class="muted small">Untuk gateway, status akhir berasal dari verifikasi server dan webhook provider.</p>
+      <p class="muted small">
+        Untuk gateway, status akhir berasal dari verifikasi server dan webhook provider.
+      </p>
     </aside>
   </div>
 </section>

@@ -2,6 +2,34 @@
   const api=window.JYYRApi,toast=window.JYYRToast;
   const money=v=>window.JYYR.formatIDR(v), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const csrf=()=>window.JYYR?.csrf||'';
+
+  async function hydrateCartBadge(){
+    const badge=document.querySelector('[data-cart-badge]');
+    if(!badge||!api?.request)return;
+
+    try{
+      const cart=await api.request('/api/cart');
+      const count=(cart?.items||[]).reduce(
+        (sum,item)=>sum+Number(item.quantity||0),
+        0
+      );
+
+      badge.textContent=count>99?'99+':String(count);
+      badge.hidden=count<=0;
+    }catch{
+      badge.hidden=true;
+    }
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener(
+      'DOMContentLoaded',
+      hydrateCartBadge,
+      {once:true}
+    );
+  }else{
+    hydrateCartBadge();
+  }
   const svg=name=>({plus:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',x:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',package:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16.5 9.4-9-5.1M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>'}[name]||'');
 
   async function ownerAction(url,body={},method='POST',ok='Selesai'){const r=await api.request(url,{method,body});toast.success(ok);return r;}
@@ -766,15 +794,65 @@
     const retry=e.target.closest('[data-retry]'); if(retry){location.reload();return}
     const openUrl=e.target.closest('[data-open-content-url]'); if(openUrl){window.open(openUrl.dataset.openContentUrl,'_blank','noopener');return}
 
-    const buy=e.target.closest('[data-buy-now]'); if(buy){buy.disabled=true;try{const cart=await api.request('/api/cart');const existing=(cart?.items||[]).find(i=>String(i.product_id)===String(buy.dataset.buyNow));if(existing){await api.request('/api/cart/'+encodeURIComponent(existing.id),{method:'PUT',body:{quantity:1}})}else{await api.request('/api/cart',{method:'POST',body:{productId:buy.dataset.buyNow,quantity:1}})}location.href='/checkout?payment=GATEWAY'}catch(err){toast.error(err.message)}finally{buy.disabled=false}}
-    const add=e.target.closest('[data-add-cart]'); if(add){add.disabled=true;try{await api.request('/api/cart',{method:'POST',body:{productId:add.dataset.addCart,quantity:1}});toast.success('Produk ditambahkan ke cart.')}catch(err){toast.error(err.message)}finally{add.disabled=false}}
+    const buy=e.target.closest('[data-buy-now]'); if(buy){buy.disabled=true;try{const cart=await api.request('/api/cart');const existing=(cart?.items||[]).find(i=>String(i.product_id)===String(buy.dataset.buyNow));if(existing){await api.request('/api/cart/'+encodeURIComponent(existing.id),{method:'PUT',body:{quantity:1}})}else{await api.request('/api/cart',{method:'POST',body:{productId:buy.dataset.buyNow,quantity:1}})}location.href='/checkout'}catch(err){toast.error(err.message)}finally{buy.disabled=false}}
+    const add=e.target.closest('[data-add-cart]'); if(add){add.disabled=true;try{await api.request('/api/cart',{method:'POST',body:{productId:add.dataset.addCart,quantity:1}});toast.success('Produk ditambahkan ke keranjang.');await hydrateCartBadge();}catch(err){toast.error(err.message)}finally{add.disabled=false}}
     const rm=e.target.closest('[data-cart-remove]'); if(rm){try{await api.request('/api/cart/'+rm.dataset.cartRemove,{method:'DELETE'});location.reload()}catch(err){toast.error(err.message)}}
-    const minus=e.target.closest('[data-cart-minus]'),plus=e.target.closest('[data-cart-plus]'); if(minus||plus){const btn=minus||plus,id=btn.dataset[minus?'cartMinus':'cartPlus'],card=btn.closest('.cart-item');const qty=Number(card.querySelector('.quantity span').textContent)+(plus?1:-1);if(qty<1)return;try{await api.request('/api/cart/'+id,{method:'PUT',body:{quantity:qty}});location.reload()}catch(err){toast.error(err.message)}}
+    const minus=e.target.closest('[data-cart-minus]'),plus=e.target.closest('[data-cart-plus]');
+    if(minus||plus){
+      const btn=minus||plus;
+      const id=btn.dataset[minus?'cartMinus':'cartPlus'];
+      const card=btn.closest('.cart-item');
+      const qtyNode=card?.querySelector('.quantity span');
+      const lineNode=card?.querySelector('[data-cart-line-total]');
+      const controls=card?.querySelectorAll('.quantity .icon-button')||[];
+      const current=Number(qtyNode?.textContent||0);
+      const qty=current+(plus?1:-1);
+
+      if(qty<1)return;
+
+      controls.forEach(x=>x.disabled=true);
+      card?.setAttribute('aria-busy','true');
+
+      try{
+        await api.request(
+          '/api/cart/'+encodeURIComponent(id),
+          {
+            method:'PUT',
+            body:{quantity:qty}
+          }
+        );
+
+        const updated=await api.request('/api/cart');
+        const item=(updated?.items||[]).find(
+          x=>String(x.id)===String(id)
+        );
+
+        if(item){
+          if(qtyNode)qtyNode.textContent=String(item.quantity);
+          if(lineNode)lineNode.textContent=money(item.lineTotal);
+        }
+
+        const totalNode=document.querySelector(
+          '[data-cart-summary-total]'
+        );
+
+        if(totalNode){
+          totalNode.textContent=money(updated?.total||0);
+        }
+
+        await hydrateCartBadge();
+      }catch(err){
+        toast.error(err.message);
+      }finally{
+        controls.forEach(x=>x.disabled=false);
+        card?.removeAttribute('aria-busy');
+      }
+    }
     const amount=e.target.closest('[data-deposit-amount]');if(amount){document.querySelectorAll('[data-deposit-amount]').forEach(x=>x.classList.remove('selected'));amount.classList.add('selected');const custom=document.getElementById('deposit-custom');if(custom)custom.value=Number(amount.dataset.depositAmount)}
     const read=e.target.closest('[data-read-notification]');if(read){try{await api.request('/api/notifications/'+read.dataset.readNotification+'/read',{method:'PUT'});read.closest('.notification-card')?.classList.remove('unread');read.remove()}catch(err){toast.error(err.message)}}
     const tab=e.target.closest('[data-tab-target]');if(tab){const name=tab.dataset.tabTarget;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));tab.classList.add('active');document.querySelector(`[data-tab="${name}"]`)?.classList.add('active')}
     const dep=e.target.closest('[data-deposit-submit]');if(dep){const v=Number(document.getElementById('deposit-custom')?.value||0);if(v<1000)return toast.error('Minimum deposit Rp1.000.');dep.disabled=true;try{const r=await api.request('/api/deposit',{method:'POST',body:{amount:v,returnUrl:location.origin+'/deposit'}});if(r.paymentUrl)location.href=r.paymentUrl;else toast.success('Deposit dibuat.')}catch(err){toast.error(err.message)}finally{dep.disabled=false}}
-    const checkout=e.target.closest('[data-checkout-confirm]');if(checkout){const method=document.getElementById('payment-method')?.value||'BALANCE';checkout.disabled=true;try{const r=await api.request('/api/orders',{method:'POST',body:{paymentMethod:method,returnUrl:location.origin+'/orders'}});if(r.payment?.paymentUrl)location.href=r.payment.paymentUrl;else location.href='/orders/'+r.order.id}catch(err){toast.error(err.message)}finally{checkout.disabled=false}}
+    const checkout=e.target.closest('[data-checkout-confirm]');if(checkout){const method=document.querySelector('input[name="paymentMethod"]:checked')?.value||'BALANCE';checkout.disabled=true;try{const r=await api.request('/api/orders',{method:'POST',body:{paymentMethod:method,returnUrl:location.origin+'/orders'}});if(r.payment?.paymentUrl)location.href=r.payment.paymentUrl;else location.href='/orders/'+r.order.id}catch(err){toast.error(err.message)}finally{checkout.disabled=false}}
 
     const download=e.target.closest('[data-download-content]');if(download){download.disabled=true;try{const r=await api.request('/api/download/'+download.dataset.downloadContent);if(r.url)window.open(r.url,'_blank','noopener');else if(r.content?.type==='TEXT')toast.success('Content teks tersedia di halaman.');else toast.error('Secure URL tidak tersedia.')}catch(err){toast.error(err.message)}finally{download.disabled=false}}
     const service=e.target.closest('[data-service-order]');if(service){open(`<form data-service-order-form class="stack-form"><h2>Pesan ${esc(service.dataset.serviceName)}</h2><p class="muted">Harga ${money(service.dataset.servicePrice)} akan dipotong dari saldo setelah konfirmasi.</p><input type="hidden" name="serviceId" value="${esc(service.dataset.serviceOrder)}"><label class="field"><span>Username (opsional)</span><input name="username"></label><label class="field"><span>URL (opsional)</span><input name="url" type="url"></label><label class="field"><span>Quantity</span><input name="quantity" type="number" min="1" value="1"></label><label class="field"><span>Target (opsional)</span><input name="target"></label><label class="field"><span>Notes</span><textarea name="notes"></textarea></label>${formButtons('Konfirmasi Service')}</form>`)}
