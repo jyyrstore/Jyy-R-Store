@@ -21,7 +21,7 @@
     <div class="sidebar-section-label">Sumber Daya</div>
     <% if (currentUser) { %>
       <a class="nav-link" href="/services"><%- icon('settings') %><span>Layanan</span></a>
-      <a class="nav-link" href="/top-order"><%- icon('package') %><span>Top Order</span></a>
+      <a class="nav-link" href="/top-order"><%- icon('trophy') %><span>Top Order</span></a>
     <% } %>
     <a class="nav-link <%= req.path.startsWith('/faq')?'active':'' %>" href="/faq"><%- icon('info') %><span>FAQ</span></a>
     <a class="nav-link <%= req.path.startsWith('/security')?'active':'' %>" href="/security"><%- icon('shield') %><span>Keamanan</span></a>
@@ -34,7 +34,7 @@
     <% if (currentUser) { %>
       <div class="sidebar-section-label">Profil & Sesi</div>
       <a class="nav-link <%= req.path.startsWith('/profile')?'active':'' %>" href="/profile"><%- icon('user') %><span>Profil</span></a>
-      <button class="nav-link nav-button" data-logout><%- icon('external') %><span>Keluar</span></button>
+      <button class="nav-link nav-button" data-logout><%- icon('logout') %><span>Keluar</span></button>
     <% } %>
   </div>
 </aside>
