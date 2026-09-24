@@ -942,6 +942,17 @@ button[aria-busy="true"]{
   font-size:12px;
 }
 
+.profile-login-copy span,
+.profile-login-copy small{
+  display:inline;
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+
+.profile-login-copy small::before{
+  content:' · ';
+}
+
 .profile-login-copy small{
   margin-top:2px;
   color:var(--muted);
