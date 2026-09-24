@@ -39,7 +39,7 @@ async function ownerUpdateStatus(ownerId,orderId,status){
       const items=(await client.query('select product_id,quantity from order_items where order_id=$1',[orderId])).rows;
       for(const i of items) await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.product_id,i.quantity]);
     }
-    const updated=(await client.query("update orders set status=$2,completed_at=case when $2='COMPLETED' then now() else completed_at end,updated_at=now() where id=$1 returning *",[orderId,status])).rows[0];
+    const updated=(await client.query("update orders set status=$2::order_status,completed_at=case when $2::order_status='COMPLETED'::order_status then now() else completed_at end,updated_at=now() where id=$1 returning *",[orderId,status])).rows[0];
     await client.query('insert into activity_logs(actor_user_id,action,entity_type,entity_id,metadata) values($1,$2,$3,$4,$5)',[ownerId,'OWNER_ORDER_STATUS','order',orderId,{from,to:status}]);
     await notifications.create({user_id:order.user_id,type:'ORDER',title:`Status order ${order.order_number} diperbarui`,body:`Status order sekarang ${status}.`,link:`/orders/${orderId}`},client);
     return updated;

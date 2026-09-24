@@ -196,3 +196,144 @@
     grid-column:5;
   }
 }
+
+/* =========================================================
+   JYYR OWNER ACTIONS — COMPACT RESPONSIVE
+   ========================================================= *//
+
+.owner-page .table-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  flex-wrap:wrap;
+  gap:6px;
+  min-width:0;
+}
+
+.owner-page .table-actions .button{
+  flex:0 0 auto;
+  width:auto;
+  min-width:0;
+  max-width:100%;
+  height:32px;
+  min-height:32px;
+  padding:0 10px;
+  font-size:12px;
+  line-height:1;
+  white-space:nowrap;
+}
+
+.owner-page .inline-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.owner-page .inline-actions .button{
+  flex:0 0 auto;
+  width:auto;
+}
+
+.modal .button-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  min-width:0;
+}
+
+.modal .button-grid .button{
+  width:100%;
+  min-width:0;
+}
+
+.modal .inline-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.modal .inline-actions .button{
+  flex:0 1 auto;
+  min-width:110px;
+}
+
+@media(max-width:600px){
+  .owner-page .table-scroll td:has(.table-actions){
+    display:block;
+    padding:10px 4px;
+  }
+
+  .owner-page .table-scroll td:has(.table-actions)::before{
+    display:none;
+  }
+
+  .owner-page .table-scroll .table-actions{
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    gap:6px;
+  }
+
+  .owner-page .table-scroll .table-actions .button{
+    width:100%;
+    min-width:0;
+    height:32px;
+    min-height:32px;
+    padding:0 8px;
+    font-size:11px;
+    white-space:nowrap;
+  }
+
+  .owner-page .inline-actions{
+    width:100%;
+    justify-content:flex-end;
+  }
+
+  .owner-page .inline-actions .button{
+    flex:0 1 auto;
+  }
+
+  .modal .button-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:7px;
+  }
+
+  .modal .button-grid .button{
+    height:40px;
+    min-height:40px;
+    padding:0 9px;
+    font-size:12px;
+  }
+
+  .modal .inline-actions{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+  }
+
+  .modal .inline-actions .button{
+    width:100%;
+    min-width:0;
+  }
+
+  .owner-page .toolbar .filter-bar .button{
+    grid-column:auto;
+    width:auto;
+    justify-self:end;
+  }
+}
+
+@media(max-width:380px){
+  .owner-page .table-scroll .table-actions{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .owner-page .table-scroll .table-actions .button{
+    padding:0 7px;
+    font-size:10.5px;
+  }
+}
