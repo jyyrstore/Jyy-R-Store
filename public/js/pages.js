@@ -815,6 +815,17 @@
   });
 
   document.querySelectorAll('table').forEach(table=>{const heads=[...table.querySelectorAll('thead th')].map(x=>x.textContent.trim());table.querySelectorAll('tbody tr').forEach(row=>[...row.children].forEach((cell,i)=>{if(heads[i])cell.setAttribute('data-label',heads[i])}));});
+  document.addEventListener('input',e=>{
+    const bio=e.target.closest('[data-profile-bio]');
+    if(!bio)return;
+
+    const counter=bio.form?.querySelector('[data-profile-bio-count]');
+
+    if(counter){
+      counter.textContent=String(bio.value.length);
+    }
+  });
+
   document.addEventListener('click',async e=>{
     const retry=e.target.closest('[data-retry]'); if(retry){location.reload();return}
     const searchRetry=e.target.closest('[data-search-retry]'); if(searchRetry){search();return}
@@ -1169,6 +1180,51 @@
           .forEach(el=>{
             el.textContent=username;
           });
+
+        document
+          .querySelectorAll('[data-profile-detail="username"]')
+          .forEach(el=>{
+            el.textContent=`@${username}`;
+          });
+
+        document
+          .querySelectorAll('[data-profile-detail="display_name"]')
+          .forEach(el=>{
+            el.textContent=displayName;
+          });
+
+        document
+          .querySelectorAll('[data-profile-detail="email"]')
+          .forEach(el=>{
+            el.textContent=
+              nextProfile.email||
+              document.querySelector(
+                '#profile-form [type="email"]'
+              )?.value||
+              'Tidak tersedia';
+          });
+
+        document
+          .querySelectorAll('[data-profile-detail="phone"]')
+          .forEach(el=>{
+            el.textContent=
+              nextProfile.phone||
+              formData.get('phone')||
+              'Belum ditambahkan';
+          });
+
+        document
+          .querySelectorAll('[data-profile-detail="bio"]')
+          .forEach(el=>{
+            el.textContent=
+              nextProfile.bio||
+              formData.get('bio')||
+              'Belum ada bio.';
+          });
+
+        pf
+          .closest('.profile-edit-disclosure')
+          ?.removeAttribute('open');
 
         toast.success('Profil diperbarui.');
       }catch(err){

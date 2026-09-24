@@ -87,6 +87,32 @@ test('CI requires lint',()=>{
 
 // PROFILE UI/UX FINAL TESTS
 
+test('profile account uses a compact read view with expandable editor',()=>{
+  const source=read('views/pages/profile.ejs');
+
+  assert.match(source,/profile-account-view/);
+  assert.match(source,/profile-detail-list/);
+  assert.match(source,/data-profile-detail="username"/);
+  assert.match(source,/data-profile-detail="display_name"/);
+  assert.match(source,/data-profile-detail="phone"/);
+  assert.match(source,/data-profile-detail="bio"/);
+  assert.match(source,/details class="profile-edit-disclosure"/);
+  assert.match(source,/id="profile-form"/);
+});
+
+test('profile account compact styles include responsive rows and bio counter',()=>{
+  const source=read('public/css/pages.css');
+  const scripts=read('public/js/pages.js');
+
+  assert.match(source,/PROFILE ACCOUNT COMPACT UX V1/);
+  assert.match(source,/\.profile-detail-row/);
+  assert.match(source,/\.profile-bio-help/);
+  assert.match(source,/@media\(max-width:600px\)/);
+  assert.match(scripts,/data-profile-bio-count/);
+  assert.match(scripts,/profile-edit-disclosure/);
+});
+
+
 test('profile page contains final identity and account summary',()=>{
   const source=read('views/pages/profile.ejs');
 

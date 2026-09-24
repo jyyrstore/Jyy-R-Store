@@ -646,6 +646,151 @@ button[aria-busy="true"]{
   min-width:0;
 }
 
+/* PROFILE ACCOUNT COMPACT UX V1 */
+
+.profile-account-panel{
+  padding:18px;
+}
+
+.profile-account-head{
+  min-width:0;
+}
+
+.profile-account-head .profile-section-heading{
+  margin-bottom:10px;
+}
+
+.profile-account-head .profile-section-heading p{
+  max-width:58ch;
+}
+
+.profile-account-view{
+  border-top:1px solid var(--border);
+}
+
+.profile-detail-section{
+  padding:12px 0 2px;
+}
+
+.profile-detail-section + .profile-detail-section{
+  margin-top:2px;
+  border-top:1px solid var(--border);
+}
+
+.profile-detail-kicker{
+  margin-bottom:2px;
+  color:var(--muted);
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+
+.profile-detail-list{
+  margin:0;
+}
+
+.profile-detail-row{
+  display:grid;
+  grid-template-columns:145px minmax(0,1fr);
+  gap:16px;
+  align-items:center;
+  min-width:0;
+  padding:11px 0;
+  border-bottom:1px solid var(--border);
+}
+
+.profile-detail-row:last-child{
+  border-bottom:0;
+}
+
+.profile-detail-row dt{
+  color:var(--muted);
+  font-size:12px;
+}
+
+.profile-detail-row dd{
+  min-width:0;
+  margin:0;
+  color:var(--text);
+  font-size:13px;
+  font-weight:650;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+.profile-detail-value-muted{
+  color:var(--muted-strong)!important;
+  font-weight:500!important;
+}
+
+.profile-detail-bio{
+  line-height:1.6;
+  white-space:pre-wrap;
+}
+
+.profile-edit-disclosure{
+  margin-top:12px;
+}
+
+.profile-account-edit-summary{
+  width:max-content;
+  max-width:100%;
+  list-style:none;
+  justify-content:center;
+}
+
+.profile-account-edit-summary::-webkit-details-marker{
+  display:none;
+}
+
+.profile-account-edit-summary .icon{
+  width:15px;
+  height:15px;
+}
+
+.profile-edit-disclosure[open] .profile-account-edit-summary{
+  border-color:rgba(167,139,250,.32);
+  background:rgba(139,92,246,.07);
+}
+
+.profile-edit-disclosure .profile-form{
+  margin-top:12px;
+  padding-top:14px;
+  border-top:1px solid var(--border);
+}
+
+.profile-bio-help{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.profile-bio-help strong{
+  color:var(--muted-strong);
+}
+
+@media(max-width:600px){
+  .profile-detail-row{
+    grid-template-columns:1fr;
+    gap:4px;
+    align-items:start;
+    padding:10px 0;
+  }
+
+  .profile-account-edit-summary{
+    width:100%;
+  }
+
+  .profile-bio-help{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:4px;
+  }
+}
+
+
 .profile-section-heading{
   margin-bottom:18px;
 }

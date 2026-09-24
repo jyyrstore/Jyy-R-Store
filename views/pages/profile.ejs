@@ -145,110 +145,206 @@
       class="panel profile-account-panel"
       aria-labelledby="profile-account-title"
     >
-      <div class="profile-section-heading">
-        <div>
+      <div class="profile-account-head">
+        <div class="profile-section-heading">
           <div class="eyebrow">Informasi</div>
-          <h2 id="profile-account-title">Data akun</h2>
+
+          <h2 id="profile-account-title">
+            Data akun
+          </h2>
+
           <p>
-            Perbarui informasi profil yang ingin ditampilkan pada akun Anda.
+            Informasi dasar akun Anda, ditampilkan lebih ringkas agar mudah dipindai.
           </p>
         </div>
       </div>
 
-      <form
-        id="profile-form"
-        class="form-grid profile-form"
+      <div
+        class="profile-account-view"
+        aria-label="Informasi akun"
       >
-
-        <label class="field">
-          <span>Username</span>
-
-          <input
-            name="username"
-            value="<%= profile.username || '' %>"
-            autocomplete="username"
-            minlength="3"
-            maxlength="32"
-            spellcheck="false"
-            required
-          />
-
-          <small class="field-help">
-            Username digunakan sebagai identitas publik akun.
-          </small>
-        </label>
-
-        <label class="field">
-          <span>Nama tampilan</span>
-
-          <input
-            name="display_name"
-            value="<%= profile.display_name || '' %>"
-            autocomplete="name"
-            maxlength="80"
-          />
-
-          <small class="field-help">
-            Nama yang digunakan untuk menyapa Anda di dalam aplikasi.
-          </small>
-        </label>
-
-        <label class="field full">
-          <span>Email</span>
-
-          <input
-            type="email"
-            value="<%= profile.email || '' %>"
-            readonly
-            aria-readonly="true"
-            autocomplete="email"
-          />
-
-          <small class="field-help">
-            Email autentikasi dikelola melalui sistem akun dan tidak
-            diubah dari halaman ini.
-          </small>
-        </label>
-
-        <label class="field">
-          <span>Nomor telepon</span>
-
-          <input
-            name="phone"
-            type="tel"
-            inputmode="tel"
-            value="<%= profile.phone || '' %>"
-            autocomplete="tel"
-            maxlength="30"
-          />
-        </label>
-
-        <label class="field full">
-          <span>Bio</span>
-
-          <textarea
-            name="bio"
-            rows="5"
-            maxlength="500"
-            placeholder="Ceritakan sedikit tentang Anda..."
-          ><%= profile.bio || '' %></textarea>
-
-          <small class="field-help">
-            Maksimal 500 karakter.
-          </small>
-        </label>
-
-        <div class="profile-form-actions full">
-          <button
-            class="button button-primary"
-            id="profile-save"
-            type="submit"
+        <section
+          class="profile-detail-section"
+          aria-labelledby="profile-identity-details-title"
+        >
+          <div
+            class="profile-detail-kicker"
+            id="profile-identity-details-title"
           >
-            Simpan perubahan
-          </button>
-        </div>
+            Identitas akun
+          </div>
 
-      </form>
+          <dl class="profile-detail-list">
+
+            <div class="profile-detail-row">
+              <dt>Username</dt>
+
+              <dd data-profile-detail="username">
+                @<%= profile.username || 'user' %>
+              </dd>
+            </div>
+
+            <div class="profile-detail-row">
+              <dt>Nama tampilan</dt>
+
+              <dd data-profile-detail="display_name">
+                <%= profile.display_name || 'Belum diatur' %>
+              </dd>
+            </div>
+
+            <div class="profile-detail-row">
+              <dt>Email</dt>
+
+              <dd data-profile-detail="email">
+                <%= profile.email || 'Tidak tersedia' %>
+              </dd>
+            </div>
+
+          </dl>
+        </section>
+
+        <section
+          class="profile-detail-section"
+          aria-labelledby="profile-contact-details-title"
+        >
+          <div
+            class="profile-detail-kicker"
+            id="profile-contact-details-title"
+          >
+            Informasi kontak
+          </div>
+
+          <dl class="profile-detail-list">
+
+            <div class="profile-detail-row">
+              <dt>Nomor telepon</dt>
+
+              <dd
+                class="profile-detail-value-muted"
+                data-profile-detail="phone"
+              >
+                <%= profile.phone || 'Belum ditambahkan' %>
+              </dd>
+            </div>
+
+            <div class="profile-detail-row profile-detail-row-bio">
+              <dt>Bio</dt>
+
+              <dd
+                class="profile-detail-value-muted profile-detail-bio"
+                data-profile-detail="bio"
+              >
+                <%= profile.bio || 'Belum ada bio.' %>
+              </dd>
+            </div>
+
+          </dl>
+        </section>
+      </div>
+
+      <details class="profile-edit-disclosure">
+
+        <summary
+          class="button button-secondary button-small profile-account-edit-summary"
+        >
+          <%- icon('edit') %>
+          <span>Edit profil</span>
+        </summary>
+
+        <form
+          id="profile-form"
+          class="form-grid profile-form"
+        >
+
+          <label class="field">
+            <span>Username</span>
+
+            <input
+              name="username"
+              value="<%= profile.username || '' %>"
+              autocomplete="username"
+              minlength="3"
+              maxlength="32"
+              spellcheck="false"
+              required
+            />
+          </label>
+
+          <label class="field">
+            <span>Nama tampilan</span>
+
+            <input
+              name="display_name"
+              value="<%= profile.display_name || '' %>"
+              autocomplete="name"
+              maxlength="80"
+            />
+          </label>
+
+          <label class="field full">
+            <span>Email</span>
+
+            <input
+              type="email"
+              value="<%= profile.email || '' %>"
+              readonly
+              aria-readonly="true"
+              autocomplete="email"
+            />
+
+            <small class="field-help">
+              Email autentikasi dikelola melalui sistem akun dan
+              tidak diubah dari halaman ini.
+            </small>
+          </label>
+
+          <label class="field">
+            <span>Nomor telepon</span>
+
+            <input
+              name="phone"
+              type="tel"
+              inputmode="tel"
+              value="<%= profile.phone || '' %>"
+              autocomplete="tel"
+              maxlength="30"
+            />
+          </label>
+
+          <label class="field full">
+            <span>Bio</span>
+
+            <textarea
+              name="bio"
+              data-profile-bio
+              rows="4"
+              maxlength="500"
+              placeholder="Ceritakan sedikit tentang Anda..."
+            ><%= profile.bio || '' %></textarea>
+
+            <small class="field-help profile-bio-help">
+              <span>Maksimal 500 karakter.</span>
+
+              <span>
+                <strong data-profile-bio-count>
+                  <%= String(profile.bio || '').length %>
+                </strong>/500
+              </span>
+            </small>
+          </label>
+
+          <div class="profile-form-actions full">
+            <button
+              class="button button-primary"
+              id="profile-save"
+              type="submit"
+            >
+              Simpan perubahan
+            </button>
+          </div>
+
+        </form>
+      </details>
     </section>
 
     <div class="profile-side-column">
