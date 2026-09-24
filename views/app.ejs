@@ -23,12 +23,13 @@
     <%- include('partials/header') %>
     <div class="app-shell">
       <%- include('partials/sidebar') %>
-      <main class="main-content" id="main-content">
-        <%- include(view) %>
-      </main>
-    </div>
+      <div class="main-column">
+        <main class="main-content" id="main-content">
+          <%- include(view) %>
+        </main>
+        <%- include('partials/footer') %>
+      </div>
     <%- include('partials/bottom-nav') %>
-    <%- include('partials/footer') %>
   <% } else { %>
     <main class="auth-shell"><%- include(view) %></main>
   <% } %>
