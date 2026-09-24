@@ -1,17 +1,35 @@
-<section class="page-shell"><div class="page-header"><div><div class="eyebrow">Notifikasi</div><h1>Notifikasi</h1></div></div><div class="stack-list"><% notifications.forEach(n=>{ %><article class="notification-card <%= n.is_read?'read':'unread' %>" data-notification-id="<%= n.id %>"><div class="content-icon"><%- icon(n.type==='PAYMENT'?'check':n.type==='TICKET'?'ticket':'info') %></div><div><strong><%= n.title %></strong><p><%= n.body %></p><small><%= formatDate(n.created_at) %></small></div><div class="inline-actions">
-  <% if(n.link){ %>
-    <a class="button button-secondary button-small" href="<%= n.link %>">Buka</a>
+<section class="page-shell"><div class="page-header"><div><div class="eyebrow">Notifikasi</div><h1>Notifikasi</h1></div></div><div class="stack-list"><% notifications.forEach(n=>{ %><article class="notification-card <%= n.is_read?'read':'unread' %><%= (n.link || !n.is_read) ? ' has-actions' : '' %>" data-notification-id="<%= n.id %>">
+  <div class="content-icon">
+    <%- icon(n.type==='PAYMENT'?'check':n.type==='TICKET'?'ticket':'info') %>
+  </div>
+
+  <div class="notification-content">
+    <div class="notification-head">
+      <strong><%= n.title %></strong>
+      <time datetime="<%= n.created_at %>"><%= formatDate(n.created_at) %></time>
+    </div>
+
+    <p><%= n.body %></p>
+  </div>
+
+  <% if(n.link || !n.is_read){ %>
+    <div class="inline-actions">
+      <% if(n.link){ %>
+        <a class="button button-secondary button-small" href="<%= n.link %>">Buka</a>
+      <% } %>
+
+      <% if(!n.is_read){ %>
+        <button
+          class="button button-secondary button-small"
+          type="button"
+          aria-label="Tandai notifikasi sebagai dibaca"
+          data-read-notification="<%= n.id %>">
+          Tandai dibaca
+        </button>
+      <% } %>
+    </div>
   <% } %>
-  <% if(!n.is_read){ %>
-    <button
-      class="button button-secondary button-small"
-      type="button"
-      aria-label="Tandai notifikasi sebagai dibaca"
-      data-read-notification="<%= n.id %>">
-      Tandai dibaca
-    </button>
-  <% } %>
-</div></article><% }) %><% if(!notifications.length){ %><%- include('../partials/empty',{title:'Tidak ada notifikasi',description:'Notifikasi order, pembayaran, dan support akan tampil di sini.'}) %><% } %>
+</article><% }) %><% if(!notifications.length){ %><%- include('../partials/empty',{title:'Tidak ada notifikasi',description:'Notifikasi order, pembayaran, dan support akan tampil di sini.'}) %><% } %>
 <%- include('../partials/pagination',{
   pagination:notificationsPagination,
   param:'page'

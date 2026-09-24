@@ -15,15 +15,30 @@
     <div class="product-price"><%= formatIDR(product.price) %></div>
 
     <div class="product-actions">
-      <% if (currentUser && product.stock>0) { %>
-        <button class="button button-primary button-small" data-add-cart="<%= product.id %>">
-          <%- icon('cart') %> Tambah ke Keranjang
-        </button>
-      <% } %>
-
-      <a class="button button-secondary button-small" href="/product/<%= product.slug %>">
-        Detail →
+      <a
+        class="product-detail-link"
+        href="/product/<%= product.slug %>"
+      >
+        Detail
       </a>
+
+      <% if (currentUser && product.stock>0) { %>
+        <div class="product-action-row">
+          <button
+            class="button button-secondary button-small"
+            data-add-cart="<%= product.id %>"
+          >
+            Keranjang
+          </button>
+
+          <button
+            class="button button-primary button-small"
+            data-buy-now="<%= product.id %>"
+          >
+            Beli
+          </button>
+        </div>
+      <% } %>
     </div>
   </div>
 </article>
