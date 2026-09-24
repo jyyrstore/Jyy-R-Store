@@ -548,46 +548,9 @@ button[aria-busy="true"]{
   margin:0 5px;
 }
 
-.profile-badges{
-  display:flex;
-  align-items:center;
-  flex-wrap:wrap;
-  gap:7px;
-  margin-top:12px;
-}
-
-.profile-badge{
-  text-transform:uppercase;
-}
-
-.profile-badge-role{
-  color:var(--primary-2);
-  border-color:rgba(167,139,250,.28);
-  background:rgba(139,92,246,.08);
-}
-
-.profile-badge-status[data-profile-status="ACTIVE"]{
-  color:var(--success);
-  border-color:rgba(69,196,138,.25);
-  background:rgba(69,196,138,.08);
-}
-
-.profile-badge-status[data-profile-status="PENDING"]{
-  color:var(--warning);
-  border-color:rgba(228,170,82,.25);
-  background:rgba(228,170,82,.08);
-}
-
-.profile-badge-status[data-profile-status="BANNED"],
-.profile-badge-status[data-profile-status="SUSPENDED"]{
-  color:#ff9b9e;
-  border-color:rgba(235,111,115,.25);
-  background:rgba(235,111,115,.08);
-}
-
 .profile-stat-grid{
   display:grid;
-  grid-template-columns:repeat(5,minmax(0,1fr));
+  grid-template-columns:repeat(2,minmax(0,1fr));
   margin-top:20px;
   padding-top:18px;
   border-top:1px solid var(--border);
@@ -598,11 +561,17 @@ button[aria-busy="true"]{
   align-items:center;
   gap:11px;
   min-width:0;
-  padding:0 14px;
+  padding:14px;
+  border-left:0;
+  border-top:0;
 }
 
-.profile-stat-card + .profile-stat-card{
+.profile-stat-card:nth-child(even){
   border-left:1px solid var(--border);
+}
+
+.profile-stat-card:nth-child(n+3){
+  border-top:1px solid var(--border);
 }
 
 .profile-stat-icon{
@@ -978,14 +947,6 @@ button[aria-busy="true"]{
 }
 
 @media(max-width:860px){
-  .profile-stat-grid{
-    grid-template-columns:repeat(3,minmax(0,1fr));
-  }
-
-  .profile-stat-card{
-    padding:0 10px;
-  }
-
   .profile-security-card{
     grid-template-columns:auto minmax(0,1fr);
   }
@@ -1027,7 +988,6 @@ button[aria-busy="true"]{
   }
 
   .profile-stat-grid{
-    grid-template-columns:repeat(2,minmax(0,1fr));
     gap:0;
     margin-top:16px;
     padding-top:14px;
@@ -1036,14 +996,6 @@ button[aria-busy="true"]{
   .profile-stat-card{
     min-height:0;
     padding:12px 10px;
-  }
-
-  .profile-stat-card:nth-child(even){
-    border-left:1px solid var(--border);
-  }
-
-  .profile-stat-card:nth-child(n+3){
-    border-top:1px solid var(--border);
   }
 
   .profile-content-grid{

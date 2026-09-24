@@ -19,12 +19,6 @@
 
   const profileInitial =
     String(profileName).trim().slice(0,1).toUpperCase() || 'U';
-
-  const profileStatus =
-    String(profile.status || '').toUpperCase();
-
-  const profileRole =
-    String(profile.role || '').toUpperCase();
 %>
 
 <section class="page-shell profile-page">
@@ -78,24 +72,6 @@
           <% } %>
         </p>
 
-        <div
-          class="profile-badges"
-          aria-label="Status akun"
-        >
-          <span
-            class="badge profile-badge profile-badge-role"
-            data-profile-role="<%= profileRole %>"
-          >
-            <%= labelStatus(profile.role) %>
-          </span>
-
-          <span
-            class="badge profile-badge profile-badge-status"
-            data-profile-status="<%= profileStatus %>"
-          >
-            <%= labelStatus(profile.status) %>
-          </span>
-        </div>
       </div>
 
     </div>
@@ -156,6 +132,17 @@
         <div>
           <span>Total deposit</span>
           <strong><%= formatIdr(profile.total_deposit) %></strong>
+        </div>
+      </article>
+
+      <article class="profile-stat-card">
+        <div class="profile-stat-icon">
+          <%- icon('dashboard') %>
+        </div>
+
+        <div>
+          <span>Top</span>
+          <strong><%= profile.top_rank ? Number(profile.top_rank) : '—' %></strong>
         </div>
       </article>
     </div>
