@@ -1,4 +1,4 @@
-const { withTransaction }=require('../../config/database');
+const { withTransaction, query }=require('../../config/database');
 const provider=()=>require('../../config/payment').paymentProvider();
 const delivery=require('../../repositories/delivery.repository');
 const notifications=require('../../repositories/notification.repository');
@@ -30,74 +30,152 @@ async function createForOrder(userId,order,returnUrl){
   );
 
   const customerEmail=profile?.email||null;
+  const idempotencyKey=`order:${order.id}:payment`;
 
-  return withTransaction(async(client)=>{
-    const locked=(await client.query('select * from orders where id=$1 for update',[order.id])).rows[0];
+  /*
+   * Transaction #1 hanya untuk validasi + locking singkat.
+   * Network call ke provider sengaja dilakukan setelah transaction selesai.
+   */
+  const prepared=await withTransaction(async(client)=>{
+    const locked=(
+      await client.query(
+        'select * from orders where id=$1 for update',
+        [order.id]
+      )
+    ).rows[0];
+
     if(!locked) throw notFound('Order not found.');
     if(locked.user_id!==userId) throw forbidden();
-    if(!PAYMENT_CREATABLE_ORDER_STATUSES.has(String(locked.status||'').toUpperCase())){
-      throw badRequest('ORDER_PAYMENT_STATE_INVALID','Payment hanya dapat dibuat untuk order yang masih PENDING.');
+
+    if(!PAYMENT_CREATABLE_ORDER_STATUSES.has(
+      String(locked.status||'').toUpperCase()
+    )){
+      throw badRequest(
+        'ORDER_PAYMENT_STATE_INVALID',
+        'Payment hanya dapat dibuat untuk order yang masih PENDING.'
+      );
     }
 
-    const existing=(await client.query(
-      "select * from payments where order_id=$1 and status='PENDING' order by created_at desc limit 1 for update",
-      [locked.id]
-    )).rows[0];
+    const existing=(
+      await client.query(
+        "select * from payments where order_id=$1 and status='PENDING' order by created_at desc limit 1 for update",
+        [locked.id]
+      )
+    ).rows[0];
 
     if(existing){
       return {
-        payment:existing,
-        paymentUrl:existing.raw_reference?.paymentUrl||existing.raw_reference?.payment_url||null,
-        duplicate:true
+        existing:true,
+        payment:existing
       };
     }
 
-    const idempotencyKey=`order:${locked.id}:payment`;
-    const result=await provider().createPayment({
+    return {
+      existing:false,
       orderId:locked.id,
-      amount:locked.total,
+      amount:Number(locked.total),
+      idempotencyKey,
       customer:{
         userId,
         givenNames:customerName,
         email:customerEmail
-      },
-      returnUrl,
-      idempotencyKey
-    });
-
-    try{
-      const p=(await client.query(
-        'insert into payments(order_id,user_id,provider,reference,amount,status,raw_reference,idempotency_key,expires_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *',
-        [
-          locked.id,
-          userId,
-          loadEnv().PAYMENT_PROVIDER||'generic-json',
-          result.reference,
-          locked.total,
-          'PENDING',
-          {...(result.raw||{}),paymentUrl:result.paymentUrl||null},
-          idempotencyKey,
-          result.expiresAt||null
-        ]
-      )).rows[0];
-      return {payment:p,paymentUrl:result.paymentUrl};
-    }catch(error){
-      if(error?.code==='23505'){
-        const concurrent=(await client.query(
-          "select * from payments where order_id=$1 and status='PENDING' order by created_at desc limit 1 for update",
-          [locked.id]
-        )).rows[0];
-        if(concurrent){
-          return {
-            payment:concurrent,
-            paymentUrl:concurrent.raw_reference?.paymentUrl||concurrent.raw_reference?.payment_url||null,
-            duplicate:true
-          };
-        }
       }
-      throw error;
-    }
+    };
   });
+
+  if(prepared.existing){
+    return {
+      payment:prepared.payment,
+      paymentUrl:
+        prepared.payment.raw_reference?.paymentUrl||
+        prepared.payment.raw_reference?.payment_url||
+        null,
+      duplicate:true
+    };
+  }
+
+  /*
+   * Provider API is now outside the DB transaction.
+   * Retries use the same idempotency key.
+   */
+  const result=await provider().createPayment({
+    orderId:prepared.orderId,
+    amount:prepared.amount,
+    customer:prepared.customer,
+    returnUrl,
+    idempotencyKey:prepared.idempotencyKey
+  });
+
+  /*
+   * Transaction #2 hanya menyimpan hasil provider secara atomic.
+   */
+  try{
+    return await withTransaction(async(client)=>{
+      const concurrent=(
+        await client.query(
+          "select * from payments where order_id=$1 and status='PENDING' order by created_at desc limit 1 for update",
+          [prepared.orderId]
+        )
+      ).rows[0];
+
+      if(concurrent){
+        return {
+          payment:concurrent,
+          paymentUrl:
+            concurrent.raw_reference?.paymentUrl||
+            concurrent.raw_reference?.payment_url||
+            result.paymentUrl||
+            null,
+          duplicate:true
+        };
+      }
+
+      const p=(
+        await client.query(
+          'insert into payments(order_id,user_id,provider,reference,amount,status,raw_reference,idempotency_key,expires_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *',
+          [
+            prepared.orderId,
+            userId,
+            loadEnv().PAYMENT_PROVIDER||'generic-json',
+            result.reference,
+            prepared.amount,
+            'PENDING',
+            {...(result.raw||{}),paymentUrl:result.paymentUrl||null},
+            prepared.idempotencyKey,
+            result.expiresAt||null
+          ]
+        )
+      ).rows[0];
+
+      return {
+        payment:p,
+        paymentUrl:result.paymentUrl
+      };
+    });
+  }catch(error){
+    if(error?.code==='23505'){
+      const concurrent=(
+        await query(
+          "select * from payments where order_id=$1 and status='PENDING' order by created_at desc limit 1",
+          [prepared.orderId]
+        )
+      ).rows[0];
+
+      if(concurrent){
+        return {
+          payment:concurrent,
+          paymentUrl:
+            concurrent.raw_reference?.paymentUrl||
+            concurrent.raw_reference?.payment_url||
+            result.paymentUrl||
+            null,
+          duplicate:true
+        };
+      }
+    }
+
+    throw error;
+  }
 }
 
 async function getStatus(id,userId){

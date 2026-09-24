@@ -4,7 +4,7 @@ const compression = require('compression');
 const helmet = require('helmet');
 const path = require('path');
 const { loadEnv, isConfigured } = require('./src/config/env');
-const { initDatabase, closeDatabase } = require('./src/config/database');
+const { initDatabase, db, closeDatabase } = require('./src/config/database');
 const { initSupabase } = require('./src/config/supabase');
 const storage = require('./src/config/storage');
 const { initStorage } = storage;
@@ -141,6 +141,54 @@ async function createApp() {
   app.use('/api/cron', cronRouter);
 
   app.use(express.json({ limit: '2mb' }));
+
+  app.get('/live', (req, res) => {
+    return res.status(200).json({
+      success:true,
+      status:'ok',
+      service:'jyyr-store',
+      requestId:req.id
+    });
+  });
+
+  app.get('/ready', async (req, res) => {
+    if(!isConfigured()){
+      return res.status(503).json({
+        success:false,
+        status:'not_ready',
+        service:'jyyr-store',
+        checks:{configuration:false},
+        requestId:req.id
+      });
+    }
+
+    try{
+      await db().query('select 1');
+
+      return res.status(200).json({
+        success:true,
+        status:'ready',
+        service:'jyyr-store',
+        checks:{
+          configuration:true,
+          database:true
+        },
+        requestId:req.id
+      });
+    }catch(error){
+      return res.status(503).json({
+        success:false,
+        status:'not_ready',
+        service:'jyyr-store',
+        checks:{
+          configuration:true,
+          database:false
+        },
+        requestId:req.id
+      });
+    }
+  });
+
   app.use('/api', generalRateLimit());
   app.use('/api/auth', sensitiveRateLimit());
   app.use('/api/payment', sensitiveRateLimit());

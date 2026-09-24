@@ -2,6 +2,13 @@ const { query, withTransaction } = require('../config/database');
 const crypto = require('crypto');
 const storage = require('../config/storage');
 const { loadEnv } = require('../config/env');
+const { badRequest } = require('../utils/error');
+
+const PRODUCT_EVENT_TYPES=new Set([
+  'VIEW',
+  'CART_ADD',
+  'PURCHASE'
+]);
 
 function safeIntRange(value,fallback,min=0,max=1000000){
   const n=Number(value);
@@ -169,5 +176,31 @@ async function deleteContent(id,productId=null){
 
   return row||null;
 }
-async function event(productId,userId,type){ await query('insert into product_events(product_id,user_id,event_type) values($1,$2,$3)',[productId,userId||null,type]); const expression=type==='VIEW'?'view_count=view_count+1':type==='CART_ADD'?'cart_add_count=cart_add_count+1':'purchase_count=purchase_count+1'; await query(`update products set ${expression} where id=$1`,[productId]); }
+async function event(productId,userId,type){
+  const normalized=String(type||'').toUpperCase();
+
+  if(!PRODUCT_EVENT_TYPES.has(normalized)){
+    throw badRequest(
+      'INVALID_PRODUCT_EVENT',
+      'Jenis event produk tidak valid.'
+    );
+  }
+
+  await query(
+    'insert into product_events(product_id,user_id,event_type) values($1,$2,$3)',
+    [productId,userId||null,normalized]
+  );
+
+  const expression=
+    normalized==='VIEW'
+      ?'view_count=view_count+1'
+      :normalized==='CART_ADD'
+        ?'cart_add_count=cart_add_count+1'
+        :'purchase_count=purchase_count+1';
+
+  await query(
+    `update products set ${expression} where id=$1`,
+    [productId]
+  );
+}
 module.exports={list,adminList,count,findBySlug,findById,create,update,remove,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event};

@@ -18,4 +18,5 @@ jobs:
         run: |
           ! grep -RInE '(SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|PAYMENT_WEBHOOK_SECRET|XENDIT_SECRET_KEY|XENDIT_WEBHOOK_TOKEN|SMTP_PASSWORD|SESSION_SECRET|CSRF_SECRET|ENCRYPTION_KEY)=([^[:space:]]+)' . --exclude-dir=.git --exclude-dir=node_modules --exclude='.env.example' --exclude='package-lock.json'
       - run: npm ci --ignore-scripts
+      - run: npm run lint
       - run: npm run test:security

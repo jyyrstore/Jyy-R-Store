@@ -17,6 +17,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
+      - run: npm run lint
       - run: npm test
       - run: npm run verify
       # Connect the verified artifact to the chosen deployment platform after
