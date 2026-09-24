@@ -518,7 +518,7 @@ button[aria-busy="true"]{
       rgba(167,139,250,.08)
     );
   color:var(--primary-2);
-  font-size:20px !important;
+  font-size:20px;
   font-weight:900;
   box-shadow:var(--shadow-sm);
 }
@@ -529,7 +529,7 @@ button[aria-busy="true"]{
 
 .profile-identity-copy h2{
   margin:4px 0 5px;
-  font-size:20px !important;
+  font-size:20px;
   line-height:1.08;
   letter-spacing:-.03em;
   overflow-wrap:anywhere;
@@ -797,7 +797,7 @@ button[aria-busy="true"]{
 
 .profile-section-heading h2{
   margin:4px 0 5px;
-  font-size:20px !important;
+  font-size:20px;
   line-height:1.2;
 }
 
@@ -1016,7 +1016,6 @@ button[aria-busy="true"]{
     height:62px;
     min-width:62px;
     border-radius:18px;
-    font-size:20px !important;
   }
 
   .profile-stat-grid{
@@ -1084,9 +1083,6 @@ button[aria-busy="true"]{
     min-width:56px;
   }
 
-  .profile-identity-copy h2{
-    font-size:20px !important;
-  }
 }
 
 /* PROFILE PAGE FINAL UIUX END */
