@@ -2,7 +2,7 @@
   <section class="hero">
     <div>
       <div class="eyebrow accent">JYY'R STORE</div>
-      <h1>Digital products, secure checkout & delivery.</h1>
+      <h1>Produk digital dengan checkout aman dan akses terlindungi.</h1>
       <p>Temukan produk digital dan layanan Jyy'R Store dengan pembelian mudah, pembayaran jelas, dan delivery aman.</p>
       <div class="hero-actions">
         <a href="/store" class="button button-primary"><%- icon('package') %> Jelajahi Store</a>
@@ -17,14 +17,14 @@
 
   <section class="section">
     <div class="section-header">
-      <div><div class="eyebrow">Discover</div><h2>Produk terbaru</h2></div>
+      <div><div class="eyebrow">Terbaru</div><h2>Produk terbaru</h2></div>
       <a href="/store" class="text-link">Lihat semua</a>
     </div>
     <div class="product-grid"><% products.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>
   </section>
 
   <section class="section">
-    <div class="section-header"><div><div class="eyebrow">Explore</div><h2>Kategori</h2></div></div>
+    <div class="section-header"><div><div class="eyebrow">Kategori</div><h2>Temukan berdasarkan kategori</h2></div></div>
     <div class="category-grid">
 <% categories.forEach(c=>{ %>
   <a href="/store?category=<%= c.slug %>" class="category-card">
@@ -44,7 +44,7 @@
       <div class="stack-list"><% services.forEach(s=>{ %><a class="list-card" href="/services"><div><strong><%= s.name %></strong><span><%= s.category || 'Layanan' %></span></div><b><%= formatIDR(s.price) %></b></a><% }) %></div>
     </div>
     <div>
-      <div class="eyebrow">Information</div><h2>Informasi terbaru</h2>
+      <div class="eyebrow">Informasi</div><h2>Informasi terbaru</h2>
       <div class="stack-list"><% announcements.forEach(a=>{ %><article class="info-card"><strong><%= a.title %></strong><p><%= a.body %></p></article><% }) %>
         <% if(!announcements.length){ %><%- include('../partials/empty',{title:'Belum ada informasi',description:'Announcement akan tampil di sini.'}) %><% } %>
       </div>

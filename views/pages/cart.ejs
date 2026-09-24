@@ -1,11 +1,21 @@
 <section class="page-shell">
+  <% const cartItemCount=(cart.items||[]).reduce((sum,item)=>sum+Number(item.quantity||0),0); %>
   <div class="page-header">
     <div>
       <div class="eyebrow">Keranjang</div>
-      <h1>Keranjang</h1>
-      <p>Review item sebelum lanjut ke pembayaran.</p>
+      <h1>Keranjang <span class="muted small">(<%= cartItemCount %> item)</span></h1>
+      <p>Periksa produk sebelum lanjut ke pembayaran.</p>
     </div>
-    <a href="/store" class="button button-secondary">Lanjut belanja</a>
+    <div class="cart-header-actions">
+      <a href="/store" class="button button-secondary">Lanjut belanja</a>
+      <% if(cart.items.length){ %>
+        <button
+          class="button button-secondary cart-clear-button"
+          type="button"
+          data-cart-clear
+        >Kosongkan keranjang</button>
+      <% } %>
+    </div>
   </div>
 
   <div class="cart-layout">
@@ -84,11 +94,11 @@
 
       <% if(cart.items.length){ %>
         <a class="button button-primary button-block" href="/checkout">
-          Checkout
+          Lanjut ke pembayaran
         </a>
       <% } else { %>
         <button class="button button-primary button-block" type="button" disabled>
-          Checkout
+          Lanjut ke pembayaran
         </button>
       <% } %>
     </aside>

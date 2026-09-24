@@ -11,7 +11,7 @@
     <div class="stack-list">
       <div class="section-header">
         <div>
-          <div class="eyebrow">Review</div>
+          <div class="eyebrow">Ringkasan</div>
           <h2>Item pesanan</h2>
         </div>
       </div>
@@ -76,11 +76,17 @@
               <%= selectedPaymentMethod==='GATEWAY' ? 'checked' : '' %>
             >
             <span class="payment-option__copy">
-              <strong>Payment Gateway</strong>
-              <small>Bayar melalui provider pembayaran.</small>
+              <strong>Pembayaran online</strong>
+              <small>Bayar melalui metode online yang tersedia.</small>
             </span>
           </label>
         </div>
+
+        <% if(!walletSufficient){ %>
+          <a class="checkout-balance-help" href="/deposit">
+            Isi saldo Wallet
+          </a>
+        <% } %>
       </fieldset>
 
       <hr>

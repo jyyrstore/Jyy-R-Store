@@ -327,3 +327,64 @@
     padding:12px;
   }
 }
+
+
+/* =========================================================
+   UI/UX POLISH — CUSTOMER FLOW
+   ========================================================= */
+
+.cart-header-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.cart-clear-button{
+  color:var(--muted-strong);
+}
+
+.cart-clear-button:hover{
+  color:var(--text);
+  border-color:var(--error);
+}
+
+.checkout-balance-help{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:36px;
+  padding:0 12px;
+  border:1px solid rgba(228,170,82,.3);
+  border-radius:var(--radius-md);
+  color:var(--warning);
+  background:rgba(228,170,82,.06);
+  text-decoration:none;
+  font-size:12px;
+  font-weight:800;
+}
+
+.checkout-balance-help:hover{
+  border-color:rgba(228,170,82,.5);
+  background:rgba(228,170,82,.1);
+}
+
+.search-results .service-card{
+  min-width:0;
+}
+
+@media(max-width:600px){
+  .cart-header-actions{
+    width:100%;
+    justify-content:stretch;
+  }
+
+  .cart-header-actions .button{
+    flex:1;
+  }
+
+  .checkout-balance-help{
+    width:100%;
+  }
+}

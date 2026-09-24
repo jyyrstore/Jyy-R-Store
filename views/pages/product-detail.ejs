@@ -15,7 +15,7 @@
       VIDEO: 'Video',
       AUDIO: 'Audio',
       TEXT: 'Teks',
-      LINK: 'Link'
+      LINK: 'Tautan'
     };
 
     const accessTypeLabels = {
@@ -49,7 +49,7 @@
       </div>
     </div>
     <div class="detail-copy">
-      <div class="eyebrow"><%= product.category_name || 'Product' %></div><h1><%= product.name %></h1>
+      <div class="eyebrow"><%= product.category_name || 'Produk' %></div><h1><%= product.name %></h1>
       <div class="detail-price"><%= formatIDR(product.price) %></div>
       <p class="detail-description"><%= product.description || 'Tidak ada deskripsi.' %></p>
       <div class="detail-meta">
@@ -72,7 +72,7 @@
     </div>
   </div>
   <div class="section"><div class="section-header"><h2>Isi produk</h2><span class="muted"><%= product.contents.length %> item</span></div><div class="content-list">
-    <% if(product.contents.length===0){ %><%- include('../partials/empty',{title:'Belum ada content',description:'Owner belum menambahkan delivery content untuk produk ini.'}) %><% } %>
+    <% if(product.contents.length===0){ %><%- include('../partials/empty',{title:'Belum ada isi produk',description:'Belum ada isi produk yang ditambahkan untuk produk ini.'}) %><% } %>
     <% product.contents.forEach(c=>{ %>
       <article class="content-card">
         <div class="content-icon"><%- icon(c.type==='VIDEO'?'play':c.type==='AUDIO'?'music':c.type==='IMAGE'?'image':c.type==='LINK'?'external':c.type==='TEXT'?'note':'package') %></div>

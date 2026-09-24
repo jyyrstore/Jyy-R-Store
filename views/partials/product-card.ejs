@@ -1,9 +1,9 @@
 <article class="product-card" data-product-card data-product-id="<%= product.id %>">
   <a href="/product/<%= product.slug %>" class="product-thumb-wrap">
-    <% if (product.thumbnail_url || product.thumbnail_path) { %><img loading="lazy" class="product-thumb" src="<%= product.thumbnail_url || assetUrl(publicAssetBucket, product.thumbnail_path) %>" alt="<%= product.name %>" data-image-fallback><div class="image-fallback" hidden><%- icon('image') %><span>Image unavailable</span></div><% } else { %><div class="image-fallback"><%- icon('image') %><span>Image unavailable</span></div><% } %>
+    <% if (product.thumbnail_url || product.thumbnail_path) { %><img loading="lazy" class="product-thumb" src="<%= product.thumbnail_url || assetUrl(publicAssetBucket, product.thumbnail_path) %>" alt="<%= product.name %>" data-image-fallback><div class="image-fallback" hidden><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } else { %><div class="image-fallback"><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } %>
   </a>
   <div class="product-body">
-    <div class="eyebrow"><%= product.category_name || 'Product' %></div>
+    <div class="eyebrow"><%= product.category_name || 'Produk' %></div>
     <a class="product-title" href="/product/<%= product.slug %>"><%= product.name %></a>
     <div class="product-meta">
       <span class="product-stock">

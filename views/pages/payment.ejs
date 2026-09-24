@@ -1,4 +1,13 @@
-<section class="page-shell narrow"><div class="page-header"><div><div class="eyebrow">Pembayaran</div><h1>Status pembayaran</h1><p>ID pembayaran <code><%= payment.id %></code></p></div><span class="badge badge-<%= String(payment.status||'').toLowerCase() %>"><%= labelStatus(payment.status) %></span></div><div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted">Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div></section>
+<section class="page-shell narrow"><div class="page-header"><div><div class="eyebrow">Pembayaran</div><h1>Status pembayaran</h1><p>ID pembayaran <code><%= payment.id %></code></p></div><span
+  class="badge badge-<%= String(payment.status||'').toLowerCase() %>"
+  data-label-pending="<%= labelStatus('PENDING') %>"
+  data-label-processing="<%= labelStatus('PROCESSING') %>"
+  data-label-paid="<%= labelStatus('PAID') %>"
+  data-label-failed="<%= labelStatus('FAILED') %>"
+  data-label-expired="<%= labelStatus('EXPIRED') %>"
+  data-label-refunded="<%= labelStatus('REFUNDED') %>"
+  data-label-cancelled="<%= labelStatus('CANCELLED') %>"
+><%= labelStatus(payment.status) %></span></div><div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted">Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div></section>
 
 <script nonce="<%= cspNonce %>">
 (()=>{
@@ -10,19 +19,9 @@
     'CANCELLED'
   ]);
 
-  const statusLabels={
-    PENDING:'Menunggu',
-    PROCESSING:'Diproses',
-    PAID:'Berhasil',
-    FAILED:'Gagal',
-    EXPIRED:'Kedaluwarsa',
-    REFUNDED:'Dikembalikan',
-    CANCELLED:'Dibatalkan'
-  };
-
   const statusLabel=value=>{
-    const key=String(value||'').toUpperCase();
-    return statusLabels[key]||String(value||'—');
+    const key=String(value||'').toLowerCase();
+    return badge?.getAttribute('data-label-'+key)||String(value||'—');
   };
 
   let stopped=false;

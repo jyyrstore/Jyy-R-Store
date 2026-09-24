@@ -823,6 +823,7 @@
     const buy=e.target.closest('[data-buy-now]'); if(buy){buy.disabled=true;try{const cart=await api.request('/api/cart');const existing=(cart?.items||[]).find(i=>String(i.product_id)===String(buy.dataset.buyNow));if(existing){await api.request('/api/cart/'+encodeURIComponent(existing.id),{method:'PUT',body:{quantity:1}})}else{await api.request('/api/cart',{method:'POST',body:{productId:buy.dataset.buyNow,quantity:1}})}location.href='/checkout'}catch(err){toast.error(err.message)}finally{buy.disabled=false}}
     const add=e.target.closest('[data-add-cart]'); if(add){add.disabled=true;try{await api.request('/api/cart',{method:'POST',body:{productId:add.dataset.addCart,quantity:1}});toast.success('Produk ditambahkan ke keranjang.');await hydrateCartBadge();}catch(err){toast.error(err.message)}finally{add.disabled=false}}
     const rm=e.target.closest('[data-cart-remove]'); if(rm){try{await api.request('/api/cart/'+rm.dataset.cartRemove,{method:'DELETE'});location.reload()}catch(err){toast.error(err.message)}}
+    const clearCart=e.target.closest('[data-cart-clear]'); if(clearCart){clearCart.disabled=true;try{await api.request('/api/cart',{method:'DELETE'});toast.success('Keranjang dikosongkan.');location.reload()}catch(err){toast.error(err.message)}finally{clearCart.disabled=false}}
     const minus=e.target.closest('[data-cart-minus]'),plus=e.target.closest('[data-cart-plus]');
     if(minus||plus){
       const btn=minus||plus;
@@ -1436,10 +1437,13 @@
               </div>
               <div class="service-footer">
                 <strong>${money(s.price)}</strong>
-                <a
-                  class="button button-secondary button-small"
-                  href="/services"
-                >Detail</a>
+                <button
+                  class="button button-primary button-small"
+                  type="button"
+                  data-service-order="${esc(s.id)}"
+                  data-service-name="${esc(s.name)}"
+                  data-service-price="${esc(s.price)}"
+                >Pesan</button>
               </div>
             </article>
           `).join('')}</div>`
