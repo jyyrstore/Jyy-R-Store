@@ -19,9 +19,18 @@ const auth = require('../services/auth/auth.service');
 const messages = require('../services/support/message.service');
 const {safeNextPath}=require('../utils/url');
 const {setAuthSession}=require('../utils/auth-session');
+const {pageParams,paginationUrl}=require('../utils/pagination');
+const {paginationMeta}=require('../utils/pagination-meta');
 
 function base(req, extra={}) {
-  return { title: "Jyy'R Store", req, csrfToken: req.csrfToken?.() || null, ...extra };
+  return {
+    title:"Jyy'R Store",
+    req,
+    csrfToken:req.csrfToken?.() || null,
+    paginationUrl:(param,page,query={})=>
+      paginationUrl(req,param,page,query),
+    ...extra
+  };
 }
 function configurationPage(req,res) {
   const env = loadEnv();
@@ -73,14 +82,159 @@ async function checkout(req,res,next){
 }
 async function orders(req,res,next){ try{res.render('app',base(req,{view:'pages/orders',orders:await orderService.getUserOrders(req.user.id,{limit:100})}));}catch(e){next(e)} }
 async function orderDetail(req,res,next){ try{const order=await require('../repositories/orders.repository').findForUser(req.params.id,req.user.id); if(!order){const err=new Error('Order not found.');err.status=404;err.expose=true;throw err;} res.render('app',base(req,{view:'pages/order-detail',order}));}catch(e){next(e)} }
-async function history(req,res,next){try{const orders=await orderService.getUserOrders(req.user.id,{limit:100}); const mutations=await wallet.mutations(req.user.id); res.render('app',base(req,{view:'pages/history',orders,mutations}));}catch(e){next(e)}}
+async function history(req,res,next){
+  try{
+    const orderPager=pageParams({
+      page:req.query.ordersPage,
+      limit:5
+    });
+
+    const mutationPager=pageParams({
+      page:req.query.mutationsPage,
+      limit:5
+    });
+
+    const [
+      orders,
+      orderTotal,
+      mutations,
+      mutationTotal
+    ]=await Promise.all([
+      orderService.getUserOrders(
+        req.user.id,
+        {
+          limit:orderPager.limit,
+          offset:orderPager.offset
+        }
+      ),
+      require('../repositories/orders.repository')
+        .countForUser(req.user.id),
+      wallet.mutations(
+        req.user.id,
+        mutationPager.limit,
+        mutationPager.offset
+      ),
+      wallet.countMutations(
+        req.user.id
+      )
+    ]);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/history',
+        orders,
+        mutations,
+        activeHistoryTab:
+          req.query.tab==='mutations'
+            ? 'mutations'
+            : 'orders',
+        ordersPagination:
+          paginationMeta(
+            orderTotal,
+            orderPager.page,
+            orderPager.limit
+          ),
+        mutationsPagination:
+          paginationMeta(
+            mutationTotal,
+            mutationPager.page,
+            mutationPager.limit
+          )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
 async function deposit(req,res,next){try{const w=await wallet.get(req.user.id); const deposits=await require('../repositories/deposits.repository').listForUser(req.user.id); res.render('app',base(req,{view:'pages/deposit',wallet:w,deposits}));}catch(e){next(e)}}
-async function profilePage(req,res,next){try{const [p,history]=await Promise.all([profile.get(req.user.id),profile.loginHistory(req.user.id)]);res.render('app',base(req,{view:'pages/profile',profile:p,loginHistory:history}));}catch(e){next(e)}}
+async function profilePage(req,res,next){
+  try{
+    const pager=pageParams({
+      page:req.query.loginPage,
+      limit:5
+    });
+
+    const [
+      p,
+      history,
+      total
+    ]=await Promise.all([
+      profile.get(req.user.id),
+      profile.loginHistory(
+        req.user.id,
+        {
+          limit:pager.limit,
+          offset:pager.offset
+        }
+      ),
+      profile.countLoginHistory(
+        req.user.id
+      )
+    ]);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/profile',
+        profile:p,
+        loginHistory:history,
+        loginPagination:
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
 async function messagesPage(req,res,next){try{res.render('app',base(req,{view:'pages/messages',messages:await messages.list(req.user.id)}));}catch(e){next(e)}}
 async function messageDetail(req,res,next){try{const m=await messages.detail(req.params.id,req.user.id);if(!m){const e=new Error('Message not found.');e.status=404;e.expose=true;throw e;}res.render('app',base(req,{view:'pages/message-detail',message:m}));}catch(e){next(e)}}
 async function ticketsPage(req,res,next){try{res.render('app',base(req,{view:'pages/tickets',tickets:await tickets.list(req.user.id)}));}catch(e){next(e)}}
 async function ticketDetail(req,res,next){try{const t=await tickets.detail(req.params.id,req.user.id);if(!t){const e=new Error('Ticket not found.');e.status=404;e.expose=true;throw e;}res.render('app',base(req,{view:'pages/ticket-detail',ticket:t}));}catch(e){next(e)}}
-async function notificationsPage(req,res,next){try{res.render('app',base(req,{view:'pages/notifications',notifications:await notifications.list(req.user.id)}));}catch(e){next(e)}}
+async function notificationsPage(req,res,next){
+  try{
+    const pager=pageParams({
+      page:req.query.page,
+      limit:5
+    });
+
+    const [
+      items,
+      total
+    ]=await Promise.all([
+      notifications.list(
+        req.user.id,
+        {
+          limit:pager.limit,
+          offset:pager.offset
+        }
+      ),
+      notifications.count(
+        req.user.id
+      )
+    ]);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/notifications',
+        notifications:items,
+        notificationsPagination:
+          paginationMeta(
+            total,
+            pager.page,
+            pager.limit
+          )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
 async function servicesPage(req,res,next){try{res.render('app',base(req,{view:'pages/services',services:await services.list(true)}));}catch(e){next(e)}}
 async function topOrder(req,res,next){try{const data=(await analytics.period('30d')).top;res.render('app',base(req,{view:'pages/top-order',items:data}));}catch(e){next(e)}}
 async function faq(req,res,next){try{res.render('app',base(req,{view:'pages/faq',faqs:await faqRepo.listPublic()}));}catch(e){next(e)}}

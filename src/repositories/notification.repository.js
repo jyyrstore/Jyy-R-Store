@@ -40,7 +40,17 @@ async function create(data,client){
   ).rows[0];
 }
 
-async function list(userId){
+async function list(userId,{limit=100,offset=0}={}){
+  const lim=Math.min(
+    100,
+    Math.max(1,Number(limit)||100)
+  );
+
+  const off=Math.max(
+    0,
+    Number(offset)||0
+  );
+
   return (
     await query(
       `
@@ -54,11 +64,28 @@ async function list(userId){
         where n.user_id=$1
            or n.user_id is null
         order by n.created_at desc
-        limit 100
+        limit $2
+        offset $3
       `,
-      [userId]
+      [userId,lim,off]
     )
   ).rows;
+}
+
+async function count(userId){
+  return Number(
+    (
+      await query(
+        `
+          select count(*)::int count
+          from notifications n
+          where n.user_id=$1
+             or n.user_id is null
+        `,
+        [userId]
+      )
+    ).rows[0].count
+  );
 }
 
 async function adminList(limit=200){
@@ -209,6 +236,7 @@ async function markRead(id,userId){
 module.exports={
   create,
   list,
+  count,
   adminList,
   unreadCount,
   markRead

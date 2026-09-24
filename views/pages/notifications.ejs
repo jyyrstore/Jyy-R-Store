@@ -11,4 +11,9 @@
       Tandai dibaca
     </button>
   <% } %>
-</div></article><% }) %><% if(!notifications.length){ %><%- include('../partials/empty',{title:'Tidak ada notifikasi',description:'Notifikasi order, pembayaran, dan support akan tampil di sini.'}) %><% } %></div></section>
+</div></article><% }) %><% if(!notifications.length){ %><%- include('../partials/empty',{title:'Tidak ada notifikasi',description:'Notifikasi order, pembayaran, dan support akan tampil di sini.'}) %><% } %>
+<%- include('../partials/pagination',{
+  pagination:notificationsPagination,
+  param:'page'
+}) %>
+</div></section>

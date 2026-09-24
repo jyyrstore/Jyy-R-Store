@@ -24,6 +24,17 @@ async function listForUser(userId,{limit=50,offset=0}={}){
   ).rows;
 }
 
+async function countForUser(userId){
+  return Number(
+    (
+      await query(
+        'select count(*)::int count from orders where user_id=$1',
+        [userId]
+      )
+    ).rows[0].count
+  );
+}
+
 async function findForUser(id,userId){
   return (
     await query(
@@ -61,4 +72,11 @@ async function adminList(filters={}){
   ).rows;
 }
 
-module.exports={listForUser,findForUser,findById,adminList,withTransaction};
+module.exports={
+  listForUser,
+  countForUser,
+  findForUser,
+  findById,
+  adminList,
+  withTransaction
+};

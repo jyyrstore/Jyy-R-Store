@@ -449,6 +449,11 @@
 
           <% } %>
 
+          <%- include('../partials/pagination',{
+            pagination:loginPagination,
+            param:'loginPage'
+          }) %>
+
         </div>
       </section>
 

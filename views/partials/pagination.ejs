@@ -1,0 +1,54 @@
+<%
+  const p=pagination;
+  const queryParams=query||{};
+  const build=page=>
+    paginationUrl(param,page,queryParams);
+%>
+
+<% if(p && p.totalPages>1){ %>
+  <nav
+    class="pagination"
+    aria-label="<%= label||'Pagination' %>"
+  >
+    <% if(p.showPrevious){ %>
+      <a
+        class="pagination-link pagination-icon"
+        href="<%= build(p.page-1) %>"
+        aria-label="Halaman sebelumnya"
+      >&lt;</a>
+    <% } %>
+
+    <% if(p.showFirst){ %>
+      <a
+        class="pagination-link pagination-icon"
+        href="<%= build(1) %>"
+        aria-label="Halaman pertama"
+      >&lt;&lt;</a>
+    <% } %>
+
+    <% p.pages.forEach(number=>{ %>
+      <a
+        class="pagination-link <%= number===p.page?'active':'' %>"
+        href="<%= build(number) %>"
+        <%= number===p.page?'aria-current="page"':'' %>
+        aria-label="Halaman <%= number %>"
+      ><%= number %></a>
+    <% }) %>
+
+    <% if(p.hasNext){ %>
+      <a
+        class="pagination-link pagination-icon"
+        href="<%= build(p.page+1) %>"
+        aria-label="Halaman berikutnya"
+      >&gt;</a>
+    <% } %>
+
+    <% if(p.showLast){ %>
+      <a
+        class="pagination-link pagination-icon"
+        href="<%= build(p.totalPages) %>"
+        aria-label="Halaman terakhir"
+      >&gt;&gt;</a>
+    <% } %>
+  </nav>
+<% } %>
