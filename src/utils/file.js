@@ -1,6 +1,14 @@
 const path = require('path');
 const sanitize = require('sanitize-filename');
-const { fileTypeFromBuffer } = require('file-type');
+let fileTypeFromBufferImpl;
+
+async function fileTypeFromBuffer(buffer) {
+  if (!fileTypeFromBufferImpl) {
+    ({ fileTypeFromBuffer: fileTypeFromBufferImpl } = await import('file-type'));
+  }
+
+  return fileTypeFromBufferImpl(buffer);
+}
 const ALLOWED = {
   IMAGE: ['image/jpeg','image/png','image/webp'],
   VIDEO: ['video/mp4','video/webm','video/quicktime'],
