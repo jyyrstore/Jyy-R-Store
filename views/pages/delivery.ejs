@@ -1,6 +1,6 @@
 <section class="page-shell">
   <div class="page-header">
-    <div><div class="eyebrow">Delivery</div><h1>Library produk</h1><p>Akses produk yang sudah dibeli dari order yang telah memenuhi status delivery.</p></div>
+    <div><div class="eyebrow">Produk Saya</div><h1>Library produk</h1><p>Akses produk digital yang sudah tersedia untuk akunmu.</p></div>
   </div>
 
   <div class="stack-list">
@@ -9,7 +9,7 @@
         <div>
           <div class="eyebrow accent">Digital access</div>
           <strong><%= e.product_name || e.product_id %></strong>
-          <span><%= e.status %> · diberikan <%= formatDate(e.granted_at) %></span>
+          <span><%= labelStatus(e.status) %> · tersedia sejak <%= formatDate(e.granted_at) %></span>
         </div>
         <a class="button button-primary button-small" href="/orders/<%= e.order_id %>">
           <%- icon('download') %> Buka Order

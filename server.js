@@ -79,6 +79,44 @@ async function createApp() {
   app.locals.assetUrl = (bucket, filePath) => filePath ? storage.publicUrl(bucket, filePath) : null;
   app.locals.formatIDR = (value) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value || 0));
   app.locals.formatDate = (value) => value ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—';
+  const STATUS_LABELS = {
+    PENDING: 'Menunggu',
+    PROCESSING: 'Diproses',
+    PAID: 'Berhasil',
+    COMPLETED: 'Selesai',
+    FAILED: 'Gagal',
+    CANCELLED: 'Dibatalkan',
+    EXPIRED: 'Kedaluwarsa',
+    REFUNDED: 'Dikembalikan',
+    DRAFT: 'Draft',
+    PUBLISHED: 'Tersedia',
+    ARCHIVED: 'Diarsipkan',
+    OUT_OF_STOCK: 'Habis',
+    ACTIVE: 'Aktif',
+    INACTIVE: 'Nonaktif',
+    OPEN: 'Terbuka',
+    IN_PROGRESS: 'Diproses',
+    RESOLVED: 'Selesai',
+    CLOSED: 'Ditutup',
+    SUCCESS: 'Berhasil',
+    REJECTED: 'Ditolak'
+  };
+
+  app.locals.labelStatus = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) return '—';
+
+    const key = raw.toUpperCase();
+
+    if (STATUS_LABELS[key]) {
+      return STATUS_LABELS[key];
+    }
+
+    return raw
+      .toLowerCase()
+      .replace(/_/g, ' ')
+      .replace(/(^|\s)\S/g, char => char.toUpperCase());
+  };
   app.locals.isConfigured = isConfigured();
   app.locals.publicAssetBucket = env.PUBLIC_ASSET_BUCKET;
   app.locals.socialLinks = [

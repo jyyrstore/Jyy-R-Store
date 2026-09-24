@@ -283,3 +283,73 @@ body.no-scroll{
 .cart-count[hidden]{
   display:none!important;
 }
+
+
+/* =========================================================
+   CUSTOMER UI POLISH
+   ========================================================= */
+
+.notification-button,
+.cart-button{
+  position:relative;
+}
+
+.notification-count{
+  position:absolute;
+  top:4px;
+  right:4px;
+  min-width:17px;
+  height:17px;
+  padding:0 4px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:var(--error);
+  color:#fff;
+  border:2px solid var(--deep);
+  font-size:9px;
+  font-weight:900;
+  line-height:1;
+}
+
+.notification-count[hidden]{
+  display:none!important;
+}
+
+.search-section{
+  margin-top:28px;
+}
+
+.search-section:first-child{
+  margin-top:0;
+}
+
+.search-chip-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+
+.search-loading{
+  min-height:80px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+}
+
+.empty-state.compact{
+  min-height:110px;
+}
+
+@media(max-width:860px){
+  .search-chip-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media(max-width:480px){
+  .search-chip-grid{
+    grid-template-columns:1fr;
+  }
+}

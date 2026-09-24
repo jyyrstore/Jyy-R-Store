@@ -4,8 +4,9 @@
   const csrf=()=>window.JYYR?.csrf||'';
 
   async function hydrateCartBadge(){
-    const badge=document.querySelector('[data-cart-badge]');
-    if(!badge||!api?.request)return;
+    const badges=[...document.querySelectorAll('[data-cart-badge]')];
+
+    if(!badges.length||!api?.request)return;
 
     try{
       const cart=await api.request('/api/cart');
@@ -14,21 +15,45 @@
         0
       );
 
-      badge.textContent=count>99?'99+':String(count);
-      badge.hidden=count<=0;
+      badges.forEach(badge=>{
+        badge.textContent=count>99?'99+':String(count);
+        badge.hidden=count<=0;
+      });
     }catch{
-      badge.hidden=true;
+      badges.forEach(badge=>{ badge.hidden=true; });
+    }
+  }
+
+  async function hydrateNotificationBadge(){
+    const badges=[...document.querySelectorAll('[data-notification-badge]')];
+
+    if(!badges.length||!api?.request)return;
+
+    try{
+      const result=await api.request('/api/notifications/unread');
+      const count=Number(result?.count||0);
+
+      badges.forEach(badge=>{
+        badge.textContent=count>99?'99+':String(count);
+        badge.hidden=count<=0;
+      });
+    }catch{
+      badges.forEach(badge=>{ badge.hidden=true; });
     }
   }
 
   if(document.readyState==='loading'){
     document.addEventListener(
       'DOMContentLoaded',
-      hydrateCartBadge,
+      ()=>{
+        hydrateCartBadge();
+        hydrateNotificationBadge();
+      },
       {once:true}
     );
   }else{
     hydrateCartBadge();
+    hydrateNotificationBadge();
   }
   const svg=name=>({plus:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',x:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',package:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16.5 9.4-9-5.1M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>'}[name]||'');
 
@@ -792,6 +817,7 @@
   document.querySelectorAll('table').forEach(table=>{const heads=[...table.querySelectorAll('thead th')].map(x=>x.textContent.trim());table.querySelectorAll('tbody tr').forEach(row=>[...row.children].forEach((cell,i)=>{if(heads[i])cell.setAttribute('data-label',heads[i])}));});
   document.addEventListener('click',async e=>{
     const retry=e.target.closest('[data-retry]'); if(retry){location.reload();return}
+    const searchRetry=e.target.closest('[data-search-retry]'); if(searchRetry){search();return}
     const openUrl=e.target.closest('[data-open-content-url]'); if(openUrl){window.open(openUrl.dataset.openContentUrl,'_blank','noopener');return}
 
     const buy=e.target.closest('[data-buy-now]'); if(buy){buy.disabled=true;try{const cart=await api.request('/api/cart');const existing=(cart?.items||[]).find(i=>String(i.product_id)===String(buy.dataset.buyNow));if(existing){await api.request('/api/cart/'+encodeURIComponent(existing.id),{method:'PUT',body:{quantity:1}})}else{await api.request('/api/cart',{method:'POST',body:{productId:buy.dataset.buyNow,quantity:1}})}location.href='/checkout'}catch(err){toast.error(err.message)}finally{buy.disabled=false}}
@@ -849,7 +875,7 @@
       }
     }
     const amount=e.target.closest('[data-deposit-amount]');if(amount){document.querySelectorAll('[data-deposit-amount]').forEach(x=>x.classList.remove('selected'));amount.classList.add('selected');const custom=document.getElementById('deposit-custom');if(custom)custom.value=Number(amount.dataset.depositAmount)}
-    const read=e.target.closest('[data-read-notification]');if(read){try{await api.request('/api/notifications/'+read.dataset.readNotification+'/read',{method:'PUT'});read.closest('.notification-card')?.classList.remove('unread');read.remove()}catch(err){toast.error(err.message)}}
+    const read=e.target.closest('[data-read-notification]');if(read){try{await api.request('/api/notifications/'+read.dataset.readNotification+'/read',{method:'PUT'});read.closest('.notification-card')?.classList.remove('unread');read.remove();await hydrateNotificationBadge()}catch(err){toast.error(err.message)}}
     const tab=e.target.closest('[data-tab-target]');if(tab){const name=tab.dataset.tabTarget;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));tab.classList.add('active');document.querySelector(`[data-tab="${name}"]`)?.classList.add('active')}
     const dep=e.target.closest('[data-deposit-submit]');if(dep){const v=Number(document.getElementById('deposit-custom')?.value||0);if(v<1000)return toast.error('Minimum deposit Rp1.000.');dep.disabled=true;try{const r=await api.request('/api/deposit',{method:'POST',body:{amount:v,returnUrl:location.origin+'/deposit'}});if(r.paymentUrl)location.href=r.paymentUrl;else toast.success('Deposit dibuat.')}catch(err){toast.error(err.message)}finally{dep.disabled=false}}
     const checkout=e.target.closest('[data-checkout-confirm]');if(checkout){const method=document.querySelector('input[name="paymentMethod"]:checked')?.value||'BALANCE';checkout.disabled=true;try{const r=await api.request('/api/orders',{method:'POST',body:{paymentMethod:method,returnUrl:location.origin+'/orders'}});if(r.payment?.paymentUrl)location.href=r.payment.paymentUrl;else location.href='/orders/'+r.order.id}catch(err){toast.error(err.message)}finally{checkout.disabled=false}}
@@ -1345,6 +1371,127 @@
     const omf=e.target.closest('[data-owner-message-form]');if(omf){e.preventDefault();const fd=Object.fromEntries(new FormData(omf));try{await ownerAction('/api/owner/messages/'+fd.user_id+'/reply',{body:fd.body},'POST','Pesan dikirim.');location.reload()}catch(err){toast.error(err.message)}}
   });
 
-  async function search(){const q=document.getElementById('search-query')?.value?.trim(),root=document.getElementById('search-results');if(!root||!q)return;root.innerHTML='<div class="panel">Mencari...</div>';try{const r=await api.request('/api/search?q='+encodeURIComponent(q));root.innerHTML=`<div class="section"><h2>Produk</h2><div class="product-grid">${(r.products||[]).map(p=>`<a class="list-card" href="/product/${encodeURIComponent(p.slug)}"><div><strong>${esc(p.name)}</strong><span>${esc(p.category_name||'Product')}</span></div><b>${money(p.price)}</b></a>`).join('')||'<div class="empty-state"><h3>Tidak ada produk</h3></div>'}</div></div>`}catch(err){root.innerHTML='<div class="empty-state"><h3>Gagal memuat hasil</h3><p>'+esc(err.message)+'</p></div>'}}
+  async function search(){
+    const q=document.getElementById('search-query')?.value?.trim();
+    const root=document.getElementById('search-results');
+
+    if(!root)return;
+
+    if(!q){
+      root.innerHTML='';
+      return;
+    }
+
+    root.innerHTML=
+      '<div class="panel search-loading" aria-live="polite">'+
+      'Mencari hasil untuk “'+esc(q)+'”…</div>';
+
+    try{
+      const r=await api.request(
+        '/api/search?q='+encodeURIComponent(q)
+      );
+
+      const products=r.products||[];
+      const categories=r.categories||[];
+      const services=r.services||[];
+
+      const productMarkup=products.length
+        ? `<div class="product-grid">${products.map(p=>`
+            <a class="list-card" href="/product/${encodeURIComponent(p.slug)}">
+              <div>
+                <strong>${esc(p.name)}</strong>
+                <span>${esc(p.category_name||'Produk')}</span>
+              </div>
+              <b>${money(p.price)}</b>
+            </a>
+          `).join('')}</div>`
+        : `<div class="empty-state">
+            <h3>Produk tidak ditemukan</h3>
+            <p>Coba kata kunci lain.</p>
+          </div>`;
+
+      const categoryMarkup=categories.length
+        ? `<div class="search-chip-grid">${categories.map(c=>`
+            <a class="category-card" href="/store?category=${encodeURIComponent(c.slug)}">
+              <span class="category-card__content">
+                <strong class="category-card__name">${esc(c.name)}</strong>
+                <small class="category-card__description">
+                  ${esc(c.description||'Lihat produk')}
+                </small>
+              </span>
+              <span class="category-card__arrow" aria-hidden="true">→</span>
+            </a>
+          `).join('')}</div>`
+        : `<div class="empty-state compact">
+            <p>Tidak ada kategori yang cocok.</p>
+          </div>`;
+
+      const serviceMarkup=services.length
+        ? `<div class="service-grid">${services.map(s=>`
+            <article class="service-card">
+              <div>
+                <div class="eyebrow">${esc(s.category||'Layanan')}</div>
+                <h3>${esc(s.name)}</h3>
+                <p>${esc(s.description||'Layanan Jyy’R Store.')}</p>
+              </div>
+              <div class="service-footer">
+                <strong>${money(s.price)}</strong>
+                <a
+                  class="button button-secondary button-small"
+                  href="/services"
+                >Detail</a>
+              </div>
+            </article>
+          `).join('')}</div>`
+        : `<div class="empty-state compact">
+            <p>Tidak ada layanan yang cocok.</p>
+          </div>`;
+
+      root.innerHTML=`
+        <div class="search-section">
+          <div class="section-header">
+            <div>
+              <div class="eyebrow">Produk</div>
+              <h2>Produk</h2>
+            </div>
+          </div>
+          ${productMarkup}
+        </div>
+
+        <div class="search-section">
+          <div class="section-header">
+            <div>
+              <div class="eyebrow">Kategori</div>
+              <h2>Kategori</h2>
+            </div>
+          </div>
+          ${categoryMarkup}
+        </div>
+
+        <div class="search-section">
+          <div class="section-header">
+            <div>
+              <div class="eyebrow">Layanan</div>
+              <h2>Layanan</h2>
+            </div>
+          </div>
+          ${serviceMarkup}
+        </div>
+      `;
+    }catch(err){
+      root.innerHTML=`
+        <div class="empty-state">
+          <h3>Pencarian gagal</h3>
+          <p>${esc(err.message||'Terjadi kesalahan saat mencari.')}</p>
+          <button
+            class="button button-secondary button-small"
+            type="button"
+            data-search-retry
+          >Coba lagi</button>
+        </div>
+      `;
+    }
+  }
+
   document.querySelector('.filter-bar[action="/search"]')?.addEventListener('submit',e=>{e.preventDefault();history.pushState({},'', '/search?q='+encodeURIComponent(document.getElementById('search-query').value.trim()));search()}); if(location.pathname==='/search')search();
 })();

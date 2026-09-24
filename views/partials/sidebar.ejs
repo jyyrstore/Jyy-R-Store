@@ -8,11 +8,11 @@
       <div class="sidebar-section-label">Akun</div>
       <a class="nav-link <%= req.path==='/dashboard'?'active':'' %>" href="/dashboard"><%- icon('dashboard') %><span>Dashboard</span></a>
       <a class="nav-link <%= req.path.startsWith('/orders')?'active':'' %>" href="/orders"><%- icon('history') %><span>Pesanan</span></a>
-      <a class="nav-link <%= req.path.startsWith('/delivery')?'active':'' %>" href="/delivery"><%- icon('download') %><span>Delivery</span></a>
+      <a class="nav-link <%= req.path.startsWith('/delivery')?'active':'' %>" href="/delivery"><%- icon('download') %><span>Produk Saya</span></a>
       <a class="nav-link <%= req.path==='/history'?'active':'' %>" href="/history"><%- icon('history') %><span>Riwayat</span></a>
       <a class="nav-link <%= req.path.startsWith('/deposit')?'active':'' %>" href="/deposit"><%- icon('wallet') %><span>Wallet</span></a>
 
-      <div class="sidebar-section-label">Support</div>
+      <div class="sidebar-section-label">Bantuan</div>
       <a class="nav-link <%= req.path.startsWith('/messages')?'active':'' %>" href="/messages"><%- icon('message') %><span>Pesan</span></a>
       <a class="nav-link <%= req.path.startsWith('/tickets')?'active':'' %>" href="/tickets"><%- icon('ticket') %><span>Tiket</span></a>
       <a class="nav-link <%= req.path.startsWith('/notifications')?'active':'' %>" href="/notifications"><%- icon('bell') %><span>Notifikasi</span></a>
@@ -32,9 +32,9 @@
     <% } %>
 
     <% if (currentUser) { %>
-      <div class="sidebar-section-label">Account</div>
+      <div class="sidebar-section-label">Akun</div>
       <a class="nav-link <%= req.path.startsWith('/profile')?'active':'' %>" href="/profile"><%- icon('user') %><span>Profil</span></a>
-      <button class="nav-link nav-button" data-logout><%- icon('external') %><span>Logout</span></button>
+      <button class="nav-link nav-button" data-logout><%- icon('external') %><span>Keluar</span></button>
     <% } %>
   </div>
 </aside>

@@ -1,5 +1,78 @@
-<section class="page-shell narrow"><div class="page-header"><div><div class="eyebrow">Payment</div><h1>Status pembayaran</h1><p>Payment ID <code><%= payment.id %></code></p></div><span class="badge"><%= payment.status %></span></div><div class="panel"><div class="summary-row"><span>Provider</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Reference</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Amount</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Created</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted">Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div></section>
+<section class="page-shell narrow"><div class="page-header"><div><div class="eyebrow">Pembayaran</div><h1>Status pembayaran</h1><p>ID pembayaran <code><%= payment.id %></code></p></div><span class="badge badge-<%= String(payment.status||'').toLowerCase() %>"><%= labelStatus(payment.status) %></span></div><div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted">Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div></section>
 
 <script nonce="<%= cspNonce %>">
-(()=>{const terminal=new Set(['PAID','FAILED','EXPIRED','REFUNDED','CANCELLED']);let stopped=false;let tries=0;const badge=document.querySelector('.badge');const note=document.querySelector('.panel .muted');const tick=async()=>{if(stopped||terminal.has('<%= payment.status %>')||tries>=80)return;tries++;try{const r=await fetch('/api/payment/<%= payment.id %>',{credentials:'same-origin',headers:{'Accept':'application/json'}});const out=await r.json();const p=out.data||out;if(p.status){badge.textContent=p.status;if(terminal.has(p.status)){location.reload();return}note.textContent='Status akan diperbarui otomatis oleh backend/webhook provider.'}}catch{}setTimeout(tick,3000)};if(!terminal.has('<%= payment.status %>'))tick();window.addEventListener('beforeunload',()=>{stopped=true});})();
+(()=>{
+  const terminal=new Set([
+    'PAID',
+    'FAILED',
+    'EXPIRED',
+    'REFUNDED',
+    'CANCELLED'
+  ]);
+
+  const statusLabels={
+    PENDING:'Menunggu',
+    PROCESSING:'Diproses',
+    PAID:'Berhasil',
+    FAILED:'Gagal',
+    EXPIRED:'Kedaluwarsa',
+    REFUNDED:'Dikembalikan',
+    CANCELLED:'Dibatalkan'
+  };
+
+  const statusLabel=value=>{
+    const key=String(value||'').toUpperCase();
+    return statusLabels[key]||String(value||'—');
+  };
+
+  let stopped=false;
+  let tries=0;
+
+  const badge=document.querySelector('.badge');
+  const note=document.querySelector('.panel .muted');
+
+  const tick=async()=>{
+    if(stopped||terminal.has('<%= payment.status %>')||tries>=80){
+      return;
+    }
+
+    tries++;
+
+    try{
+      const r=await fetch(
+        '/api/payment/<%= payment.id %>',
+        {
+          credentials:'same-origin',
+          headers:{'Accept':'application/json'}
+        }
+      );
+
+      const out=await r.json();
+      const p=out.data||out;
+
+      if(p.status){
+        badge.textContent=statusLabel(p.status);
+
+        if(terminal.has(p.status)){
+          location.reload();
+          return;
+        }
+
+        note.textContent=
+          'Status pembayaran diperbarui otomatis.';
+      }
+    }catch{}
+
+    setTimeout(tick,3000);
+  };
+
+  if(!terminal.has('<%= payment.status %>')){
+    tick();
+  }
+
+  window.addEventListener(
+    'beforeunload',
+    ()=>{stopped=true}
+  );
+})();
 </script>
