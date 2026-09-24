@@ -467,3 +467,63 @@ body.no-scroll{
     width:34px;
   }
 }
+/* =========================================================
+   TOAST FEEDBACK
+   ========================================================= */
+
+#toast-root.toast-root{
+  position:fixed;
+  top:calc(var(--header) + 12px);
+  right:16px;
+  z-index:var(--z-toast);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  width:min(420px,calc(100vw - 24px));
+  pointer-events:none;
+}
+
+#toast-root .toast{
+  pointer-events:auto;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  width:100%;
+  padding:12px 14px;
+  background:var(--surface);
+  color:var(--text);
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-md);
+  box-shadow:var(--shadow);
+  font-size:13px;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+}
+
+#toast-root .toast.success{
+  border-color:rgba(69,196,138,.32);
+  background:rgba(69,196,138,.08);
+}
+
+#toast-root .toast.error{
+  border-color:rgba(235,111,115,.32);
+  background:rgba(235,111,115,.08);
+}
+
+#toast-root .toast.info{
+  border-color:rgba(113,167,242,.32);
+  background:rgba(113,167,242,.08);
+}
+
+@media(max-width:600px){
+  #toast-root.toast-root{
+    top:calc(var(--header) + 8px);
+    right:12px;
+    width:calc(100vw - 24px);
+  }
+
+  #toast-root .toast{
+    padding:11px 12px;
+    font-size:12px;
+  }
+}
