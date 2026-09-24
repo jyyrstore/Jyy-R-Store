@@ -99,44 +99,44 @@
       </div>
 
     </div>
-  </section>
 
-  <section
-    class="profile-stat-grid"
-    aria-label="Ringkasan akun"
-  >
-    <article class="profile-stat-card">
-      <div class="profile-stat-icon">
-        <%- icon('history') %>
-      </div>
+    <div
+      class="profile-stat-grid"
+      aria-label="Ringkasan akun"
+    >
+      <article class="profile-stat-card">
+        <div class="profile-stat-icon">
+          <%- icon('history') %>
+        </div>
 
-      <div>
-        <span>Pesanan</span>
-        <strong><%= Number(profile.total_orders || 0) %></strong>
-      </div>
-    </article>
+        <div>
+          <span>Pesanan</span>
+          <strong><%= Number(profile.total_orders || 0) %></strong>
+        </div>
+      </article>
 
-    <article class="profile-stat-card">
-      <div class="profile-stat-icon">
-        <%- icon('wallet') %>
-      </div>
+      <article class="profile-stat-card">
+        <div class="profile-stat-icon">
+          <%- icon('wallet') %>
+        </div>
 
-      <div>
-        <span>Saldo</span>
-        <strong><%= formatIdr(profile.balance) %></strong>
-      </div>
-    </article>
+        <div>
+          <span>Saldo</span>
+          <strong><%= formatIdr(profile.balance) %></strong>
+        </div>
+      </article>
 
-    <article class="profile-stat-card">
-      <div class="profile-stat-icon">
-        <%- icon('download') %>
-      </div>
+      <article class="profile-stat-card">
+        <div class="profile-stat-icon">
+          <%- icon('download') %>
+        </div>
 
-      <div>
-        <span>Total deposit</span>
-        <strong><%= formatIdr(profile.total_deposit) %></strong>
-      </div>
-    </article>
+        <div>
+          <span>Total deposit</span>
+          <strong><%= formatIdr(profile.total_deposit) %></strong>
+        </div>
+      </article>
+    </div>
   </section>
 
   <div class="two-column profile-content-grid">
