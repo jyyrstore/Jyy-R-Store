@@ -1,5 +1,5 @@
 const { supabasePublic }=require('../../config/supabase');
-const profiles=require('../../repositories/profiles.repository');
+const profiles=require('../../repositories/profiles.repository'); const {parseUserAgent}=require('../../utils/normalization');
 const { query }=require('../../config/database'); const {loadEnv}=require('../../config/env');
 
 async function register({email,password,username}){
@@ -26,9 +26,11 @@ async function login({email,password},{ip,userAgent}={}){
   const {data,error}=await client.auth.signInWithPassword({email,password});
 
   if(error){
+    const loginMeta=parseUserAgent(userAgent);
+
     await query(
       "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values(null,$1,$2,$3,'FAILED',now())",
-      ['Unknown',userAgent||null,ip||null]
+      [loginMeta.device,loginMeta.browser,ip||null]
     ).catch(()=>{});
 
     throw Object.assign(new Error('Email atau password tidak valid.'),{
@@ -41,9 +43,11 @@ async function login({email,password},{ip,userAgent}={}){
   const profile=await profiles.findById(data.user.id);
 
   if(profile?.status==='BANNED'){
+    const loginMeta=parseUserAgent(userAgent);
+
     await query(
       "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
-      [data.user.id,'Unknown',userAgent||null,ip||null]
+      [data.user.id,loginMeta.device,loginMeta.browser,ip||null]
     ).catch(()=>{});
 
     throw Object.assign(new Error('Akun dinonaktifkan.'),{
@@ -54,9 +58,11 @@ async function login({email,password},{ip,userAgent}={}){
   }
 
   if(profile?.status==='SUSPENDED'){
+    const loginMeta=parseUserAgent(userAgent);
+
     await query(
       "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
-      [data.user.id,'Unknown',userAgent||null,ip||null]
+      [data.user.id,loginMeta.device,loginMeta.browser,ip||null]
     ).catch(()=>{});
 
     throw Object.assign(new Error('Akun sedang ditangguhkan.'),{
@@ -76,9 +82,11 @@ async function login({email,password},{ip,userAgent}={}){
 
   await query('update profiles set last_login_at=now() where id=$1',[data.user.id]);
   await query('insert into wallets(user_id) values($1) on conflict do nothing',[data.user.id]);
+  const loginMeta=parseUserAgent(userAgent);
+
   await query(
     "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'SUCCESS',now())",
-    [data.user.id,'Unknown',userAgent||null,ip||null]
+    [data.user.id,loginMeta.device,loginMeta.browser,ip||null]
   );
 
   return data;
