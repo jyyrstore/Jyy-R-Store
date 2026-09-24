@@ -550,62 +550,74 @@ button[aria-busy="true"]{
 
 .profile-stat-grid{
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
+  grid-template-columns:repeat(3,minmax(0,1fr));
   margin-top:20px;
   padding-top:18px;
   border-top:1px solid var(--border);
+  width:100%;
+  min-width:0;
 }
 
 .profile-stat-card{
   display:flex;
+  flex-direction:column;
   align-items:center;
-  gap:11px;
+  justify-content:center;
+  gap:7px;
   min-width:0;
-  padding:14px;
+  padding:12px 8px;
+  text-align:center;
   border-left:0;
   border-top:0;
+  overflow:hidden;
 }
 
-.profile-stat-card:nth-child(even){
+.profile-stat-card:nth-child(3n+2),
+.profile-stat-card:nth-child(3n+3){
   border-left:1px solid var(--border);
 }
 
-.profile-stat-card:nth-child(n+3){
+.profile-stat-card:nth-child(n+4){
   border-top:1px solid var(--border);
 }
 
 .profile-stat-icon{
-  width:40px;
-  height:40px;
-  min-width:40px;
+  width:34px;
+  height:34px;
+  min-width:34px;
   display:grid;
   place-items:center;
-  border-radius:12px;
+  border-radius:10px;
   background:rgba(139,92,246,.09);
   color:var(--primary-2);
 }
 
 .profile-stat-icon svg{
-  width:18px;
-  height:18px;
+  width:17px;
+  height:17px;
 }
 
 .profile-stat-card span,
 .profile-stat-card strong{
   display:block;
+  width:100%;
   min-width:0;
-  overflow-wrap:anywhere;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
 .profile-stat-card span{
   color:var(--muted);
   font-size:11px;
+  line-height:1.2;
 }
 
 .profile-stat-card strong{
-  margin-top:4px;
-  font-size:16px;
-  line-height:1.25;
+  margin-top:2px;
+  color:var(--text);
+  font-size:14px;
+  line-height:1.2;
   letter-spacing:-.02em;
 }
 
@@ -991,11 +1003,26 @@ button[aria-busy="true"]{
     gap:0;
     margin-top:16px;
     padding-top:14px;
+    grid-template-columns:repeat(3,minmax(0,1fr));
   }
 
   .profile-stat-card{
     min-height:0;
-    padding:12px 10px;
+    padding:11px 5px;
+  }
+
+  .profile-stat-icon{
+    width:32px;
+    height:32px;
+    min-width:32px;
+  }
+
+  .profile-stat-card span{
+    font-size:10px;
+  }
+
+  .profile-stat-card strong{
+    font-size:13px;
   }
 
   .profile-content-grid{
