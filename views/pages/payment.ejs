@@ -11,6 +11,9 @@
 
 <script nonce="<%= cspNonce %>">
 (()=>{
+  const badge=document.querySelector('.badge');
+  const note=document.querySelector('.panel .muted');
+
   const terminal=new Set([
     'PAID',
     'FAILED',
@@ -19,59 +22,140 @@
     'CANCELLED'
   ]);
 
+  const initialStatus='<%= payment.status %>';
+
+  let currentStatus=initialStatus;
+  let stopped=false;
+  let attempts=0;
+  let delay=3000;
+  let timer=null;
+  let controller=null;
+
   const statusLabel=value=>{
     const key=String(value||'').toLowerCase();
-    return badge?.getAttribute('data-label-'+key)||String(value||'—');
+    return badge?.getAttribute('data-label-'+key) || String(value||'—');
   };
 
-  let stopped=false;
-  let tries=0;
+  const stop=()=>{
+    stopped=true;
 
-  const badge=document.querySelector('.badge');
-  const note=document.querySelector('.panel .muted');
+    if(timer){
+      clearTimeout(timer);
+      timer=null;
+    }
+
+    controller?.abort();
+    controller=null;
+  };
+
+  const schedule=()=>{
+    if(stopped || document.hidden)return;
+
+    if(timer)clearTimeout(timer);
+
+    timer=setTimeout(()=>{
+      timer=null;
+      tick();
+    },delay);
+  };
 
   const tick=async()=>{
-    if(stopped||terminal.has('<%= payment.status %>')||tries>=80){
+    if(
+      stopped ||
+      document.hidden ||
+      terminal.has(currentStatus) ||
+      attempts>=80
+    ){
+      if(attempts>=80 && !terminal.has(currentStatus) && note){
+        note.textContent='Pembaruan otomatis dihentikan setelah batas waktu. Muat ulang halaman untuk memeriksa kembali.';
+      }
+
       return;
     }
 
-    tries++;
+    attempts++;
+    controller=new AbortController();
 
     try{
-      const r=await fetch(
+      const response=await fetch(
         '/api/payment/<%= payment.id %>',
         {
           credentials:'same-origin',
-          headers:{'Accept':'application/json'}
+          headers:{'Accept':'application/json'},
+          signal:controller.signal
         }
       );
 
-      const out=await r.json();
+      if(!response.ok){
+        if([401,403,404].includes(response.status)){
+          if(note){
+            note.textContent='Status pembayaran tidak dapat diperbarui otomatis. Periksa halaman pesanan.';
+          }
+
+          stop();
+          return;
+        }
+
+        delay=Math.min(Math.round(delay*1.5),15000);
+        schedule();
+        return;
+      }
+
+      const out=await response.json();
       const p=out.data||out;
 
       if(p.status){
-        badge.textContent=statusLabel(p.status);
+        currentStatus=String(p.status).toUpperCase();
 
-        if(terminal.has(p.status)){
+        if(badge){
+          badge.textContent=statusLabel(currentStatus);
+        }
+
+        if(terminal.has(currentStatus)){
+          stop();
           location.reload();
           return;
         }
 
-        note.textContent=
-          'Status pembayaran diperbarui otomatis.';
-      }
-    }catch{}
+        if(note){
+          note.textContent='Status pembayaran diperbarui otomatis.';
+        }
 
-    setTimeout(tick,3000);
+        delay=3000;
+      }
+
+      schedule();
+    }catch(error){
+      if(error?.name==='AbortError')return;
+
+      delay=Math.min(Math.round(delay*1.5),15000);
+      schedule();
+    }finally{
+      controller=null;
+    }
   };
 
-  if(!terminal.has('<%= payment.status %>')){
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){
+      if(timer){
+        clearTimeout(timer);
+        timer=null;
+      }
+
+      controller?.abort();
+      return;
+    }
+
+    if(!stopped && !terminal.has(currentStatus)){
+      delay=3000;
+      tick();
+    }
+  });
+
+  window.addEventListener('beforeunload',stop);
+
+  if(!terminal.has(initialStatus)){
     tick();
   }
-
-  window.addEventListener(
-    'beforeunload',
-    ()=>{stopped=true}
-  );
 })();
 </script>

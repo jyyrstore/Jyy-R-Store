@@ -11,6 +11,6 @@
 </a><a class="icon-button notification-button" href="/notifications" aria-label="Notifikasi">
   <%- icon('bell') %>
   <span class="notification-count" data-notification-badge hidden></span>
-</a><a class="profile-chip" href="/profile"><span class="avatar"><%= (profile?.username || 'U').slice(0,1).toUpperCase() %></span><span class="hide-mobile"><%= profile?.username || 'Account' %></span></a><% } else { %><a class="button button-secondary button-small" href="/auth/login">Masuk</a><a class="button button-primary button-small" href="/auth/register">Daftar</a><% } %>
+</a><a class="profile-chip" href="/profile"><span class="avatar"><%= (profile?.username || 'U').slice(0,1).toUpperCase() %></span><span class="hide-mobile"><%= profile?.username || 'Akun' %></span></a><% } else { %><a class="button button-secondary button-small" href="/auth/login">Masuk</a><a class="button button-primary button-small" href="/auth/register">Daftar</a><% } %>
   </nav>
 </header>

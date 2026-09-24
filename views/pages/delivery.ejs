@@ -1,13 +1,13 @@
 <section class="page-shell">
   <div class="page-header">
-    <div><div class="eyebrow">Produk Saya</div><h1>Library produk</h1><p>Akses produk digital yang sudah tersedia untuk akunmu.</p></div>
+    <div><div class="eyebrow">Produk Saya</div><h1>Produk Saya</h1><p>Akses produk digital yang sudah tersedia untuk akunmu.</p></div>
   </div>
 
   <div class="stack-list">
     <% entitlements.forEach(e=>{ %>
       <article class="list-card">
         <div>
-          <div class="eyebrow accent">Digital access</div>
+          <div class="eyebrow accent">Akses digital</div>
           <strong><%= e.product_name || e.product_id %></strong>
           <span><%= labelStatus(e.status) %> · tersedia sejak <%= formatDate(e.granted_at) %></span>
         </div>
@@ -18,7 +18,7 @@
     <% }) %>
 
     <% if(!entitlements.length){ %>
-      <%- include('../partials/empty',{title:'Belum ada delivery',description:'Setelah order paid, entitlement akan muncul di sini.',cta:'/store',ctaText:'Jelajahi Store'}) %>
+      <%- include('../partials/empty',{title:'Belum ada akses produk',description:'Setelah pesanan berhasil, akses produk akan muncul di sini.',cta:'/store',ctaText:'Jelajahi Store'}) %>
     <% } %>
   </div>
 </section>

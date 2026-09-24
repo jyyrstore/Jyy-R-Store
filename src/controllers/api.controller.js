@@ -101,7 +101,22 @@ const ticketController={
 const notificationController={
  list:async(req,res)=>ok(res,await notifications.list(req.user.id)),
  unread:async(req,res)=>ok(res,{count:await notifications.unreadCount(req.user.id)}),
- read:async(req,res)=>ok(res,await notifications.markRead(req.params.id,req.user.id))
+ read:async(req,res)=>{
+   const item=await notifications.markRead(req.params.id,req.user.id);
+
+   if(!item){
+     throw Object.assign(
+       new Error('Notifikasi tidak ditemukan.'),
+       {
+         status:404,
+         code:'NOTIFICATION_NOT_FOUND',
+         expose:true
+       }
+     );
+   }
+
+   return ok(res,item);
+ }
 };
 const serviceController={list:async(req,res)=>ok(res,await services.list(true)),order:async(req,res)=>ok(res,await services.purchaseWithBalance(req.user.id,req.body.serviceId,req.body.requestData),201)};
 const messageController={list:async(req,res)=>ok(res,await messages.list(req.user.id)),detail:async(req,res)=>{const m=await require('../repositories/messages.repository').findForUser(req.params.id,req.user.id);if(!m)throw Object.assign(new Error('Message not found.'),{status:404,code:'MESSAGE_NOT_FOUND',expose:true});return ok(res,m)},create:async(req,res)=>{const m=await messages.sendFromUser(req.user.id,req.body.body);await require('../services/audit.service').record(req,{action:'SEND_MESSAGE',entityType:'message',entityId:m.id}).catch(()=>{});const owner=await require('../repositories/messages.repository').firstOwner();if(owner) await notifications.create({user_id:owner.id,type:'SYSTEM',title:'Pesan baru dari user',body:`User ${req.profile?.username||req.user.id} mengirim pesan baru.`,link:'/owner/messages'}).catch(()=>{});return ok(res,m,201)}};
