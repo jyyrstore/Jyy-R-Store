@@ -27,7 +27,7 @@
       <div class="detail-price"><%= formatIDR(product.price) %></div>
       <p class="detail-description"><%= product.description || 'Tidak ada deskripsi.' %></p>
       <div class="detail-meta"><span class="badge"><%= product.stock>0 ? `${product.stock} stock` : 'Habis' %></span><span class="badge"><%= product.status %></span></div>
-      <div class="detail-actions">
+      <div class="detail-actions" aria-label="Aksi produk">
         <% if(currentUser && product.stock>0){ %>
           <button class="button button-secondary" data-add-cart="<%= product.id %>"><%- icon('cart') %> Tambah ke Cart</button>
           <button class="button button-primary" data-buy-now="<%= product.id %>"><%- icon('check') %> Beli Sekarang</button>

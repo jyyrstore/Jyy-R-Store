@@ -1,1 +1,43 @@
-<section class="page-shell"><div class="page-header"><div><div class="eyebrow">Cart</div><h1>Keranjang</h1></div><a href="/store" class="button button-secondary">Lanjut belanja</a></div><div class="cart-layout"><div class="stack-list"><% cart.items.forEach(i=>{ %><article class="cart-item"><% if(i.thumbnail_path){ %><img src="<%= assetUrl(publicAssetBucket,i.thumbnail_path) %>" alt="<%= i.name %>"><% } else { %><div class="cart-thumb image-fallback"><%- icon('image') %></div><% } %><div class="cart-main"><a href="/product/<%= i.slug %>"><strong><%= i.name %></strong></a><span><%= formatIDR(i.price) %></span><div class="quantity"><button class="icon-button" data-cart-minus="<%= i.id %>"><%- icon('minus') %></button><span><%= i.quantity %></span><button class="icon-button" data-cart-plus="<%= i.id %>"><%- icon('plus') %></button></div></div><div class="align-right"><b><%= formatIDR(i.lineTotal) %></b><button class="icon-button danger" data-cart-remove="<%= i.id %>" aria-label="Hapus"><%- icon('trash') %></button></div></article><% }) %><% if(!cart.items.length){ %><%- include('../partials/empty',{title:'Cart masih kosong',description:'Tambahkan produk dari store.',cta:'/store',ctaText:'Buka Store'}) %><% } %></div><aside class="summary-card"><div><span>Subtotal</span><strong><%= formatIDR(cart.total) %></strong></div><% if(cart.items.length){ %><a class="button button-primary button-block" href="/checkout">Checkout</a><% } else { %><button class="button button-primary button-block" type="button" disabled>Checkout</button><% } %></aside></div></section>
+<section class="page-shell">
+  <div class="page-header">
+    <div><div class="eyebrow">Cart</div><h1>Keranjang</h1><p>Review item sebelum lanjut ke pembayaran.</p></div>
+    <a href="/store" class="button button-secondary">Lanjut belanja</a>
+  </div>
+
+  <div class="cart-layout">
+    <div class="stack-list">
+      <% cart.items.forEach(i=>{ %>
+        <article class="cart-item">
+          <% if(i.thumbnail_path){ %><img src="<%= assetUrl(publicAssetBucket,i.thumbnail_path) %>" alt="<%= i.name %>"><% } else { %><div class="cart-thumb image-fallback"><%- icon('image') %></div><% } %>
+          <div class="cart-main">
+            <a href="/product/<%= i.slug %>"><strong><%= i.name %></strong></a>
+            <span><%= formatIDR(i.price) %> / item</span>
+            <div class="quantity">
+              <button class="icon-button" data-cart-minus="<%= i.id %>" aria-label="Kurangi jumlah"><%- icon('minus') %></button>
+              <span aria-live="polite"><%= i.quantity %></span>
+              <button class="icon-button" data-cart-plus="<%= i.id %>" aria-label="Tambah jumlah"><%- icon('plus') %></button>
+            </div>
+          </div>
+          <div class="align-right">
+            <b><%= formatIDR(i.lineTotal) %></b>
+            <button class="icon-button danger" data-cart-remove="<%= i.id %>" aria-label="Hapus"><%- icon('trash') %></button>
+          </div>
+        </article>
+      <% }) %>
+
+      <% if(!cart.items.length){ %>
+        <%- include('../partials/empty',{title:'Cart masih kosong',description:'Tambahkan produk dari store.',cta:'/store',ctaText:'Buka Store'}) %>
+      <% } %>
+    </div>
+
+    <aside class="summary-card">
+      <div class="eyebrow">Order summary</div>
+      <div class="summary-row"><span>Subtotal</span><strong><%= formatIDR(cart.total) %></strong></div>
+      <% if(cart.items.length){ %>
+        <a class="button button-primary button-block" href="/checkout">Checkout</a>
+      <% } else { %>
+        <button class="button button-primary button-block" type="button" disabled>Checkout</button>
+      <% } %>
+    </aside>
+  </div>
+</section>

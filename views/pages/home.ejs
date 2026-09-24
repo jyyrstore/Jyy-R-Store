@@ -1,9 +1,53 @@
 <section class="page-shell home-page">
   <section class="hero">
-    <div><div class="eyebrow accent">JYY'R STORE</div><h1>Digital store yang rapi, cepat, dan aman.</h1><p>Temukan product digital, layanan, wallet, dan delivery dalam satu alur yang terhubung.</p><div class="hero-actions"><a href="/store" class="button button-primary"><%- icon('package') %> Jelajahi Store</a><% if (!currentUser) { %><a href="/auth/register" class="button button-secondary">Buat Akun</a><% } %></div></div>
-    <div class="hero-stat"><div><span>Protected Delivery</span><strong>Server-authorized</strong></div><div><span>Premium Content</span><strong>Private + signed URL</strong></div></div>
+    <div>
+      <div class="eyebrow accent">JYY'R STORE</div>
+      <h1>Digital products, secure checkout & delivery.</h1>
+      <p>Temukan produk digital dan layanan Jyy'R Store dengan pembelian mudah, pembayaran jelas, dan delivery aman.</p>
+      <div class="hero-actions">
+        <a href="/store" class="button button-primary"><%- icon('package') %> Jelajahi Store</a>
+        <% if (!currentUser) { %><a href="/auth/register" class="button button-secondary">Buat Akun</a><% } %>
+      </div>
+    </div>
+    <div class="hero-stat">
+      <div><span>Pembayaran</span><strong>Server verified</strong></div>
+      <div><span>Delivery</span><strong>Entitlement protected</strong></div>
+    </div>
   </section>
-  <section class="section"><div class="section-header"><div><div class="eyebrow">Discover</div><h2>Produk terbaru</h2></div><a href="/store" class="text-link">Lihat semua</a></div><div class="product-grid"><% products.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div></section>
-  <section class="section"><div class="section-header"><div><div class="eyebrow">Explore</div><h2>Kategori</h2></div></div><div class="category-grid"><% categories.forEach(c=>{ %><a href="/store?category=<%= c.slug %>" class="category-card"><span><%= c.name %></span><small><%= c.description || 'Lihat produk' %></small></a><% }) %></div></section>
-  <section class="section two-column"><div><div class="eyebrow">Services</div><h2>Layanan pilihan</h2><div class="stack-list"><% services.forEach(s=>{ %><a class="list-card" href="/services"><div><strong><%= s.name %></strong><span><%= s.category || 'Service' %></span></div><b><%= formatIDR(s.price) %></b></a><% }) %></div></div><div><div class="eyebrow">Information</div><h2>Informasi terbaru</h2><div class="stack-list"><% announcements.forEach(a=>{ %><article class="info-card"><strong><%= a.title %></strong><p><%= a.body %></p></article><% }) %><% if(!announcements.length){ %><%- include('../partials/empty',{title:'Belum ada informasi',description:'Announcement akan tampil di sini.'}) %><% } %></div></div></section>
+
+  <section class="section">
+    <div class="section-header">
+      <div><div class="eyebrow">Discover</div><h2>Produk terbaru</h2></div>
+      <a href="/store" class="text-link">Lihat semua</a>
+    </div>
+    <div class="product-grid"><% products.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>
+  </section>
+
+  <section class="section">
+    <div class="section-header"><div><div class="eyebrow">Explore</div><h2>Kategori</h2></div></div>
+    <div class="category-grid">
+<% categories.forEach(c=>{ %>
+  <a href="/store?category=<%= c.slug %>" class="category-card">
+    <span class="category-card__content">
+      <strong class="category-card__name"><%= c.name %></strong>
+      <small class="category-card__description"><%= c.description || 'Lihat produk' %></small>
+    </span>
+    <span class="category-card__arrow" aria-hidden="true">→</span>
+  </a>
+<% }) %>
+</div>
+  </section>
+
+  <section class="section two-column">
+    <div>
+      <div class="eyebrow">Services</div><h2>Layanan pilihan</h2>
+      <div class="stack-list"><% services.forEach(s=>{ %><a class="list-card" href="/services"><div><strong><%= s.name %></strong><span><%= s.category || 'Service' %></span></div><b><%= formatIDR(s.price) %></b></a><% }) %></div>
+    </div>
+    <div>
+      <div class="eyebrow">Information</div><h2>Informasi terbaru</h2>
+      <div class="stack-list"><% announcements.forEach(a=>{ %><article class="info-card"><strong><%= a.title %></strong><p><%= a.body %></p></article><% }) %>
+        <% if(!announcements.length){ %><%- include('../partials/empty',{title:'Belum ada informasi',description:'Announcement akan tampil di sini.'}) %><% } %>
+      </div>
+    </div>
+  </section>
 </section>

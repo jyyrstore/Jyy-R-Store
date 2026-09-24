@@ -2,23 +2,38 @@
   <div class="sidebar-inner">
     <div class="sidebar-section-label">Store</div>
     <a class="nav-link <%= req.path==='/'?'active':'' %>" href="/"><%- icon('home') %><span>Home</span></a>
+    <a class="nav-link <%= req.path==='/store'?'active':'' %>" href="/store"><%- icon('package') %><span>Store</span></a>
+
     <% if (currentUser) { %>
+      <div class="sidebar-section-label">Akun</div>
       <a class="nav-link <%= req.path==='/dashboard'?'active':'' %>" href="/dashboard"><%- icon('dashboard') %><span>Dashboard</span></a>
+      <a class="nav-link <%= req.path.startsWith('/orders')?'active':'' %>" href="/orders"><%- icon('history') %><span>Pesanan</span></a>
+      <a class="nav-link <%= req.path.startsWith('/delivery')?'active':'' %>" href="/delivery"><%- icon('download') %><span>Delivery</span></a>
       <a class="nav-link <%= req.path==='/history'?'active':'' %>" href="/history"><%- icon('history') %><span>Riwayat</span></a>
+      <a class="nav-link <%= req.path.startsWith('/deposit')?'active':'' %>" href="/deposit"><%- icon('wallet') %><span>Wallet</span></a>
+
+      <div class="sidebar-section-label">Support</div>
       <a class="nav-link <%= req.path.startsWith('/messages')?'active':'' %>" href="/messages"><%- icon('message') %><span>Pesan</span></a>
-      <a class="nav-link" href="/top-order"><%- icon('package') %><span>Top Order</span></a>
-      <a class="nav-link" href="/deposit"><%- icon('wallet') %><span>Deposit</span></a>
-      <a class="nav-link" href="/services"><%- icon('settings') %><span>Layanan</span></a>
-      <a class="nav-link" href="/tickets"><%- icon('ticket') %><span>Tiket</span></a>
+      <a class="nav-link <%= req.path.startsWith('/tickets')?'active':'' %>" href="/tickets"><%- icon('ticket') %><span>Tiket</span></a>
+      <a class="nav-link <%= req.path.startsWith('/notifications')?'active':'' %>" href="/notifications"><%- icon('bell') %><span>Notifikasi</span></a>
     <% } %>
-    <a class="nav-link" href="/faq"><%- icon('info') %><span>FAQ</span></a>
-    <a class="nav-link" href="/security"><%- icon('shield') %><span>Security</span></a>
+
+    <div class="sidebar-section-label">Resources</div>
+    <% if (currentUser) { %>
+      <a class="nav-link" href="/services"><%- icon('settings') %><span>Layanan</span></a>
+      <a class="nav-link" href="/top-order"><%- icon('package') %><span>Top Order</span></a>
+    <% } %>
+    <a class="nav-link <%= req.path.startsWith('/faq')?'active':'' %>" href="/faq"><%- icon('info') %><span>FAQ</span></a>
+    <a class="nav-link <%= req.path.startsWith('/security')?'active':'' %>" href="/security"><%- icon('shield') %><span>Security</span></a>
+
     <% if (profile?.role === 'OWNER') { %>
       <div class="sidebar-section-label">Management</div>
-      <a class="nav-link" href="/owner"><%- icon('dashboard') %><span>Owner Panel</span></a>
+      <a class="nav-link <%= req.path.startsWith('/owner')?'active':'' %>" href="/owner"><%- icon('dashboard') %><span>Owner Panel</span></a>
     <% } %>
+
     <% if (currentUser) { %>
-      <a class="nav-link" href="/profile"><%- icon('user') %><span>Profil</span></a>
+      <div class="sidebar-section-label">Account</div>
+      <a class="nav-link <%= req.path.startsWith('/profile')?'active':'' %>" href="/profile"><%- icon('user') %><span>Profil</span></a>
       <button class="nav-link nav-button" data-logout><%- icon('external') %><span>Logout</span></button>
     <% } %>
   </div>

@@ -1,9 +1,9 @@
 <% if (currentUser) { %>
-<nav class="bottom-nav">
-  <a class="bottom-item <%= req.path==='/dashboard'?'active':'' %>" href="/dashboard"><%- icon('dashboard') %><span>Dashboard</span></a>
-  <a class="bottom-item <%= req.path.startsWith('/messages')?'active':'' %>" href="/messages"><%- icon('message') %><span>Pesan</span></a>
+<nav class="bottom-nav" aria-label="Navigasi utama">
   <a class="bottom-item <%= req.path==='/'?'active':'' %>" href="/"><%- icon('home') %><span>Home</span></a>
-  <a class="bottom-item <%= req.path.startsWith('/history')?'active':'' %>" href="/history"><%- icon('history') %><span>Riwayat</span></a>
+  <a class="bottom-item <%= req.path.startsWith('/store')?'active':'' %>" href="/store"><%- icon('package') %><span>Store</span></a>
+  <a class="bottom-item <%= req.path.startsWith('/orders')?'active':'' %>" href="/orders"><%- icon('history') %><span>Orders</span></a>
+  <a class="bottom-item <%= req.path.startsWith('/deposit')?'active':'' %>" href="/deposit"><%- icon('wallet') %><span>Wallet</span></a>
   <a class="bottom-item <%= req.path.startsWith('/profile')?'active':'' %>" href="/profile"><%- icon('user') %><span>Profil</span></a>
 </nav>
 <% } %>

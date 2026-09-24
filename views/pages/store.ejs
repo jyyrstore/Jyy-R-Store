@@ -1,5 +1,13 @@
 <section class="page-shell">
-  <div class="page-header"><div><div class="eyebrow">Store</div><h1>Katalog produk</h1><p><%= total %> produk tersedia.</p></div></div>
+  <div class="page-header">
+    <div>
+      <div class="eyebrow">Store</div>
+      <h1>Katalog produk</h1>
+      <p><%= total %> produk tersedia. Gunakan filter untuk mempersempit pilihan.</p>
+    </div>
+    <% if (currentUser) { %><a class="button button-secondary" href="/cart"><%- icon('cart') %> Keranjang</a><% } %>
+  </div>
+
   <form class="filter-bar" method="get" action="/store">
     <label class="field-inline"><span class="sr-only">Cari produk</span><input name="search" value="<%= req.query.search||'' %>" placeholder="Cari produk..." aria-label="Cari produk"></label>
     <select name="category" aria-label="Kategori"><option value="">Semua kategori</option><% categories.forEach(c=>{ %><option value="<%= c.slug %>" <%= req.query.category===c.slug?'selected':'' %>><%= c.name %></option><% }) %></select>
@@ -8,8 +16,17 @@
     <select name="sort" aria-label="Urutkan"><option value="newest">Terbaru</option><option value="popular" <%= req.query.sort==='popular'?'selected':'' %>>Populer</option><option value="price_asc" <%= req.query.sort==='price_asc'?'selected':'' %>>Harga rendah</option><option value="price_desc" <%= req.query.sort==='price_desc'?'selected':'' %>>Harga tinggi</option></select>
     <button class="button button-primary button-small" type="submit">Terapkan</button>
   </form>
+
   <% if(items.length){ %>
     <div class="product-grid"><% items.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>
-    <% const pages=Math.max(1,Math.ceil(total/Math.max(1,limit||20))); const current=Number(page||1); if(pages>1){ %><nav class="pagination" aria-label="Pagination"><% if(current>1){ %><a class="button button-secondary button-small" href="<%= paginationUrl(req.query,current-1) %>">Sebelumnya</a><% } %><span>Halaman <strong><%= current %></strong> / <%= pages %></span><% if(current<pages){ %><a class="button button-secondary button-small" href="<%= paginationUrl(req.query,current+1) %>">Berikutnya</a><% } %></nav><% } %>
-  <% } else { %><%- include('../partials/empty',{title:'Belum ada produk tersedia',description:'Coba kata kunci atau filter lain.',actionUrl:'/store',actionLabel:'Reset Filter'}) %><% } %>
+    <% const pages=Math.max(1,Math.ceil(total/Math.max(1,limit||20))); const current=Number(page||1); if(pages>1){ %>
+      <nav class="pagination" aria-label="Pagination">
+        <% if(current>1){ %><a class="button button-secondary button-small" href="<%= paginationUrl(req.query,current-1) %>">Sebelumnya</a><% } %>
+        <span>Halaman <strong><%= current %></strong> / <%= pages %></span>
+        <% if(current<pages){ %><a class="button button-secondary button-small" href="<%= paginationUrl(req.query,current+1) %>">Berikutnya</a><% } %>
+      </nav>
+    <% } %>
+  <% } else { %>
+    <%- include('../partials/empty',{title:'Belum ada produk tersedia',description:'Coba kata kunci atau filter lain.',actionUrl:'/store',actionLabel:'Reset Filter'}) %>
+  <% } %>
 </section>

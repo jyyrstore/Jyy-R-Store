@@ -5,7 +5,7 @@
   <div class="product-body">
     <div class="eyebrow"><%= product.category_name || 'Product' %></div>
     <a class="product-title" href="/product/<%= product.slug %>"><%= product.name %></a>
-    <div class="product-meta"><span><%= product.stock > 0 ? `${product.stock} tersedia` : 'Stock habis' %></span><span class="status-dot <%= product.status==='PUBLISHED'?'success':'' %>"></span></div>
+    <div class="product-meta"><span><%= product.stock > 0 ? `${product.stock} tersedia` : 'Stock habis' %></span><span class="status-dot <%= product.status==='PUBLISHED'?'success':'' %>" aria-hidden="true"></span></div>
     <div class="product-price"><%= formatIDR(product.price) %></div>
     <div class="product-actions"><a class="button button-secondary button-small" href="/product/<%= product.slug %>">Detail</a><% if (currentUser && product.stock>0) { %><button class="button button-primary button-small" data-add-cart="<%= product.id %>"><%- icon('cart') %> Tambah</button><% } %></div>
   </div>
