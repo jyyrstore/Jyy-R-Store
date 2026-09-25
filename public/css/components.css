@@ -324,7 +324,19 @@
   top:14px;
   right:14px;
   z-index:2;
-  background:rgba(255,255,255,.04);
+  width:44px;
+  height:44px;
+  padding:0;
+  border-radius:50%;
+  color:#ef4444;
+  border-color:rgba(239,68,68,.35);
+  background:rgba(239,68,68,.10);
+}
+
+.modal-close:hover{
+  color:#ff6b6b;
+  border-color:rgba(239,68,68,.55);
+  background:rgba(239,68,68,.16);
 }
 
 body.no-scroll{
@@ -438,6 +450,11 @@ body.no-scroll{
   border-radius:0;
   padding:0;
   object-fit:cover;
+}
+
+.product-thumbnail-preview-stage .product-thumbnail-empty[hidden],
+.product-thumbnail-preview-stage .product-thumbnail-preview[hidden]{
+  display:none !important;
 }
 
 .product-thumbnail-preview{

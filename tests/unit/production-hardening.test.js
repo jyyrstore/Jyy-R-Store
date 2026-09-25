@@ -570,6 +570,80 @@ test('product content preview migration is idempotent',()=>{
 
 // SINGLE THUMBNAIL PREVIEW V1
 
+
+test('owner edit product uses the same single thumbnail preview stage',()=>{
+  const pages=read('public/js/pages.js');
+
+  const start=pages.indexOf('<form data-owner-product-edit');
+  assert.ok(start>=0);
+
+  const end=pages.indexOf('</form>',start);
+  assert.ok(end>start);
+
+  const editForm=pages.slice(start,end);
+
+  assert.equal(
+    (editForm.match(/data-thumbnail-stage/g)||[]).length,
+    1
+  );
+
+  assert.equal(
+    (editForm.match(/data-thumbnail-preview/g)||[]).length,
+    1
+  );
+
+  const stageMatch=editForm.match(
+    /<div\s+class="product-thumbnail-preview-stage"[\s\S]*?<\/div>\s*<div class="product-upload-info">/
+  );
+
+  assert.ok(stageMatch);
+  assert.ok(
+    stageMatch[0].includes('data-current-thumbnail') ||
+    stageMatch[0].includes('data-thumbnail-empty')
+  );
+  assert.ok(stageMatch[0].includes('data-thumbnail-preview'));
+  assert.match(editForm,/Belum ada perubahan cover\./);
+
+  const coverPos=editForm.indexOf('<strong>Cover Produk</strong>');
+  const infoPos=editForm.indexOf('<strong>Informasi Produk</strong>');
+
+  assert.ok(coverPos>=0);
+  assert.ok(infoPos>coverPos);
+});
+
+test('thumbnail change handler restores the existing cover when no new file is selected',()=>{
+  const pages=read('public/js/pages.js');
+
+  assert.match(
+    pages,
+    /const current=form\?\.querySelector\('\[data-current-thumbnail\]'\)/
+  );
+
+  assert.match(
+    pages,
+    /if\(current\)current\.hidden=false/
+  );
+
+  assert.match(
+    pages,
+    /if\(current\)current\.hidden=true/
+  );
+});
+
+test('thumbnail preview hidden state is explicitly suppressed by CSS',()=>{
+  const css=read('public/css/components.css');
+
+  assert.match(
+    css,
+    /\.product-thumbnail-preview-stage \.product-thumbnail-empty\[hidden\][\s\S]*display:none !important/
+  );
+
+  assert.match(
+    css,
+    /\.product-thumbnail-preview-stage \.product-thumbnail-preview\[hidden\][\s\S]*display:none !important/
+  );
+});
+
 test('owner create product uses one thumbnail preview area',()=>{
   const pages=read('public/js/pages.js');
   const css=read('public/css/components.css');

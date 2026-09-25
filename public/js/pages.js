@@ -744,32 +744,46 @@
     if(!input)return;
     const file=input.files?.[0];
     const form=input.closest('form');
+    const current=form?.querySelector('[data-current-thumbnail]');
     const preview=form?.querySelector('[data-thumbnail-preview]');
     const empty=form?.querySelector('[data-thumbnail-empty]');
     const status=form?.querySelector('[data-thumbnail-status]');
+
     if(!file){
       if(preview)preview.hidden=true;
-      if(empty)empty.hidden=false;
-      if(status)status.textContent='Belum ada thumbnail dipilih.';
+      if(current)current.hidden=false;
+      if(empty)empty.hidden=Boolean(current);
+      if(status)status.textContent=current
+        ? 'Belum ada perubahan cover.'
+        : 'Belum ada thumbnail dipilih.';
       return;
     }
+
     if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
       input.value='';
       window.JYYRPicker?.syncFile?.(input);
       if(preview)preview.hidden=true;
-      if(empty)empty.hidden=false;
-      if(status)status.textContent='Thumbnail harus JPG, PNG, atau WebP.';
+      if(current)current.hidden=false;
+      if(empty)empty.hidden=Boolean(current);
+      if(status)status.textContent=current
+        ? 'Belum ada perubahan cover.'
+        : 'Thumbnail harus JPG, PNG, atau WebP.';
       toast.error('Thumbnail harus JPG, PNG, atau WebP.');
       return;
     }
+
     if(preview){
       if(preview.dataset.objectUrl)URL.revokeObjectURL(preview.dataset.objectUrl);
+
       const url=URL.createObjectURL(file);
       preview.src=url;
       preview.dataset.objectUrl=url;
       preview.hidden=false;
+
+      if(current)current.hidden=true;
       if(empty)empty.hidden=true;
     }
+
     if(status)status.textContent=`${file.name} · ${(file.size/1024/1024).toFixed(2)} MB`;
   });
   function syncOwnerContentForm(form){
@@ -1139,6 +1153,52 @@
 
           <section class="product-modal-section">
             <div class="product-modal-section-title">
+              <strong>Cover Produk</strong>
+              <span class="badge">JPG · PNG · WEBP</span>
+            </div>
+
+            <div class="product-thumbnail-box">
+              <div
+                class="product-thumbnail-preview-stage"
+                data-thumbnail-stage
+              >
+                ${d.thumbnail_url
+                  ? `<img
+                      class="product-thumbnail-preview"
+                      data-current-thumbnail
+                      src="${esc(d.thumbnail_url)}"
+                      alt="Cover produk saat ini"
+                    >`
+                  : `<div
+                      class="product-thumbnail-empty"
+                      data-thumbnail-empty
+                    >Preview Thumbnail</div>`
+                }
+
+                <img
+                  class="product-thumbnail-preview"
+                  data-thumbnail-preview
+                  alt="Preview cover baru"
+                  hidden
+                >
+              </div>
+
+              <div class="product-upload-info">
+                <strong>${d.thumbnail_url?'Ganti cover produk':'Upload cover produk'}</strong>
+                <small>Gunakan gambar utama yang jelas untuk tampilan Store.</small>
+                ${pickerFile({
+  name:'thumbnail',
+  accept:'image/jpeg,image/png,image/webp',
+  attrs:'data-thumbnail-input'
+})}
+                <small data-thumbnail-status>Belum ada perubahan cover.</small>
+                <progress data-thumbnail-progress value="0" max="100" hidden></progress>
+              </div>
+            </div>
+          </section>
+
+          <section class="product-modal-section">
+            <div class="product-modal-section-title">
               <strong>Informasi Produk</strong>
             </div>
 
@@ -1181,34 +1241,6 @@
                 <span>Deskripsi</span>
                 <textarea name="description" rows="5" maxlength="5000">${esc(d.description||'')}</textarea>
               </label>
-            </div>
-          </section>
-
-          <section class="product-modal-section">
-            <div class="product-modal-section-title">
-              <strong>Cover Produk</strong>
-              <span class="badge">JPG · PNG · WEBP</span>
-            </div>
-
-            <div class="product-thumbnail-box">
-              ${
-                d.thumbnail_url
-                  ? `<img class="product-thumbnail-preview" data-current-thumbnail src="${esc(d.thumbnail_url)}" alt="Cover produk saat ini">`
-                  : `<div class="product-thumbnail-empty" data-thumbnail-empty>Belum ada cover</div>`
-              }
-
-              <div class="product-upload-info">
-                <strong>${d.thumbnail_url?'Ganti cover produk':'Upload cover produk'}</strong>
-                <small>Gunakan gambar utama yang jelas untuk tampilan Store.</small>
-                ${pickerFile({
-  name:'thumbnail',
-  accept:'image/jpeg,image/png,image/webp',
-  attrs:'data-thumbnail-input'
-})}
-                <small class="muted" data-thumbnail-status>Belum ada perubahan cover.</small>
-                <progress data-thumbnail-progress value="0" max="100" hidden></progress>
-                <img class="product-thumbnail-preview" data-thumbnail-preview alt="Preview cover baru" hidden>
-              </div>
             </div>
           </section>
 
