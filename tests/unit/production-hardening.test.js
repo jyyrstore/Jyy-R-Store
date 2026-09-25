@@ -251,6 +251,53 @@ test('owner users UI uses filtered admin repository and responsive table labels'
 });
 
 
+
+test('auth callback URLs stay environment-driven',()=>{
+  const auth=read('src/services/auth/auth.service.js');
+  const controller=read('src/controllers/api.controller.js');
+  const env=read('src/config/env.js');
+
+  assert.match(
+    auth,
+    /emailRedirectTo:\s*`\$\{loadEnv\(\)\.APP_URL\}\/auth\/callback`/
+  );
+
+  assert.match(
+    auth,
+    /redirectTo:\s*`\$\{loadEnv\(\)\.APP_URL\}\/auth\/callback\?next=\/auth\/reset-password`/
+  );
+
+  assert.match(
+    controller,
+    /exchangeCode\(req\.query\.code\)/
+  );
+
+  assert.doesNotMatch(
+    auth,
+    /jyyrstore\.vercel\.app\/auth\/callback/
+  );
+
+  assert.doesNotMatch(
+    auth,
+    /jyyrsh\.my\.id\/auth\/callback/
+  );
+
+  assert.doesNotMatch(
+    controller,
+    /jyyrstore\.vercel\.app\/auth\/callback/
+  );
+
+  assert.doesNotMatch(
+    controller,
+    /jyyrsh\.my\.id\/auth\/callback/
+  );
+
+  assert.match(
+    env,
+    /APP_URL:\s*process\.env\.APP_URL/
+  );
+});
+
 test('global picker system removes user-facing native selectors',()=>{
   const app=read('views/app.ejs');
   const owner=read('views/owner/index.ejs');
