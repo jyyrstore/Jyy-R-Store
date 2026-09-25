@@ -13,6 +13,11 @@ function loadEnv() {
     NODE_ENV: nodeEnv,
     PORT: int(process.env.PORT, 3000),
     APP_URL: process.env.APP_URL || 'http://localhost:3000',
+    APP_ALLOWED_URLS: String(
+      process.env.APP_ALLOWED_URLS ||
+      process.env.APP_URL ||
+      'http://localhost:3000'
+    ).split(',').map(value => value.trim()).filter(Boolean),
     APP_NAME: process.env.APP_NAME || "Jyy'R Store",
     SUPABASE_URL: process.env.SUPABASE_URL || '',
     SUPABASE_PUBLISHABLE_KEY:

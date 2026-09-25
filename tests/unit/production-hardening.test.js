@@ -296,6 +296,11 @@ test('auth callback URLs stay environment-driven',()=>{
     env,
     /APP_URL:\s*process\.env\.APP_URL/
   );
+
+  assert.match(
+    env,
+    /APP_ALLOWED_URLS:\s*String\(/
+  );
 });
 
 test('global picker system removes user-facing native selectors',()=>{

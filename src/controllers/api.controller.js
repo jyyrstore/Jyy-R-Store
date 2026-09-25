@@ -58,12 +58,12 @@ const cartController={
 };
 const orderController={
  preview:async(req,res)=>ok(res,await orders.preview(req.user.id)),
- create:async(req,res)=>{const method=req.body.paymentMethod||'BALANCE';if(method==='BALANCE')return ok(res,await orders.createWalletOrder(req.user.id,req.body.idempotencyKey||crypto.randomUUID()),201);const returnUrl=safeSameOriginUrl(req.body.returnUrl,'/orders',loadEnv().APP_URL);const created=await orders.createGatewayOrder(req.user.id,{idempotencyKey:req.body.idempotencyKey||crypto.randomUUID(),returnUrl});const p=await payment.createForOrder(req.user.id,created.order,returnUrl);return ok(res,{...created,payment:p},201)},
+ create:async(req,res)=>{const method=req.body.paymentMethod||'BALANCE';if(method==='BALANCE')return ok(res,await orders.createWalletOrder(req.user.id,req.body.idempotencyKey||crypto.randomUUID()),201);const returnUrl=safeSameOriginUrl(req.body.returnUrl,'/orders',loadEnv().APP_ALLOWED_URLS);const created=await orders.createGatewayOrder(req.user.id,{idempotencyKey:req.body.idempotencyKey||crypto.randomUUID(),returnUrl});const p=await payment.createForOrder(req.user.id,created.order,returnUrl);return ok(res,{...created,payment:p},201)},
  list:async(req,res)=>ok(res,await orders.getUserOrders(req.user.id,req.query)),
  detail:async(req,res)=>{const o=await require('../repositories/orders.repository').findForUser(req.params.id,req.user.id); if(!o) throw Object.assign(new Error('Order not found.'),{status:404,code:'ORDER_NOT_FOUND',expose:true});return ok(res,o)}
 };
 const paymentController={
- create:async(req,res)=>{const order=await require('../repositories/orders.repository').findForUser(req.body.orderId,req.user.id);if(!order)throw Object.assign(new Error('Order not found.'),{status:404,code:'ORDER_NOT_FOUND',expose:true});const returnUrl=safeSameOriginUrl(req.body.returnUrl,'/orders',loadEnv().APP_URL);return ok(res,await payment.createForOrder(req.user.id,order,returnUrl),201)},
+ create:async(req,res)=>{const order=await require('../repositories/orders.repository').findForUser(req.body.orderId,req.user.id);if(!order)throw Object.assign(new Error('Order not found.'),{status:404,code:'ORDER_NOT_FOUND',expose:true});const returnUrl=safeSameOriginUrl(req.body.returnUrl,'/orders',loadEnv().APP_ALLOWED_URLS);return ok(res,await payment.createForOrder(req.user.id,order,returnUrl),201)},
  status:async(req,res)=>{
     const p=await payment.getStatus(req.params.id,req.user.id);
     return ok(res,{
@@ -80,7 +80,7 @@ const paymentController={
   }
 };
 const depositController={
- create:async(req,res)=>ok(res,await deposit.createAndPay(req.user.id,{amount:Number(req.body.amount),idempotencyKey:req.body.idempotencyKey||crypto.randomUUID(),returnUrl:safeSameOriginUrl(req.body.returnUrl,'/deposit',loadEnv().APP_URL)}),201),
+ create:async(req,res)=>ok(res,await deposit.createAndPay(req.user.id,{amount:Number(req.body.amount),idempotencyKey:req.body.idempotencyKey||crypto.randomUUID(),returnUrl:safeSameOriginUrl(req.body.returnUrl,'/deposit',loadEnv().APP_ALLOWED_URLS)}),201),
  list:async(req,res)=>ok(res,await deposit.list(req.user.id)),
  wallet:async(req,res)=>ok(res,await wallet.get(req.user.id)),
  mutations:async(req,res)=>ok(res,await wallet.mutations(req.user.id))
