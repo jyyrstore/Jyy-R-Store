@@ -1019,7 +1019,23 @@
     </div>
 
     <div class="product-thumbnail-box">
-      <div class="product-thumbnail-empty" data-thumbnail-empty>Preview Thumbnail</div>
+      <div
+        class="product-thumbnail-preview-stage"
+        data-thumbnail-stage
+      >
+        <div
+          class="product-thumbnail-empty"
+          data-thumbnail-empty
+        >Preview Thumbnail</div>
+
+        <img
+          class="product-thumbnail-preview"
+          data-thumbnail-preview
+          alt="Preview thumbnail"
+          hidden
+        >
+      </div>
+
       <div class="product-upload-info">
         <strong>Pilih gambar produk</strong>
         <small>Gunakan gambar yang jelas agar produk terlihat bagus di halaman Store.</small>
@@ -1030,7 +1046,6 @@
 })}
         <small data-thumbnail-status>Belum ada thumbnail dipilih.</small>
         <progress data-thumbnail-progress value="0" max="100" hidden></progress>
-        <img class="product-thumbnail-preview" data-thumbnail-preview alt="Preview thumbnail" hidden>
       </div>
     </div>
   </section>

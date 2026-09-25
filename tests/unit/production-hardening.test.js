@@ -566,3 +566,66 @@ test('product content preview migration is idempotent',()=>{
     )
   );
 });
+
+
+// SINGLE THUMBNAIL PREVIEW V1
+
+test('owner create product uses one thumbnail preview area',()=>{
+  const pages=read('public/js/pages.js');
+  const css=read('public/css/components.css');
+
+  const createMatch=pages.match(
+    /products:`<form data-owner-product-form[\s\S]*?<\/form>`,\s*services:/
+  );
+
+  assert.ok(createMatch);
+
+  const createForm=createMatch[0];
+
+  assert.equal(
+    (createForm.match(/data-thumbnail-stage/g)||[]).length,
+    1
+  );
+
+  assert.equal(
+    (createForm.match(/data-thumbnail-empty/g)||[]).length,
+    1
+  );
+
+  assert.equal(
+    (createForm.match(/data-thumbnail-preview/g)||[]).length,
+    1
+  );
+
+  const stageMatch=createForm.match(
+    /<div\s+class="product-thumbnail-preview-stage"[\s\S]*?<\/div>\s*<div class="product-upload-info">/
+  );
+
+  assert.ok(stageMatch);
+
+  const stage=stageMatch[0];
+
+  assert.ok(
+    stage.includes('data-thumbnail-empty')
+  );
+
+  assert.ok(
+    stage.includes('data-thumbnail-preview')
+  );
+
+  assert.ok(
+    css.includes('.product-thumbnail-preview-stage{')
+  );
+
+  assert.ok(
+    css.includes(
+      '.product-thumbnail-preview-stage .product-thumbnail-empty'
+    )
+  );
+
+  assert.ok(
+    css.includes(
+      '.product-thumbnail-preview-stage .product-thumbnail-preview'
+    )
+  );
+});
