@@ -1328,3 +1328,12 @@ button[aria-busy="true"]{
     white-space:normal;
   }
 }
+
+/* Order detail: compact product-content spacing */
+.order-download-panel .section {
+  margin-top: 0;
+}
+
+.order-download-panel .section-header {
+  margin-bottom: 10px;
+}

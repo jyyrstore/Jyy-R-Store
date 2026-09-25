@@ -9,20 +9,6 @@
         ? 'Tersedia'
         : '';
 
-    const contentTypeLabels = {
-      FILE: 'File',
-      IMAGE: 'Gambar',
-      VIDEO: 'Video',
-      AUDIO: 'Audio',
-      TEXT: 'Teks',
-      LINK: 'Tautan'
-    };
-
-    const accessTypeLabels = {
-      PURCHASED: 'Setelah pembelian',
-      PUBLIC: 'Publik',
-      PREVIEW: 'Pratinjau'
-    };
   %>
 
   <div class="product-detail">
@@ -71,82 +57,4 @@
       </div>
     </div>
   </div>
-  <div class="section"><div class="section-header"><h2>Isi produk</h2><span class="muted"><%= product.contents.length %> item</span></div><div class="content-list">
-    <% if(product.contents.length===0){ %><%- include('../partials/empty',{title:'Belum ada isi produk',description:'Belum ada isi produk yang ditambahkan untuk produk ini.'}) %><% } %>
-    <% product.contents.forEach(c=>{ %>
-      <article class="content-card">
-        <div class="content-icon">
-          <%- icon(c.type==='VIDEO'?'play':c.type==='AUDIO'?'music':c.type==='IMAGE'?'image':c.type==='LINK'?'external':c.type==='TEXT'?'note':'package') %>
-        </div>
-
-        <div class="content-body">
-          <div class="content-heading">
-            <strong><%= c.title %></strong>
-            <span><%= contentTypeLabels[c.type] || 'Konten' %> · <%= accessTypeLabels[c.access_type] || 'Akses terbatas' %></span>
-          </div>
-
-          <% if(c.description){ %>
-            <p class="content-description"><%= c.description %></p>
-          <% } %>
-
-          <% if(c.type==='TEXT' && c.allowed){ %>
-            <div class="content-text"><%= c.text_content || '' %></div>
-          <% } else if(c.type==='TEXT'){ %>
-            <div class="content-lock-note">
-              Konten tersedia setelah pembayaran terverifikasi.
-            </div>
-          <% } %>
-
-          <% if(c.type==='FILE'){ %>
-            <div class="file-meta content-extra-meta">
-              <span><%= c.mime_type || 'File' %></span>
-              <span><%= c.file_size ? (Number(c.file_size)/1024/1024).toFixed(2)+' MB' : '—' %></span>
-            </div>
-          <% } %>
-        </div>
-
-        <div class="content-side">
-          <span class="badge">
-            <%= c.allowed
-              ? (c.is_preview ? 'Pratinjau' : 'Tersedia')
-              : 'Terkunci' %>
-          </span>
-
-          <div class="content-side-actions">
-            <% if(c.type==='LINK' && c.url && c.allowed){ %>
-              <a
-                class="button button-secondary button-small"
-                href="<%= c.url %>"
-                target="_blank"
-                rel="noopener noreferrer">
-                Buka
-              </a>
-            <% } %>
-
-            <% if(c.preview_url && ['IMAGE','VIDEO','AUDIO'].includes(c.type)){ %>
-              <button
-                class="button button-secondary button-small"
-                type="button"
-                data-open-content-url="<%= c.preview_url %>">
-                Pratinjau
-              </button>
-            <% } %>
-
-            <% if(c.allowed && ['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)){ %>
-              <button
-                class="button button-primary button-small"
-                type="button"
-                data-download-content="<%= c.id %>">
-                Akses
-              </button>
-            <% } %>
-          </div>
-
-          <% if(!c.allowed && c.type!=='TEXT' && !(c.type==='LINK' && c.url)){ %>
-            <span class="muted small content-side-note">Pembelian diperlukan</span>
-          <% } %>
-        </div>
-      </article>
-    <% }) %>
-  </div></div>
-</section>
+  </section>

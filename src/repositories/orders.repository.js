@@ -38,7 +38,19 @@ async function countForUser(userId){
 async function findForUser(id,userId){
   return (
     await query(
-      `select o.*,coalesce(json_agg(json_build_object('id',oi.id,'product_id',oi.product_id,'product_name',oi.product_name,'quantity',oi.quantity,'unit_price',oi.unit_price,'line_total',oi.line_total)) filter(where oi.id is not null),'[]') items from orders o left join order_items oi on oi.order_id=o.id where o.id=$1 and o.user_id=$2 group by o.id`,
+      `select o.*,coalesce(json_agg(json_build_object(
+        'id',oi.id,
+        'product_id',oi.product_id,
+        'product_name',coalesce(p.name,oi.product_name),
+        'quantity',oi.quantity,
+        'unit_price',oi.unit_price,
+        'line_total',oi.line_total
+      )) filter(where oi.id is not null),'[]') items
+       from orders o
+       left join order_items oi on oi.order_id=o.id
+       left join products p on p.id=oi.product_id
+       where o.id=$1 and o.user_id=$2
+       group by o.id`,
       [id,userId]
     )
   ).rows[0]||null;

@@ -161,7 +161,60 @@ async function orders(req,res,next){
   }
 }
 
-async function orderDetail(req,res,next){ try{const order=await require('../repositories/orders.repository').findForUser(req.params.id,req.user.id); if(!order){const err=new Error('Order not found.');err.status=404;err.expose=true;throw err;} res.render('app',base(req,{view:'pages/order-detail',order}));}catch(e){next(e)} }
+async function orderDetail(req,res,next){
+  try{
+    const order=await require('../repositories/orders.repository').findForUser(
+      req.params.id,
+      req.user.id
+    );
+
+    if(!order){
+      const e=new Error('Order not found.');
+      e.status=404;
+      e.expose=true;
+      throw e;
+    }
+
+    const productRepo=require('../repositories/products.repository');
+    const accessControl=require('../services/delivery/access-control.service');
+
+    const items=await Promise.all(
+      order.items.map(async item=>{
+        const [contents,owned]=await Promise.all([
+          productRepo.contents(item.product_id),
+          accessControl.canAccess(req.user.id,item.product_id)
+        ]);
+
+        return {
+          ...item,
+          contents:contents.map(content=>({
+            ...content,
+            allowed:
+              content.access_type==='PUBLIC' ||
+              (content.access_type==='PREVIEW' && content.is_preview) ||
+              owned
+          }))
+        };
+      })
+    );
+
+    const viewOrder={
+      ...order,
+      items
+    };
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/order-detail',
+        order:viewOrder
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
+
 async function history(req,res,next){
   try{
     const orderPager=pageParams({
