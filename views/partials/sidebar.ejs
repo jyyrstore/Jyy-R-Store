@@ -1,8 +1,10 @@
 <%
-const ownerMode=profile?.role==='OWNER' &&
-  (req.path==='/owner' || req.path.startsWith('/owner/'));
+const currentPath=String(req.originalUrl||req.path||'').split('?')[0];
 
-const activeOwnerSection=req.path.split('/')[2] || 'dashboard';
+const ownerMode=profile?.role==='OWNER' &&
+  (currentPath==='/owner' || currentPath.startsWith('/owner/'));
+
+const activeOwnerSection=currentPath.split('/')[2] || 'dashboard';
 
 const ownerNav=[['dashboard','Dashboard','dashboard'],['products','Produk','package'],['categories','Kategori','layers'],['orders','Pesanan','clipboard-list'],['payments','Pembayaran','credit-card'],['deposits','Deposit','deposit'],['users','Pengguna','users'],['roles','Peran','key'],['tickets','Tiket','ticket'],['messages','Pesan','message'],['services','Layanan','wrench'],['information','Informasi','info'],['faq','FAQ','help-circle'],['notifications','Notifikasi','bell'],['maintenance','Pemeliharaan','tool'],['storage','Penyimpanan','database'],['activity','Log Aktivitas','activity'],['login-history','Riwayat Login','log-in'],['reports','Laporan','bar-chart'],['top-orders','Pesanan Teratas','trophy'],['security','Keamanan','shield'],['refunds','Pengembalian','rotate-ccw'],['settings','Pengaturan','sliders'],['system','Sistem','server']];
 %>

@@ -2,6 +2,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
+const ejs=require('ejs');
 
 const root=path.resolve(__dirname,'../..');
 
@@ -914,7 +915,66 @@ test('owner mode replaces the main sidebar content instead of nesting a second s
 
   assert.match(
     sidebar,
-    /req\.path==='\/owner' \|\| req\.path\.startsWith\('\/owner\/'\)/
+    /const currentPath=String\(req\.originalUrl\|\|req\.path\|\|''\)\.split\('\?'\)\[0\];/
+  );
+
+  assert.match(
+    sidebar,
+    /currentPath==='\/owner' \|\| currentPath\.startsWith\('\/owner\/'\)/
+  );
+
+  assert.match(
+    sidebar,
+    /const activeOwnerSection=currentPath\.split\('\/'\)\[2\] \|\| 'dashboard';/
+  );
+
+  const renderSidebar=({path,originalUrl})=>ejs.render(
+    sidebar,
+    {
+      req:{path,originalUrl},
+      profile:{role:'OWNER'},
+      currentUser:{id:'owner-regression-test'},
+      icon:()=>'<svg aria-hidden="true"></svg>'
+    }
+  );
+
+  // Simulate Express mounted router:
+  // pageRouter.use('/owner', owner)
+  // /owner            -> req.path='/'
+  // /owner/products   -> req.path='/products'
+  const ownerRoot=renderSidebar({
+    path:'/',
+    originalUrl:'/owner'
+  });
+
+  const ownerProducts=renderSidebar({
+    path:'/products',
+    originalUrl:'/owner/products?create=1'
+  });
+
+  assert.match(
+    ownerRoot,
+    /class="sidebar sidebar-owner"/
+  );
+
+  assert.match(
+    ownerRoot,
+    /Kembali ke Dashboard/
+  );
+
+  assert.match(
+    ownerRoot,
+    /class="nav-link active"[\s\S]*?href="\/owner\/dashboard"/
+  );
+
+  assert.match(
+    ownerProducts,
+    /class="sidebar sidebar-owner"/
+  );
+
+  assert.match(
+    ownerProducts,
+    /class="nav-link active"[\s\S]*?href="\/owner\/products"/
   );
 
   assert.match(
