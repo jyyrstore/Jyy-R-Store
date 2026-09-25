@@ -72,6 +72,39 @@ async function fileInfo(bucket,path){
   if(error) throw error;
   return data || null;
 }
+async function listObjects(
+  bucket,
+  path='',
+  {
+    limit=1000,
+    offset=0,
+    sortBy={column:'name',order:'asc'}
+  }={}
+){
+  const safeLimit=Math.min(
+    1000,
+    Math.max(1,Number(limit)||1000)
+  );
+
+  const safeOffset=Math.max(
+    0,
+    Number(offset)||0
+  );
+
+  const {data,error}=await supabaseAdmin()
+    .storage
+    .from(bucket)
+    .list(path,{
+      limit:safeLimit,
+      offset:safeOffset,
+      sortBy
+    });
+
+  if(error)throw error;
+
+  return data||[];
+}
+
 async function remove(bucket, path) { const { error } = await supabaseAdmin().storage.from(bucket).remove([path]); if (error) throw error; }
 async function copy(bucket, fromPath, toPath) {
   const storageBucket = supabaseAdmin().storage.from(bucket);
@@ -88,4 +121,4 @@ async function copy(bucket, fromPath, toPath) {
 }
 function publicUrl(bucket, path) { return supabaseAdmin().storage.from(bucket).getPublicUrl(path).data.publicUrl; }
 async function signedUrl(bucket, path, expiresIn) { const { data, error } = await supabaseAdmin().storage.from(bucket).createSignedUrl(path, expiresIn); if (error) throw error; return data.signedUrl; }
-module.exports = { initStorage, uploadBuffer, createSignedUploadUrl, fileExists, fileInfo, resumableUploadUrl, remove, copy, publicUrl, signedUrl, getBucket };
+module.exports = { initStorage, uploadBuffer, createSignedUploadUrl, fileExists, fileInfo, listObjects, resumableUploadUrl, remove, copy, publicUrl, signedUrl, getBucket };

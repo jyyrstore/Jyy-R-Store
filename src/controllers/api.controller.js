@@ -24,6 +24,7 @@ const info=require('../repositories/information.repository');
 const faq=require('../repositories/faq.repository');
 const categories=require('../repositories/categories.repository');
 const storage=require('../config/storage');
+const { log }=require('../config/logging');
 const { loadEnv }=require('../config/env');
 const makeSlug=require('../utils/slug');
 const { validateUploadDescriptor, validateFile }=require('../utils/file');
@@ -121,20 +122,45 @@ const notificationController={
 const serviceController={list:async(req,res)=>ok(res,await services.list(true)),order:async(req,res)=>ok(res,await services.purchaseWithBalance(req.user.id,req.body.serviceId,req.body.requestData),201)};
 const messageController={list:async(req,res)=>ok(res,await messages.list(req.user.id)),detail:async(req,res)=>{const m=await require('../repositories/messages.repository').findForUser(req.params.id,req.user.id);if(!m)throw Object.assign(new Error('Message not found.'),{status:404,code:'MESSAGE_NOT_FOUND',expose:true});return ok(res,m)},create:async(req,res)=>{const m=await messages.sendFromUser(req.user.id,req.body.body);await require('../services/audit.service').record(req,{action:'SEND_MESSAGE',entityType:'message',entityId:m.id}).catch(()=>{});const owner=await require('../repositories/messages.repository').firstOwner();if(owner) await notifications.create({user_id:owner.id,type:'SYSTEM',title:'Pesan baru dari user',body:`User ${req.profile?.username||req.user.id} mengirim pesan baru.`,link:'/owner/messages'}).catch(()=>{});return ok(res,m,201)}};
 const contentController={faq:async(req,res)=>ok(res,await faq.listPublic()),information:async(req,res)=>ok(res,await info.listPublic()),search:async(req,res)=>ok(res,await search.search(req.query.q||''))};
+async function recordOwnerAudit(req,payload){
+  try{
+    await require('../services/audit.service').record(req,payload);
+  }catch(error){
+    log(
+      'warn',
+      'owner_audit_failed',
+      {
+        action:payload?.action||null,
+        entityType:payload?.entityType||null,
+        entityId:payload?.entityId||null,
+        message:error?.message||String(error)
+      }
+    );
+  }
+}
+
 const ownerController={
  dashboard:async(req,res)=>ok(res,await analytics.dashboard()),
  analytics:async(req,res)=>ok(res,await analytics.period(req.query.period||'30d',req.query.from,req.query.to)),
  topOrders:async(req,res)=>ok(res,(await analytics.period(req.query.period||'30d',req.query.from,req.query.to)).top),
  products:async(req,res)=>ok(res,await require('../repositories/products.repository').adminList({search:req.query.search,status:req.query.status||'',sort:req.query.sort||'newest',limit:req.query.limit||100,offset:req.query.offset||0})),
- productCreate:async(req,res)=>{const payload={...req.body,status:'DRAFT'};const p=await product.create(payload);await require('../services/audit.service').record(req,{action:'CREATE_PRODUCT',entityType:'product',entityId:p.id,metadata:{name:p.name,status:'DRAFT'}});return ok(res,p,201)},
- productUpdate:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});const payload={...req.body};delete payload.status;delete payload.thumbnail_path;const p=await product.update(req.params.id,payload);await require('../services/audit.service').record(req,{action:'EDIT_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
- productArchive:async(req,res)=>{const p=await require('../repositories/products.repository').remove(req.params.id);await require('../services/audit.service').record(req,{action:'ARCHIVE_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
- productUnpublish:async(req,res)=>{const p=await require('../repositories/products.repository').unpublish(req.params.id);if(!p)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});await require('../services/audit.service').record(req,{action:'UNPUBLISH_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
- productDuplicate:async(req,res)=>{const p=await require('../repositories/products.repository').duplicate(req.params.id);if(!p)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});await require('../services/audit.service').record(req,{action:'DUPLICATE_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p,201)},
- productDelete:async(req,res)=>{const p=await require('../repositories/products.repository').remove(req.params.id);if(!p)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});await require('../services/audit.service').record(req,{action:'DELETE_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
- productPublish:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat dipublish.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});if(!current.thumbnail_path)throw Object.assign(new Error('Tambahkan thumbnail sebelum publish produk.'),{status:400,code:'PRODUCT_THUMBNAIL_REQUIRED',expose:true});const contents=await repo.contents(req.params.id);if(!contents.length)throw Object.assign(new Error('Tambahkan minimal satu content sebelum publish produk.'),{status:400,code:'PRODUCT_CONTENT_REQUIRED',expose:true});const invalid=contents.find(c=>(['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)&&!c.storage_path)||(c.type==='TEXT'&&!String(c.text_content||'').trim())||(c.type==='LINK'&&!String(c.url||'').trim()));if(invalid)throw Object.assign(new Error('Ada content yang belum lengkap. Pastikan file, text, atau URL sudah benar.'),{status:400,code:'PRODUCT_CONTENT_INVALID',expose:true});const p=await product.update(req.params.id,{status:'PUBLISHED'});await require('../services/audit.service').record(req,{action:'PUBLISH_PRODUCT',entityType:'product',entityId:p.id,metadata:{contentCount:contents.length}});return ok(res,p)},
- productContent:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat diubah.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});const p=await repo.addContent({...req.body,product_id:req.params.id});await require('../services/audit.service').record(req,{action:'CREATE_PRODUCT_CONTENT',entityType:'product_content',entityId:p.id,metadata:{productId:req.params.id,type:p.type}});return ok(res,p,201)},productContents:async(req,res)=>ok(res,await require('../repositories/products.repository').contents(req.params.id)),
- productContentDelete:async(req,res)=>{const repo=require('../repositories/products.repository');const deleted=await repo.deleteContent(req.params.contentId,req.params.id);if(!deleted)throw Object.assign(new Error('Content tidak ditemukan pada product tersebut.'),{status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true});if(deleted.storage_path){const ref=(await query('select 1 from product_contents where storage_path=$1 limit 1',[deleted.storage_path])).rowCount;if(!ref)await storage.remove(loadEnv().PRIVATE_PRODUCT_BUCKET,deleted.storage_path).catch(()=>{});}await require('../services/audit.service').record(req,{action:'DELETE_PRODUCT_CONTENT',entityType:'product_content',entityId:req.params.contentId,metadata:{productId:req.params.id}});return ok(res,{})},
+ productCreate:async(req,res)=>{const payload={...req.body,status:'DRAFT'};const p=await product.create(payload);await recordOwnerAudit(req,{action:'CREATE_PRODUCT',entityType:'product',entityId:p.id,metadata:{name:p.name,status:'DRAFT'}});return ok(res,p,201)},
+ productUpdate:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});const payload={...req.body};delete payload.status;delete payload.thumbnail_path;const p=await product.update(req.params.id,payload);await recordOwnerAudit(req,{action:'EDIT_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
+ productArchive:async(req,res)=>{const p=await require('../repositories/products.repository').remove(req.params.id);await recordOwnerAudit(req,{action:'ARCHIVE_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
+ productUnpublish:async(req,res)=>{const p=await require('../repositories/products.repository').unpublish(req.params.id);if(!p)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});await recordOwnerAudit(req,{action:'UNPUBLISH_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
+ productDuplicate:async(req,res)=>{const p=await require('../repositories/products.repository').duplicate(req.params.id);if(!p)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});await recordOwnerAudit(req,{action:'DUPLICATE_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p,201)},
+ productDelete:async(req,res)=>{const p=await require('../repositories/products.repository').remove(req.params.id);if(!p)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});await recordOwnerAudit(req,{action:'DELETE_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
+ productPublish:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat dipublish.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});if(!current.thumbnail_path)throw Object.assign(new Error('Tambahkan thumbnail sebelum publish produk.'),{status:400,code:'PRODUCT_THUMBNAIL_REQUIRED',expose:true});const contents=await repo.contents(req.params.id);if(!contents.length)throw Object.assign(new Error('Tambahkan minimal satu content sebelum publish produk.'),{status:400,code:'PRODUCT_CONTENT_REQUIRED',expose:true});const invalid=contents.find(c=>(['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)&&!c.storage_path)||(c.type==='TEXT'&&!String(c.text_content||'').trim())||(c.type==='LINK'&&!String(c.url||'').trim()));if(invalid)throw Object.assign(new Error('Ada content yang belum lengkap. Pastikan file, text, atau URL sudah benar.'),{status:400,code:'PRODUCT_CONTENT_INVALID',expose:true});const p=await product.update(req.params.id,{status:'PUBLISHED'});await recordOwnerAudit(req,{action:'PUBLISH_PRODUCT',entityType:'product',entityId:p.id,metadata:{contentCount:contents.length}});return ok(res,p)},
+ productContent:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat diubah.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});const accessType=
+  String(req.body.access_type||'PURCHASED').toUpperCase();
+
+const p=await repo.addContent({
+  ...req.body,
+  product_id:req.params.id,
+  access_type:accessType,
+  is_preview:accessType==='PREVIEW'
+});await recordOwnerAudit(req,{action:'CREATE_PRODUCT_CONTENT',entityType:'product_content',entityId:p.id,metadata:{productId:req.params.id,type:p.type}});return ok(res,p,201)},productContents:async(req,res)=>ok(res,await require('../repositories/products.repository').contents(req.params.id)),
+ productContentDelete:async(req,res)=>{const repo=require('../repositories/products.repository');const deleted=await repo.deleteContent(req.params.contentId,req.params.id);if(!deleted)throw Object.assign(new Error('Content tidak ditemukan pada product tersebut.'),{status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true});if(deleted.storage_path){const ref=(await query('select 1 from product_contents where storage_path=$1 limit 1',[deleted.storage_path])).rowCount;if(!ref)await storage.remove(loadEnv().PRIVATE_PRODUCT_BUCKET,deleted.storage_path).catch(()=>{});}await recordOwnerAudit(req,{action:'DELETE_PRODUCT_CONTENT',entityType:'product_content',entityId:req.params.contentId,metadata:{productId:req.params.id}});return ok(res,{})},
  categories:async(req,res)=>ok(res,await categories.list(false)),
  categoryCreate:async(req,res)=>ok(res,await categories.create({...req.body,slug:makeSlug(req.body.slug||req.body.name)}),201),
  categoryUpdate:async(req,res)=>ok(res,await categories.update(req.params.id,{...req.body,slug:makeSlug(req.body.slug||req.body.name)})),
@@ -493,8 +519,7 @@ async function ownerUploadComplete(req,res){
         }
       }
 
-      await require('../services/audit.service').record(req,{
-        action:'UPLOAD_PRODUCT_THUMBNAIL',
+      await recordOwnerAudit(req,{action:'UPLOAD_PRODUCT_THUMBNAIL',
         entityType:'product',
         entityId:productId,
         metadata:{
@@ -516,12 +541,13 @@ async function ownerUploadComplete(req,res){
       mime_type:descriptor.mime,
       file_size:fileSize,
       sort_order:Number(req.body.sortOrder||0),
-      is_preview:Boolean(req.body.isPreview),
-      access_type:req.body.accessType||'PURCHASED'
+      is_preview:
+        String(req.body.accessType||'PURCHASED').toUpperCase()==='PREVIEW',
+      access_type:
+        String(req.body.accessType||'PURCHASED').toUpperCase()
     });
 
-    await require('../services/audit.service').record(req,{
-      action:'CREATE_PRODUCT_CONTENT_UPLOAD',
+    await recordOwnerAudit(req,{action:'CREATE_PRODUCT_CONTENT_UPLOAD',
       entityType:'product_content',
       entityId:content.id,
       metadata:{
