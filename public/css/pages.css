@@ -1135,7 +1135,7 @@ button[aria-busy="true"]{
 }
 
 .owner-users-filter-field input,
-.owner-users-filter-field .jyyr-select{
+.owner-users-filter-field .jyyr-select-trigger{
   width:100%;
   min-width:0;
   height:44px;

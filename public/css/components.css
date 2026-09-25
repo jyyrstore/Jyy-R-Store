@@ -790,7 +790,6 @@ body.no-scroll{
 .jyyr-select-menu{
   position:fixed;
   z-index:10040;
-  display:none;
   max-height:260px;
   overflow:auto;
   padding:6px;
@@ -798,10 +797,24 @@ body.no-scroll{
   border-radius:var(--radius-md);
   background:var(--surface);
   box-shadow:var(--shadow);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transform:translateY(-7px) scale(.985);
+  transform-origin:top center;
+  will-change:opacity,transform;
+  transition:
+    opacity .18s ease,
+    transform .20s cubic-bezier(.22,1,.36,1),
+    visibility 0s linear .20s;
 }
 
 .jyyr-select.open .jyyr-select-menu{
-  display:block;
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+  transform:translateY(0) scale(1);
+  transition-delay:0s;
 }
 
 .jyyr-select-option{
@@ -818,11 +831,17 @@ body.no-scroll{
   font:inherit;
   text-align:left;
   cursor:pointer;
+  transform:translateX(0);
+  transition:
+    background .14s ease,
+    color .14s ease,
+    transform .14s ease;
 }
 
 .jyyr-select-option:hover,
 .jyyr-select-option:focus-visible{
   background:rgba(139,92,246,.08);
+  transform:translateX(2px);
   outline:0;
 }
 
