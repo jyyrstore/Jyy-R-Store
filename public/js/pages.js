@@ -3,6 +3,102 @@
   const money=v=>window.JYYR.formatIDR(v), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const csrf=()=>window.JYYR?.csrf||'';
 
+  const pickerSelect=({
+    name,
+    value='',
+    options=[],
+    attrs='',
+    id=''
+  }={})=>{
+    const current=String(value??'');
+
+    const label=
+      options.find(
+        option=>String(option[0])===current
+      )?.[1]||
+      options[0]?.[1]||
+      'Pilih';
+
+    return `
+      <div class="jyyr-select" data-jyyr-select>
+        <input
+          type="hidden"
+          name="${esc(name)}"
+          value="${esc(current)}"
+          data-jyyr-select-value
+          ${id?`id="${esc(id)}"`:''}
+          ${attrs}
+        >
+        <button
+          class="jyyr-select-trigger"
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded="false"
+          data-jyyr-select-trigger
+        >
+          <span data-jyyr-select-label>${esc(label)}</span>
+          <span class="jyyr-select-chevron" aria-hidden="true"></span>
+        </button>
+        <div
+          class="jyyr-select-menu"
+          role="listbox"
+          data-jyyr-select-menu
+        >
+          ${options.map(([v,l])=>`
+            <button
+              type="button"
+              class="jyyr-select-option"
+              role="option"
+              data-jyyr-select-option
+              data-value="${esc(v)}"
+              data-label="${esc(l)}"
+            >${esc(l)}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  };
+
+  const pickerFile=({
+    name,
+    accept='',
+    attrs=''
+  }={})=>`
+    <div
+      class="jyyr-file-picker"
+      data-jyyr-file-picker
+    >
+      <input
+        class="jyyr-native-file-input"
+        data-jyyr-file-input
+        name="${esc(name)}"
+        type="file"
+        accept="${esc(accept)}"
+        ${attrs}
+      >
+
+      <div class="jyyr-file-picker-main">
+        <button
+          type="button"
+          class="button button-secondary jyyr-file-trigger"
+          data-jyyr-file-trigger
+        >Pilih file</button>
+
+        <span
+          class="jyyr-file-name"
+          data-jyyr-file-name
+        >Belum ada file dipilih.</span>
+      </div>
+
+      <button
+        type="button"
+        class="button button-secondary jyyr-file-clear"
+        data-jyyr-file-clear
+        hidden
+      >Hapus</button>
+    </div>
+  `;
+
   async function hydrateCartBadge(){
     const badges=[...document.querySelectorAll('[data-cart-badge]')];
 
@@ -547,14 +643,19 @@
             <div class="owner-content-form-grid">
               <label class="field">
                 <span>Jenis Content</span>
-                <select name="type" data-owner-content-type>
-                  <option value="FILE">File / ZIP</option>
-                  <option value="IMAGE">Gambar</option>
-                  <option value="VIDEO">Video</option>
-                  <option value="AUDIO">Audio</option>
-                  <option value="TEXT">Teks</option>
-                  <option value="LINK">Link</option>
-                </select>
+                ${pickerSelect({
+      name:'type',
+      value:'FILE',
+      attrs:'data-owner-content-type',
+      options:[
+        ['FILE','File / ZIP'],
+        ['IMAGE','Gambar'],
+        ['VIDEO','Video'],
+        ['AUDIO','Audio'],
+        ['TEXT','Teks'],
+        ['LINK','Link']
+      ]
+    })}
                 <small class="field-help" data-owner-content-type-help>
                   Gunakan File untuk ZIP atau PDF yang memang akan diunduh pembeli.
                 </small>
@@ -573,11 +674,11 @@
               <div class="owner-context-field full" data-owner-content-field="file">
                 <label class="field">
                   <span>File</span>
-                  <input
-                    name="file"
-                    type="file"
-                    data-owner-content-file
-                    accept=".zip,.pdf">
+                  ${pickerFile({
+      name:'file',
+      accept:'.zip,.pdf',
+      attrs:'data-owner-content-file'
+    })}
                   <small class="field-help">File akan diupload langsung ke Storage dan diverifikasi oleh server.</small>
                 </label>
               </div>
@@ -603,11 +704,16 @@
 
               <label class="field full">
                 <span>Akses</span>
-                <select name="access_type" data-owner-content-access>
-                  <option value="PURCHASED">Hanya pembeli</option>
-                  <option value="PREVIEW">Preview sebelum membeli</option>
-                  <option value="PUBLIC">Publik</option>
-                </select>
+                ${pickerSelect({
+      name:'access_type',
+      value:'PURCHASED',
+      attrs:'data-owner-content-access',
+      options:[
+        ['PURCHASED','Hanya pembeli'],
+        ['PREVIEW','Preview sebelum membeli'],
+        ['PUBLIC','Publik']
+      ]
+    })}
                 <small class="field-help" data-owner-content-access-help>
                   Hanya user yang memiliki pembelian terkonfirmasi yang dapat membuka content ini.
                 </small>
@@ -649,6 +755,7 @@
     }
     if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
       input.value='';
+      window.JYYRPicker?.syncFile?.(input);
       if(preview)preview.hidden=true;
       if(empty)empty.hidden=false;
       if(status)status.textContent='Thumbnail harus JPG, PNG, atau WebP.';
@@ -916,7 +1023,11 @@
       <div class="product-upload-info">
         <strong>Pilih gambar produk</strong>
         <small>Gunakan gambar yang jelas agar produk terlihat bagus di halaman Store.</small>
-        <input name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp" data-thumbnail-input>
+        ${pickerFile({
+  name:'thumbnail',
+  accept:'image/jpeg,image/png,image/webp',
+  attrs:'data-thumbnail-input'
+})}
         <small data-thumbnail-status>Belum ada thumbnail dipilih.</small>
         <progress data-thumbnail-progress value="0" max="100" hidden></progress>
         <img class="product-thumbnail-preview" data-thumbnail-preview alt="Preview thumbnail" hidden>
@@ -942,10 +1053,16 @@
 
       <label class="field">
         <span>Kategori</span>
-        <select name="category_id">
-          <option value="">Tanpa kategori</option>
-          ${(window.__OWNER_CATEGORIES||[]).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}
-        </select>
+        ${pickerSelect({
+      name:'category_id',
+      value:'',
+      options:[
+        ['','Tanpa kategori'],
+        ...(window.__OWNER_CATEGORIES||[]).map(
+          c=>[c.id,c.name]
+        )
+      ]
+    })}
       </label>
 
       <label class="field">
@@ -977,7 +1094,17 @@
 </form>`,
       services:`<form data-owner-service-form class="stack-form"><h2>Tambah Service</h2><label class="field"><span>Nama</span><input name="name" required></label><label class="field"><span>Kategori</span><input name="category"></label><label class="field"><span>Harga</span><input name="price" type="number" min="0"></label><label class="field"><span>Icon key (SVG semantic)</span><input name="icon_key" value="settings" maxlength=40></label><label class="field"><span>Urutan</span><input name="sort_order" type="number" value="0" min="0"></label><label class="field"><span>Description</span><textarea name="description"></textarea></label><label class="field"><span>Requirements JSON</span><textarea name="requirements">{}</textarea></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" checked></label>${formButtons()}</form>`,
       faq:`<form data-owner-faq-form class="stack-form"><h2>Tambah FAQ</h2><label class="field"><span>Category</span><input name="category" required></label><label class="field"><span>Question</span><input name="question" required></label><label class="field"><span>Answer</span><textarea name="answer" required></textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" checked></label>${formButtons()}</form>`,
-      information:`<form data-owner-info-form class="stack-form"><h2>Tambah Information</h2><label class="field"><span>Type</span><select name="type"><option>ANNOUNCEMENT</option><option>BANNER</option><option>PROMOTION</option><option>MAINTENANCE_NOTICE</option><option>SYSTEM_NOTICE</option></select></label><label class="field"><span>Title</span><input name="title" required></label><label class="field"><span>Body</span><textarea name="body" required></textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" checked></label>${formButtons()}</form>`}[section]; if(forms)open(forms)}
+      information:`<form data-owner-info-form class="stack-form"><h2>Tambah Information</h2><label class="field"><span>Type</span>${pickerSelect({
+      name:'type',
+      value:'ANNOUNCEMENT',
+      options:[
+        ['ANNOUNCEMENT','ANNOUNCEMENT'],
+        ['BANNER','BANNER'],
+        ['PROMOTION','PROMOTION'],
+        ['MAINTENANCE_NOTICE','MAINTENANCE_NOTICE'],
+        ['SYSTEM_NOTICE','SYSTEM_NOTICE']
+      ]
+    })}</label><label class="field"><span>Title</span><input name="title" required></label><label class="field"><span>Body</span><textarea name="body" required></textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" checked></label>${formButtons()}</form>`}[section]; if(forms)open(forms)}
 
     const ep=e.target.closest('[data-owner-edit-product]');
     if(ep){
@@ -1013,14 +1140,16 @@
 
               <label class="field">
                 <span>Kategori</span>
-                <select name="category_id">
-                  <option value="">Tanpa kategori</option>
-                  ${(window.__OWNER_CATEGORIES||[]).map(c=>`
-                    <option value="${esc(c.id)}" ${d.category_id===c.id?'selected':''}>
-                      ${esc(c.name)}
-                    </option>
-                  `).join('')}
-                </select>
+                ${pickerSelect({
+      name:'category_id',
+      value:d.category_id||'',
+      options:[
+        ['','Tanpa kategori'],
+        ...(window.__OWNER_CATEGORIES||[]).map(
+          c=>[c.id,c.name]
+        )
+      ]
+    })}
               </label>
 
               <label class="field">
@@ -1056,7 +1185,11 @@
               <div class="product-upload-info">
                 <strong>${d.thumbnail_url?'Ganti cover produk':'Upload cover produk'}</strong>
                 <small>Gunakan gambar utama yang jelas untuk tampilan Store.</small>
-                <input name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp" data-thumbnail-input>
+                ${pickerFile({
+  name:'thumbnail',
+  accept:'image/jpeg,image/png,image/webp',
+  attrs:'data-thumbnail-input'
+})}
                 <small class="muted" data-thumbnail-status>Belum ada perubahan cover.</small>
                 <progress data-thumbnail-progress value="0" max="100" hidden></progress>
                 <img class="product-thumbnail-preview" data-thumbnail-preview alt="Preview cover baru" hidden>
@@ -1079,8 +1212,27 @@
     const unpublish=e.target.closest('[data-owner-unpublish]');if(unpublish){if(!(await window.JYYRModal.confirm('Unpublish produk ini?')))return;try{await ownerAction('/api/owner/products/'+unpublish.dataset.ownerUnpublish+'/unpublish',{},'POST','Produk di-unpublish.');location.reload()}catch(err){toast.error(err.message)}}
     const dup=e.target.closest('[data-owner-duplicate]');if(dup){if(!(await window.JYYRModal.confirm('Duplikat produk ini?')))return;try{await ownerAction('/api/owner/products/'+dup.dataset.ownerDuplicate+'/duplicate',{},'POST','Produk diduplikasi.');location.reload()}catch(err){toast.error(err.message)}}
     const delp=e.target.closest('[data-owner-delete-product]');if(delp){if(!(await window.JYYRModal.confirm('Arsipkan produk ini? Data transaksi tidak dihapus.')))return;try{await ownerAction('/api/owner/products/'+delp.dataset.ownerDeleteProduct+'/delete',{},'DELETE','Produk diarsipkan.');location.reload()}catch(err){toast.error(err.message)}}
-    const user=e.target.closest('[data-owner-user]');if(user){const id=user.dataset.ownerUser,status=user.dataset.ownerStatus,role=user.dataset.ownerRole;open(`<div class="stack-form"><h2>Kelola ${esc(user.dataset.ownerUsername)}</h2><p class="muted">Status: ${esc(status)} · Role: ${esc(role)}</p><div class="button-grid"><button class="button button-secondary" data-user-ban="${id}">Ban</button><button class="button button-secondary" data-user-unban="${id}">Unban</button><button class="button button-secondary" data-user-suspend="${id}">Suspend</button><button class="button button-secondary" data-user-unsuspend="${id}">Unsuspend</button><button class="button button-secondary" data-user-reset="${id}">Reset Sessions</button><button class="button button-danger" data-user-delete="${id}">Delete (Anonymize)</button></div><label class="field"><span>Role</span><select id="user-role-select"><option ${role==='USER'?'selected':''}>USER</option><option ${role==='MODERATOR'?'selected':''}>MODERATOR</option><option ${role==='ADMIN'?'selected':''}>ADMIN</option><option ${role==='OWNER'?'selected':''}>OWNER</option></select></label><button class="button button-primary" data-user-role="${id}">Change Role</button></div>`)}
-    const tick=e.target.closest('[data-owner-ticket]');if(tick){open(`<form data-owner-ticket-form class="stack-form"><h2>${esc(tick.dataset.ownerTicketNumber)}</h2><input type="hidden" name="id" value="${esc(tick.dataset.ownerTicket)}"><label class="field"><span>Reply</span><textarea name="body" required></textarea></label><label class="field"><span>Status</span><select name="status"><option>OPEN</option><option>WAITING</option><option>REPLIED</option><option>CLOSED</option></select></label>${formButtons('Reply / Update')}</form>`)}
+    const user=e.target.closest('[data-owner-user]');if(user){const id=user.dataset.ownerUser,status=user.dataset.ownerStatus,role=user.dataset.ownerRole;open(`<div class="stack-form"><h2>Kelola ${esc(user.dataset.ownerUsername)}</h2><p class="muted">Status: ${esc(status)} · Role: ${esc(role)}</p><div class="button-grid"><button class="button button-secondary" data-user-ban="${id}">Ban</button><button class="button button-secondary" data-user-unban="${id}">Unban</button><button class="button button-secondary" data-user-suspend="${id}">Suspend</button><button class="button button-secondary" data-user-unsuspend="${id}">Unsuspend</button><button class="button button-secondary" data-user-reset="${id}">Reset Sessions</button><button class="button button-danger" data-user-delete="${id}">Delete (Anonymize)</button></div><label class="field"><span>Role</span>${pickerSelect({
+      name:'owner_role',
+      value:role,
+      id:'user-role-select',
+      options:[
+        ['USER','USER'],
+        ['MODERATOR','MODERATOR'],
+        ['ADMIN','ADMIN'],
+        ['OWNER','OWNER']
+      ]
+    })}</label><button class="button button-primary" data-user-role="${id}">Change Role</button></div>`)}
+    const tick=e.target.closest('[data-owner-ticket]');if(tick){open(`<form data-owner-ticket-form class="stack-form"><h2>${esc(tick.dataset.ownerTicketNumber)}</h2><input type="hidden" name="id" value="${esc(tick.dataset.ownerTicket)}"><label class="field"><span>Reply</span><textarea name="body" required></textarea></label><label class="field"><span>Status</span>${pickerSelect({
+      name:'status',
+      value:'OPEN',
+      options:[
+        ['OPEN','OPEN'],
+        ['WAITING','WAITING'],
+        ['REPLIED','REPLIED'],
+        ['CLOSED','CLOSED']
+      ]
+    })}</label>${formButtons('Reply / Update')}</form>`)}
     const editCat=e.target.closest('[data-owner-edit-category]');if(editCat){let d;try{d=JSON.parse(editCat.dataset.ownerEditCategory)}catch{return}open(`<form data-owner-category-edit class="stack-form"><h2>Edit Kategori</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Slug</span><input name="slug" value="${esc(d.slug)}"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" ${d.is_active?'checked':''}></label>${formButtons()}</form>`)}
     const editSvc=e.target.closest('[data-owner-edit-service]');if(editSvc){let d;try{d=JSON.parse(editSvc.dataset.ownerEditService)}catch{return}open(`<form data-owner-service-edit class="stack-form"><h2>Edit Service</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Kategori</span><input name="category" value="${esc(d.category||'')}"></label><label class="field"><span>Harga</span><input name="price" type="number" value="${Number(d.price)||0}" min="0"></label><label class="field"><span>Description</span><textarea name="description">${esc(d.description||'')}</textarea></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" ${d.is_active?'checked':''}></label>${formButtons()}</form>`)}
     const editFaq=e.target.closest('[data-owner-edit-faq]');if(editFaq){let d;try{d=JSON.parse(editFaq.dataset.ownerEditFaq)}catch{return}open(`<form data-owner-faq-edit class="stack-form"><h2>Edit FAQ</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Category</span><input name="category" value="${esc(d.category)}"></label><label class="field"><span>Question</span><input name="question" value="${esc(d.question)}"></label><label class="field"><span>Answer</span><textarea name="answer">${esc(d.answer)}</textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" ${d.is_published?'checked':''}></label>${formButtons()}</form>`)}

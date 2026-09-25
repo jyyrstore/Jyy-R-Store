@@ -483,7 +483,19 @@ function ownerPage(section){
   return async (req,res,next)=>{
     try{
       let data={};
-      if(section==='dashboard'){ data.dashboard=await analytics.dashboard(); data.analytics=await analytics.period(req.query.period||'30d',req.query.from,req.query.to); }
+      if(section==='dashboard'){
+        const [dashboardData,analyticsData]=await Promise.all([
+          analytics.dashboard(),
+          analytics.period(
+            req.query.period||'30d',
+            req.query.from,
+            req.query.to
+          )
+        ]);
+
+        data.dashboard=dashboardData;
+        data.analytics=analyticsData;
+      }
       else if(section==='products'){
         const repo=require('../repositories/products.repository');
         const pager=ownerPager(req);

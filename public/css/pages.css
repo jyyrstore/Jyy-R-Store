@@ -1135,7 +1135,7 @@ button[aria-busy="true"]{
 }
 
 .owner-users-filter-field input,
-.owner-users-filter-field select{
+.owner-users-filter-field .jyyr-select{
   width:100%;
   min-width:0;
   height:44px;
@@ -1156,12 +1156,12 @@ button[aria-busy="true"]{
 }
 
 .owner-users-filter-field input:hover,
-.owner-users-filter-field select:hover{
+.owner-users-filter-field .jyyr-select-trigger:hover{
   border-color:var(--border-strong);
 }
 
 .owner-users-filter-field input:focus,
-.owner-users-filter-field select:focus{
+.owner-users-filter-field .jyyr-select-trigger:focus-visible{
   border-color:var(--primary-2);
   box-shadow:0 0 0 3px rgba(167,139,250,.10);
 }

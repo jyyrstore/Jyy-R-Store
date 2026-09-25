@@ -20,7 +20,77 @@
           <div class="stat-card"><span>Tiket Aktif</span><strong><%= dashboard.tickets %></strong></div>
         </div>
         <div class="chart-grid">
-          <div class="panel"><div class="section-header"><div><h2>Pendapatan & Pesanan</h2><p class="muted">Data berasal dari analytics service/database.</p></div><select data-owner-period><option value="today">Hari Ini</option><option value="7d">7 Hari</option><option value="30d" selected>30 Hari</option><option value="90d">3 Months</option><option value="180d">6 Months</option><option value="1y">1 Tahun</option><option value="custom">Kustom</option></select></div><div class="inline-actions analytics-custom" data-analytics-custom hidden><input type="date" data-analytics-from aria-label="Tanggal mulai analytics"><input type="date" data-analytics-to aria-label="Tanggal akhir analytics"><button class="button button-secondary" type="button" data-analytics-apply>Terapkan</button></div><div class="chart-wrap"><canvas id="owner-chart" height="260"></canvas></div></div>
+          <div class="panel"><div class="section-header"><div><h2>Pendapatan & Pesanan</h2><p class="muted">Data berasal dari analytics service/database.</p></div><div class="jyyr-select" data-jyyr-select>
+  <input
+    type="hidden"
+    value="30d"
+    data-owner-period
+    data-jyyr-select-value
+  >
+  <button
+    class="jyyr-select-trigger"
+    type="button"
+    aria-haspopup="listbox"
+    aria-expanded="false"
+    data-jyyr-select-trigger
+  >
+    <span data-jyyr-select-label>30 Hari</span>
+    <span class="jyyr-select-chevron" aria-hidden="true"></span>
+  </button>
+  <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="today" data-label="Hari Ini">Hari Ini</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="7d" data-label="7 Hari">7 Hari</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="30d" data-label="30 Hari">30 Hari</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="90d" data-label="3 Bulan">3 Bulan</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="180d" data-label="6 Bulan">6 Bulan</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="1y" data-label="1 Tahun">1 Tahun</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="custom" data-label="Kustom">Kustom</button>
+  </div>
+</div></div><div class="inline-actions analytics-custom" data-analytics-custom hidden>
+  <div class="jyyr-date-field" data-jyyr-date-field>
+    <input
+      type="text"
+      class="jyyr-picker-input"
+      readonly
+      data-jyyr-picker
+      data-jyyr-picker-mode="date"
+      data-jyyr-value=""
+      placeholder="Tanggal mulai"
+      aria-label="Tanggal mulai analytics"
+    >
+    <input
+      type="hidden"
+      data-analytics-from
+      data-jyyr-picker-value
+      value=""
+    >
+  </div>
+
+  <div class="jyyr-date-field" data-jyyr-date-field>
+    <input
+      type="text"
+      class="jyyr-picker-input"
+      readonly
+      data-jyyr-picker
+      data-jyyr-picker-mode="date"
+      data-jyyr-value=""
+      placeholder="Tanggal akhir"
+      aria-label="Tanggal akhir analytics"
+    >
+    <input
+      type="hidden"
+      data-analytics-to
+      data-jyyr-picker-value
+      value=""
+    >
+  </div>
+
+  <button
+    class="button button-secondary"
+    type="button"
+    data-analytics-apply
+  >Terapkan</button>
+</div></div>
           <div class="panel"><div class="section-header"><div><h2>Deposit & Pengguna Baru</h2><p class="muted">Deposit sukses dan pertumbuhan user.</p></div></div><div class="chart-wrap"><canvas id="owner-growth-chart" height="260"></canvas></div></div>
           <div class="panel"><h2>Status Pesanan</h2><div class="status-bars"><% (analytics.status||[]).forEach(s=>{ const max=Math.max(...(analytics.status||[]).map(x=>Number(x.count)||0),1); %><div><div class="bar-label"><span><%= s.status %></span><b><%= s.count %></b></div><div class="bar"><span style="width:<%= Math.min(100,Number(s.count)/max*100) %>%"></span></div></div><% }) %></div></div>
         </div>
@@ -181,24 +251,41 @@
 
             <label class="owner-users-filter-field">
               <span>Role</span>
-              <select name="role">
-                <option value="" <%= !userRole?'selected':'' %>>Semua role</option>
-                <option value="USER" <%= userRole==='USER'?'selected':'' %>>User</option>
-                <option value="MODERATOR" <%= userRole==='MODERATOR'?'selected':'' %>>Moderator</option>
-                <option value="ADMIN" <%= userRole==='ADMIN'?'selected':'' %>>Admin</option>
-                <option value="OWNER" <%= userRole==='OWNER'?'selected':'' %>>Owner</option>
-              </select>
+              <div class="jyyr-select" data-jyyr-select>
+  <input type="hidden" name="role" value="<%= userRole %>" data-jyyr-select-value>
+  <button class="jyyr-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" data-jyyr-select-trigger>
+    <span data-jyyr-select-label>Semua role</span>
+    <span class="jyyr-select-chevron" aria-hidden="true"></span>
+  </button>
+  <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="" data-label="Semua role">Semua role</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="USER" data-label="User">User</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="MODERATOR" data-label="Moderator">Moderator</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="ADMIN" data-label="Admin">Admin</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="OWNER" data-label="Owner">Owner</button>
+  </div>
+</div>
+<script>
+/* server-selected role is synchronized by the global picker */
+</script>
             </label>
 
             <label class="owner-users-filter-field">
               <span>Status</span>
-              <select name="status">
-                <option value="" <%= !userStatus?'selected':'' %>>Semua status</option>
-                <option value="ACTIVE" <%= userStatus==='ACTIVE'?'selected':'' %>>Aktif</option>
-                <option value="SUSPENDED" <%= userStatus==='SUSPENDED'?'selected':'' %>>Suspended</option>
-                <option value="BANNED" <%= userStatus==='BANNED'?'selected':'' %>>Banned</option>
-                <option value="PENDING" <%= userStatus==='PENDING'?'selected':'' %>>Pending</option>
-              </select>
+              <div class="jyyr-select" data-jyyr-select>
+  <input type="hidden" name="status" value="<%= userStatus %>" data-jyyr-select-value>
+  <button class="jyyr-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" data-jyyr-select-trigger>
+    <span data-jyyr-select-label>Semua status</span>
+    <span class="jyyr-select-chevron" aria-hidden="true"></span>
+  </button>
+  <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="" data-label="Semua status">Semua status</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="ACTIVE" data-label="Aktif">Aktif</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="SUSPENDED" data-label="Suspended">Suspended</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="BANNED" data-label="Banned">Banned</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="PENDING" data-label="Pending">Pending</button>
+  </div>
+</div>
             </label>
 
             <button class="button button-primary owner-users-filter-submit" type="submit">
@@ -330,7 +417,21 @@
       <% } else if(ownerSection==='information'){ %>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Type</th><th>Title</th><th>Tersedia</th><th>Publish At</th><th>Aksi</th></tr></thead><tbody><% (items||[]).forEach(row=>{ %><tr><td><%= row.type %></td><td><%= row.title %></td><td><%= row.is_published?'Ya':'Tidak' %></td><td><%= formatDate(row.publish_at) %></td><td><button class="button button-secondary button-small" data-owner-edit-info='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button></td></tr><% }) %></tbody></table></div></div>
       <% } else if(ownerSection==='notifications'){ %>
-        <div class="panel stack-form"><h2>Buat Notifikasi</h2><form data-owner-notification-create><div class="form-grid"><label class="field"><span>Type</span><select name="type"><option>SYSTEM</option><option>PROMOTION</option><option>ORDER</option><option>PAYMENT</option><option>DEPOSIT</option><option>TICKET</option></select></label><label class="field"><span>User ID (opsional)</span><input name="user_id" placeholder="Kosong = broadcast"></label><label class="field"><span>Title</span><input name="title" required maxlength="160"></label></div><label class="field"><span>Body</span><textarea name="body" maxlength="5000" required></textarea></label><label class="field"><span>Link</span><input name="link"></label><div class="inline-actions"><button class="button button-primary">Kirim</button><button class="button button-secondary" type="button" data-owner-broadcast>Kirim ke Semua</button></div></form></div>
+        <div class="panel stack-form"><h2>Buat Notifikasi</h2><form data-owner-notification-create><div class="form-grid"><label class="field"><span>Type</span><div class="jyyr-select" data-jyyr-select>
+  <input type="hidden" name="type" value="SYSTEM" data-jyyr-select-value>
+  <button class="jyyr-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" data-jyyr-select-trigger>
+    <span data-jyyr-select-label>SYSTEM</span>
+    <span class="jyyr-select-chevron" aria-hidden="true"></span>
+  </button>
+  <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="SYSTEM" data-label="SYSTEM">SYSTEM</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="PROMOTION" data-label="PROMOTION">PROMOTION</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="ORDER" data-label="ORDER">ORDER</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="PAYMENT" data-label="PAYMENT">PAYMENT</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="DEPOSIT" data-label="DEPOSIT">DEPOSIT</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="TICKET" data-label="TICKET">TICKET</button>
+  </div>
+</div></label><label class="field"><span>User ID (opsional)</span><input name="user_id" placeholder="Kosong = broadcast"></label><label class="field"><span>Title</span><input name="title" required maxlength="160"></label></div><label class="field"><span>Body</span><textarea name="body" maxlength="5000" required></textarea></label><label class="field"><span>Link</span><input name="link"></label><div class="inline-actions"><button class="button button-primary">Kirim</button><button class="button button-secondary" type="button" data-owner-broadcast>Kirim ke Semua</button></div></form></div>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Type</th><th>Title</th><th>User</th><th>Read</th><th>Created</th></tr></thead><tbody><% (items||[]).forEach(row=>{ %><tr><td><%= row.type %></td><td><%= row.title %></td><td><%= row.user_id||'ALL' %></td><td><%= row.is_read?'Ya':'Belum' %></td><td><%= formatDate(row.created_at) %></td></tr><% }) %></tbody></table></div>
 <%- include('../partials/pagination',{
   pagination:ownerPagination,
@@ -340,7 +441,45 @@
 }) %>
 </div>
       <% } else if(ownerSection==='maintenance'){ %>
-        <form class="panel stack-form" data-owner-maintenance><div class="panel subdued"><strong>Preview</strong><p class="muted"><%= maintenance?.title||"Maintenance Jyy'R Store" %></p><small class="muted"><%= maintenance?.message||'Saat aktif, user akan melihat halaman maintenance. Webhook dan backend kritis tetap bekerja.' %></small></div><label class="switch-row"><span>Maintenance ON</span><input type="checkbox" name="enabled" <%= maintenance?.enabled?'checked':'' %>></label><label class="field"><span>Title</span><input name="title" value="<%= maintenance?.title||'' %>" required></label><label class="field"><span>Message</span><textarea name="message"><%= maintenance?.message||'' %></textarea></label><label class="field"><span>Scheduled Start</span><input type="datetime-local" name="scheduled_start" value="<%= maintenance?.scheduled_start?new Date(maintenance.scheduled_start).toISOString().slice(0,16):'' %>"></label><label class="field"><span>Scheduled End</span><input type="datetime-local" name="scheduled_end" value="<%= maintenance?.scheduled_end?new Date(maintenance.scheduled_end).toISOString().slice(0,16):'' %>"></label><label class="switch-row"><span>Allow Owner Access</span><input type="checkbox" name="allow_owner_access" <%= maintenance?.allow_owner_access?'checked':'' %>></label><button class="button button-primary">Simpan maintenance</button></form>
+        <form class="panel stack-form" data-owner-maintenance><div class="panel subdued"><strong>Preview</strong><p class="muted"><%= maintenance?.title||"Maintenance Jyy'R Store" %></p><small class="muted"><%= maintenance?.message||'Saat aktif, user akan melihat halaman maintenance. Webhook dan backend kritis tetap bekerja.' %></small></div><label class="switch-row"><span>Maintenance ON</span><input type="checkbox" name="enabled" <%= maintenance?.enabled?'checked':'' %>></label><label class="field"><span>Title</span><input name="title" value="<%= maintenance?.title||'' %>" required></label><label class="field"><span>Message</span><textarea name="message"><%= maintenance?.message||'' %></textarea></label><label class="field">
+  <span>Scheduled Start</span>
+  <div class="jyyr-date-field" data-jyyr-date-field>
+    <input
+      type="text"
+      class="jyyr-picker-input"
+      readonly
+      data-jyyr-picker
+      data-jyyr-picker-mode="datetime"
+      data-jyyr-value="<%= maintenance?.scheduled_start?new Date(maintenance.scheduled_start).toISOString().slice(0,16):'' %>"
+      placeholder="Pilih tanggal & waktu"
+    >
+    <input
+      type="hidden"
+      name="scheduled_start"
+      data-jyyr-picker-value
+      value="<%= maintenance?.scheduled_start?new Date(maintenance.scheduled_start).toISOString().slice(0,16):'' %>"
+    >
+  </div>
+</label><label class="field">
+  <span>Scheduled End</span>
+  <div class="jyyr-date-field" data-jyyr-date-field>
+    <input
+      type="text"
+      class="jyyr-picker-input"
+      readonly
+      data-jyyr-picker
+      data-jyyr-picker-mode="datetime"
+      data-jyyr-value="<%= maintenance?.scheduled_end?new Date(maintenance.scheduled_end).toISOString().slice(0,16):'' %>"
+      placeholder="Pilih tanggal & waktu"
+    >
+    <input
+      type="hidden"
+      name="scheduled_end"
+      data-jyyr-picker-value
+      value="<%= maintenance?.scheduled_end?new Date(maintenance.scheduled_end).toISOString().slice(0,16):'' %>"
+    >
+  </div>
+</label><label class="switch-row"><span>Allow Owner Access</span><input type="checkbox" name="allow_owner_access" <%= maintenance?.allow_owner_access?'checked':'' %>></label><button class="button button-primary">Simpan maintenance</button></form>
       <% } else if(ownerSection==='storage'){ %>
         <div class="stat-grid"><div class="stat-card"><span>Public Assets</span><strong class="small-value"><%= storage?.publicBucket||'—' %></strong></div><div class="stat-card"><span>Private Products</span><strong class="small-value"><%= storage?.privateBucket||'—' %></strong></div><div class="stat-card"><span>User Uploads</span><strong class="small-value"><%= storage?.userBucket||'—' %></strong></div></div><div class="panel"><h2>Storage Security</h2><p class="muted">Premium content tetap private dan diakses melalui authorization server-side + signed URL.</p></div>
       <% } else if(ownerSection==='system'){ %>

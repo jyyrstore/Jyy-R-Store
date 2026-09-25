@@ -36,12 +36,25 @@
       >
     </label>
 
-    <select class="filter-category" name="category" aria-label="Kategori">
-      <option value="">Semua kategori</option>
+    <div class="jyyr-select filter-category" data-jyyr-select>
+  <input
+    type="hidden"
+    class="filter-category-value"
+    name="category"
+    value="<%= req.query.category||'' %>"
+    data-jyyr-select-value
+  >
+  <button class="jyyr-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" data-jyyr-select-trigger>
+    <span data-jyyr-select-label>Semua kategori</span>
+    <span class="jyyr-select-chevron" aria-hidden="true"></span>
+  </button>
+  <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
+      <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="" data-label="Semua kategori">Semua kategori</button>
       <% categories.forEach(c=>{ %>
-        <option value="<%= c.slug %>" <%= req.query.category===c.slug?'selected':'' %>><%= c.name %></option>
+        <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="<%= c.slug %>" data-label="<%= c.name %>"><%= c.name %></button>
       <% }) %>
-    </select>
+  </div>
+</div>
 
     <input
       class="filter-min"
@@ -63,12 +76,25 @@
       aria-label="Harga maksimum"
     >
 
-    <select class="filter-sort" name="sort" aria-label="Urutkan">
-      <option value="newest">Terbaru</option>
-      <option value="popular" <%= req.query.sort==='popular'?'selected':'' %>>Populer</option>
-      <option value="price_asc" <%= req.query.sort==='price_asc'?'selected':'' %>>Harga rendah</option>
-      <option value="price_desc" <%= req.query.sort==='price_desc'?'selected':'' %>>Harga tinggi</option>
-    </select>
+    <div class="jyyr-select filter-sort" data-jyyr-select>
+  <input
+    type="hidden"
+    class="filter-sort-value"
+    name="sort"
+    value="<%= req.query.sort||'newest' %>"
+    data-jyyr-select-value
+  >
+  <button class="jyyr-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" data-jyyr-select-trigger>
+    <span data-jyyr-select-label>Terbaru</span>
+    <span class="jyyr-select-chevron" aria-hidden="true"></span>
+  </button>
+  <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="newest" data-label="Terbaru">Terbaru</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="popular" data-label="Populer">Populer</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="price_asc" data-label="Harga rendah">Harga rendah</button>
+    <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="price_desc" data-label="Harga tinggi">Harga tinggi</button>
+  </div>
+</div>
 
     <button class="button button-primary button-small filter-submit" type="submit">
       Terapkan Filter

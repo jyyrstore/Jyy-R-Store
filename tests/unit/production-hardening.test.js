@@ -249,3 +249,83 @@ test('owner users UI uses filtered admin repository and responsive table labels'
   assert.match(css,/\.owner-users-table/);
   assert.match(css,/\.owner-users-filter/);
 });
+
+
+test('global picker system removes user-facing native selectors',()=>{
+  const app=read('views/app.ejs');
+  const owner=read('views/owner/index.ejs');
+  const store=read('views/pages/store.ejs');
+  const pages=read('public/js/pages.js');
+  const picker=read('public/js/pickers.js');
+  const components=read('public/css/components.css');
+
+  assert.match(
+    app,
+    /\/js\/pickers\.js/
+  );
+
+  assert.doesNotMatch(
+    owner,
+    /<\s*select\b/i
+  );
+
+  assert.doesNotMatch(
+    store,
+    /<\s*select\b/i
+  );
+
+  assert.doesNotMatch(
+    pages,
+    /<\s*select\b/i
+  );
+
+  assert.doesNotMatch(
+    owner,
+    /type=["'](?:date|datetime-local|time|month|week)["']/i
+  );
+
+  const files=
+    pages.match(
+      /class="jyyr-native-file-input"/g
+    )||[];
+
+  const inputs=
+    pages.match(
+      /type=["']file["']/gi
+    )||[];
+
+  assert.equal(
+    files.length,
+    inputs.length
+  );
+
+  assert.match(
+    picker,
+    /data-jyyr-select/
+  );
+
+  assert.match(
+    picker,
+    /data-jyyr-picker/
+  );
+
+  assert.match(
+    picker,
+    /data-jyyr-file-picker/
+  );
+
+  assert.match(
+    components,
+    /\.jyyr-select/
+  );
+
+  assert.match(
+    components,
+    /\.jyyr-picker-input/
+  );
+
+  assert.match(
+    components,
+    /\.jyyr-file-picker/
+  );
+});

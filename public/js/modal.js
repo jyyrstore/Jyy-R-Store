@@ -10,7 +10,13 @@
       'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
     )].filter(el => {
       const style=window.getComputedStyle(el);
-      return style.visibility!=='hidden' && style.display!=='none';
+      return (
+        style.visibility!=='hidden' &&
+        style.display!=='none' &&
+        !el.matches(
+          '.jyyr-native-file-input,input[type="file"]'
+        )
+      );
     });
   }
 
