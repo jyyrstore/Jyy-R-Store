@@ -185,15 +185,39 @@ async function orderDetail(req,res,next){
           accessControl.canAccess(req.user.id,item.product_id)
         ]);
 
-        return {
-          ...item,
-          contents:contents.map(content=>({
-            ...content,
-            allowed:
+        const mappedContents=await Promise.all(
+          contents.map(async content=>{
+            const allowed=
               content.access_type==='PUBLIC' ||
               (content.access_type==='PREVIEW' && content.is_preview) ||
-              owned
-          }))
+              owned;
+
+            let preview_url=null;
+
+            if(allowed && content.storage_path){
+              const bucket=
+                content.storage_path.startsWith('public-assets/')
+                  ? loadEnv().PUBLIC_ASSET_BUCKET
+                  : loadEnv().PRIVATE_PRODUCT_BUCKET;
+
+              preview_url=await storage.signedUrl(
+                bucket,
+                content.storage_path.replace(/^public-assets\//,''),
+                loadEnv().SIGNED_URL_EXPIRATION
+              ).catch(()=>null);
+            }
+
+            return {
+              ...content,
+              allowed,
+              preview_url
+            };
+          })
+        );
+
+        return {
+          ...item,
+          contents:mappedContents
         };
       })
     );
