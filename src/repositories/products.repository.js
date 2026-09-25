@@ -15,7 +15,71 @@ function safeIntRange(value,fallback,min=0,max=1000000){
   if(!Number.isSafeInteger(n)) return fallback;
   return Math.max(min,Math.min(max,n));
 }
-function filters({search='',category='',sort='newest',minPrice=null,maxPrice=null,status='PUBLISHED'}){ const args=[status,search||'',category||'',minPrice==null?null:Number(minPrice),maxPrice==null?null:Number(maxPrice)]; let order='p.created_at desc'; if(sort==='popular') order='p.purchase_count desc,p.created_at desc'; if(sort==='price_asc') order='p.price asc,p.created_at desc'; if(sort==='price_desc') order='p.price desc,p.created_at desc'; return {args,where:`p.status=$1 and ($2='' or p.name ilike '%'||$2||'%' or p.description ilike '%'||$2||'%') and ($3='' or c.slug=$3) and ($4::numeric is null or p.price >= $4::numeric) and ($5::numeric is null or p.price <= $5::numeric)`,order}; }
+function filters({
+  search='',
+  category='',
+  sort='newest',
+  minPrice=null,
+  maxPrice=null,
+  status='PUBLISHED'
+}){
+  const safePrice=value=>{
+    if(value===null||value===undefined||value==='')return null;
+
+    const n=Number(value);
+
+    if(!Number.isSafeInteger(n)||n<0){
+      throw badRequest(
+        'INVALID_PRICE_FILTER',
+        'Filter harga harus berupa bilangan bulat >= 0.'
+      );
+    }
+
+    return n;
+  };
+
+  const safeMin=safePrice(minPrice);
+  const safeMax=safePrice(maxPrice);
+
+  if(
+    safeMin!==null &&
+    safeMax!==null &&
+    safeMin>safeMax
+  ){
+    throw badRequest(
+      'INVALID_PRICE_RANGE',
+      'minPrice tidak boleh lebih besar dari maxPrice.'
+    );
+  }
+
+  const args=[
+    status,
+    search||'',
+    category||'',
+    safeMin,
+    safeMax
+  ];
+
+  let order='p.created_at desc';
+
+  if(sort==='popular'){
+    order='p.purchase_count desc,p.created_at desc';
+  }
+
+  if(sort==='price_asc'){
+    order='p.price asc,p.created_at desc';
+  }
+
+  if(sort==='price_desc'){
+    order='p.price desc,p.created_at desc';
+  }
+
+  return {
+    args,
+    where:`p.status=$1 and ($2='' or p.name ilike '%'||$2||'%' or p.description ilike '%'||$2||'%') and ($3='' or c.slug=$3) and ($4::numeric is null or p.price >= $4::numeric) and ($5::numeric is null or p.price <= $5::numeric)`,
+    order
+  };
+}
 async function list(opts={}){
   const f=filters(opts);
   const limit=safeIntRange(opts.limit,20,1,100);
@@ -143,14 +207,16 @@ async function duplicate(id){
       let thumbnailPath=null;
 
       if(p.thumbnail_path){
-        const ext=(String(p.thumbnail_path).match(/\.[a-z0-9]+$/i)||[''])[0];
+        const sourcePath=String(p.thumbnail_path);
+        const sourceObjectPath=storage.publicObjectPath(sourcePath);
+        const ext=(sourceObjectPath.match(/\.[a-z0-9]+$/i)||[''])[0];
 
         thumbnailPath=
           `products/${copy.id}/${crypto.randomUUID()}${ext}`;
 
         await storage.copy(
           env.PUBLIC_ASSET_BUCKET,
-          p.thumbnail_path,
+          sourceObjectPath,
           thumbnailPath
         );
 

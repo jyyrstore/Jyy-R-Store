@@ -61,8 +61,7 @@ const productController={
   },
  categories:async(req,res)=>ok(res,await categories.list(true)),
  create:async(req,res)=>ok(res,await product.create(req.body),201),
- update:async(req,res)=>ok(res,await product.update(req.params.id,req.body)),
- event:async(req,res)=>{await requireAuth(req,res,()=>{}); return ok(res,{})}
+ update:async(req,res)=>ok(res,await product.update(req.params.id,req.body))
 };
 const cartController={
  get:async(req,res)=>ok(res,await cart.get(req.user.id)),
@@ -528,7 +527,7 @@ async function ownerUploadComplete(req,res){
         if(!ref){
           await storage.remove(
             env.PUBLIC_ASSET_BUCKET,
-            previousThumbnailPath
+            storage.publicObjectPath(previousThumbnailPath)
           ).catch(()=>{});
         }
       }

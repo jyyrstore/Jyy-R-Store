@@ -3,7 +3,64 @@ const categories=require('../../repositories/categories.repository');
 const { badRequest, notFound }=require('../../utils/error');
 const slug=require('../../utils/slug');
 
-async function catalog(q){ const limit=Math.min(100,Number(q.limit||20)); const page=Math.max(1,Number(q.page||1)); const opts={search:q.search||'',category:q.category||'',sort:q.sort||'newest',minPrice:q.minPrice??null,maxPrice:q.maxPrice??null,limit,offset:(page-1)*limit}; const [items,total,cats]=await Promise.all([products.list(opts),products.count(opts),categories.list(true)]); return {items,total,page,limit,categories:cats}; }
+function parsePriceFilter(value,name){
+  if(value===undefined||value===null||value===''){
+    return null;
+  }
+
+  const n=Number(value);
+
+  if(!Number.isSafeInteger(n)||n<0){
+    throw badRequest(
+      'INVALID_PRICE_FILTER',
+      `${name} harus berupa bilangan bulat >= 0.`
+    );
+  }
+
+  return n;
+}
+
+async function catalog(q={}){
+  const limit=Math.min(100,Math.max(1,Number(q.limit||20)));
+  const page=Math.max(1,Number(q.page||1));
+  const minPrice=parsePriceFilter(q.minPrice,'minPrice');
+  const maxPrice=parsePriceFilter(q.maxPrice,'maxPrice');
+
+  if(
+    minPrice!==null &&
+    maxPrice!==null &&
+    minPrice>maxPrice
+  ){
+    throw badRequest(
+      'INVALID_PRICE_RANGE',
+      'minPrice tidak boleh lebih besar dari maxPrice.'
+    );
+  }
+
+  const opts={
+    search:q.search||'',
+    category:q.category||'',
+    sort:q.sort||'newest',
+    minPrice,
+    maxPrice,
+    limit,
+    offset:(page-1)*limit
+  };
+
+  const [items,total,cats]=await Promise.all([
+    products.list(opts),
+    products.count(opts),
+    categories.list(true)
+  ]);
+
+  return {
+    items,
+    total,
+    page,
+    limit,
+    categories:cats
+  };
+}
 
 async function detailBySlug(slugValue,userId){
   const product=await products.findBySlug(slugValue);

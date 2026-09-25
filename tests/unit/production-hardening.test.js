@@ -50,7 +50,7 @@ test('payment provider call is outside the DB transaction',()=>{
 
   const prepared=source.indexOf('const prepared=await withTransaction');
   const providerCall=source.indexOf('const result=await provider().createPayment',prepared);
-  const finalize=source.indexOf('return await withTransaction',providerCall);
+  const finalize=source.indexOf('withTransaction',providerCall);
 
   assert.ok(prepared>=0);
   assert.ok(providerCall>prepared);
@@ -627,5 +627,196 @@ test('owner create product uses one thumbnail preview area',()=>{
     css.includes(
       '.product-thumbnail-preview-stage .product-thumbnail-preview'
     )
+  );
+});
+
+// CONSISTENCY HARDENING V1
+
+
+test('gateway payment keeps a fallback expiry when provider omits expiry',()=>{
+  const source=read('src/services/payment/payment.service.js');
+
+  assert.match(
+    source,
+    /const expiresAt=/
+  );
+
+  assert.match(
+    source,
+    /Date\.parse\(String\(result\.expiresAt\)\)/
+  );
+
+  assert.match(
+    source,
+    /new Date\(Date\.now\(\)\+30\*60\*1000\)\.toISOString\(\)/
+  );
+
+  assert.match(
+    source,
+    /prepared\.idempotencyKey,\s*expiresAt/
+  );
+});
+
+test('gateway payment creates a local payment placeholder before provider call',()=>{
+  const source=read('src/services/payment/payment.service.js');
+
+  const placeholder=source.indexOf(
+    "insert into payments("
+  );
+
+  const providerCall=source.indexOf(
+    "const result=await provider().createPayment"
+  );
+
+  assert.ok(placeholder>=0);
+  assert.ok(providerCall>placeholder);
+  assert.match(
+    source,
+    /now\(\)\+interval '30 minutes'/
+  );
+  assert.match(
+    source,
+    /idempotencyKey=`order:\$\{order\.id\}:payment`/
+  );
+});
+
+test('gateway expiration recovers orders without payment rows',()=>{
+  const source=read('src/jobs/payment-expiration.job.js');
+
+  assert.match(
+    source,
+    /payment_method='GATEWAY'/
+  );
+
+  assert.match(
+    source,
+    /not exists\(\s*select 1\s*from payments/
+  );
+
+  assert.match(
+    source,
+    /reserved_stock=greatest\(reserved_stock-\$2,0\)/
+  );
+
+  assert.match(
+    source,
+    /orphanOrdersExpired/
+  );
+});
+
+test('wallet cart clear receives transaction client',()=>{
+  const order=read('src/services/order/order.service.js');
+  const cart=read('src/repositories/cart.repository.js');
+
+  assert.match(
+    order,
+    /await carts\.clear\(userId,client\)/
+  );
+
+  assert.match(
+    cart,
+    /async function clear\(userId,client=null\)/
+  );
+
+  assert.match(
+    cart,
+    /client\.query\(sql,\[userId\]\)/
+  );
+});
+
+test('legacy public thumbnail paths are normalized centrally',()=>{
+  const storage=read('src/config/storage.js');
+  const products=read('src/repositories/products.repository.js');
+  const api=read('src/controllers/api.controller.js');
+
+  assert.match(
+    storage,
+    /function publicObjectPath\(path\)/
+  );
+
+  assert.ok(
+    storage.includes("replace(/^public-assets\\//,'')")
+  );
+
+  assert.match(
+    products,
+    /storage\.publicObjectPath\(sourcePath\)/
+  );
+
+  assert.match(
+    api,
+    /storage\.publicObjectPath\(previousThumbnailPath\)/
+  );
+});
+
+test('catalog rejects invalid price filters before SQL',()=>{
+  const service=read('src/services/product/product.service.js');
+  const repo=read('src/repositories/products.repository.js');
+
+  assert.match(
+    service,
+    /parsePriceFilter/
+  );
+
+  assert.match(
+    service,
+    /INVALID_PRICE_FILTER/
+  );
+
+  assert.match(
+    service,
+    /INVALID_PRICE_RANGE/
+  );
+
+  assert.match(
+    repo,
+    /Number\.isSafeInteger\(n\)/
+  );
+});
+
+test('mutation deduplication includes request payload',()=>{
+  const source=read('public/js/api.js');
+
+  assert.match(
+    source,
+    /function mutationFingerprint\(body\)/
+  );
+
+  assert.match(
+    source,
+    /const key=fingerprint===null/
+  );
+
+  assert.match(
+    source,
+    /`\$\{method\}:\$\{url\}:\$\{fingerprint\}`/
+  );
+
+  assert.match(
+    source,
+    /FormData/
+  );
+});
+
+test('product controller has no manual auth event handler',()=>{
+  const source=read('src/controllers/api.controller.js');
+
+  assert.doesNotMatch(
+    source,
+    /event:async\(req,res\)=>\{await requireAuth/
+  );
+});
+
+test('payment webhook can recover placeholder by order id',()=>{
+  const source=read('src/services/payment/payment.service.js');
+
+  assert.match(
+    source,
+    /if\(!payment&&parsed\.orderId\)/
+  );
+
+  assert.match(
+    source,
+    /from payments where order_id=\$1/
   );
 });

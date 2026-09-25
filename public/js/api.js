@@ -144,12 +144,45 @@ window.JYYRApi=(function(){
     }
   }
 
+  function mutationFingerprint(body){
+    if(body instanceof FormData){
+      return null;
+    }
+
+    if(typeof body==='string'){
+      return body;
+    }
+
+    if(body===undefined){
+      return '';
+    }
+
+    try{
+      return JSON.stringify(body);
+    }catch{
+      return String(body);
+    }
+  }
+
   function request(url,options={}){
     const method=String(options.method||'GET').toUpperCase();
     const isMutation=!SAFE_METHODS.includes(method);
-    const key=`${method}:${url}`;
+    const fingerprint=isMutation
+      ? mutationFingerprint(options.body)
+      : '';
 
-    if(isMutation){
+    /*
+     * FormData requests are intentionally not deduplicated because two
+     * uploads to the same endpoint can legitimately contain different
+     * files. JSON/string mutations include their payload in the key.
+     */
+    const key=fingerprint===null
+      ? null
+      : `${method}:${url}:${fingerprint}`;
+
+    const cooldownKey=`${method}:${url}`;
+
+    if(isMutation&&key){
       const existing=inFlight.get(key);
 
       if(existing){
@@ -157,15 +190,23 @@ window.JYYRApi=(function(){
       }
     }
 
-    const cooldownError=isMutation ? getCooldownError(key) : null;
+    const cooldownError=
+      isMutation
+        ? getCooldownError(cooldownKey)
+        : null;
 
     if(cooldownError){
       return Promise.reject(cooldownError);
     }
 
-    const promise=execute(url,options,method,key);
+    const promise=execute(
+      url,
+      options,
+      method,
+      cooldownKey
+    );
 
-    if(isMutation){
+    if(isMutation&&key){
       inFlight.set(key,promise);
 
       promise

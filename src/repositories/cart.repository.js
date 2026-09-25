@@ -55,11 +55,16 @@ async function removeItem(userId,itemId){
   );
 }
 
-async function clear(userId){
-  await query(
-    'delete from cart_items ci using carts c where ci.cart_id=c.id and c.user_id=$1',
-    [userId]
-  );
+async function clear(userId,client=null){
+  const sql=
+    'delete from cart_items ci using carts c where ci.cart_id=c.id and c.user_id=$1';
+
+  if(client){
+    await client.query(sql,[userId]);
+    return;
+  }
+
+  await query(sql,[userId]);
 }
 
 module.exports={ensure,get,upsertItem,setItem,removeItem,clear};

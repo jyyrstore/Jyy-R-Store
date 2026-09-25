@@ -33,8 +33,14 @@ async function createForOrder(userId,order,returnUrl){
   const idempotencyKey=`order:${order.id}:payment`;
 
   /*
-   * Transaction #1 hanya untuk validasi + locking singkat.
-   * Network call ke provider sengaja dilakukan setelah transaction selesai.
+   * Transaction #1:
+   * - lock order
+   * - reuse an existing payment intent when possible
+   * - otherwise create a local PENDING payment placeholder
+   *
+   * The placeholder is intentionally persisted BEFORE the external
+   * provider call so reserved_stock always has a payment record that
+   * the expiration worker can eventually release.
    */
   const prepared=await withTransaction(async(client)=>{
     const locked=(
@@ -44,8 +50,8 @@ async function createForOrder(userId,order,returnUrl){
       )
     ).rows[0];
 
-    if(!locked) throw notFound('Order not found.');
-    if(locked.user_id!==userId) throw forbidden();
+    if(!locked)throw notFound('Order not found.');
+    if(locked.user_id!==userId)throw forbidden();
 
     if(!PAYMENT_CREATABLE_ORDER_STATUSES.has(
       String(locked.status||'').toUpperCase()
@@ -56,7 +62,7 @@ async function createForOrder(userId,order,returnUrl){
       );
     }
 
-    const existing=(
+    let existing=(
       await client.query(
         "select * from payments where order_id=$1 and status='PENDING' order by created_at desc limit 1 for update",
         [locked.id]
@@ -64,14 +70,80 @@ async function createForOrder(userId,order,returnUrl){
     ).rows[0];
 
     if(existing){
+      const paymentUrl=
+        existing.raw_reference?.paymentUrl||
+        existing.raw_reference?.payment_url||
+        null;
+
+      /*
+       * A placeholder has no provider reference/payment URL yet.
+       * It is safe to retry the same provider idempotency key.
+       */
+      if(existing.reference||paymentUrl){
+        return {
+          existing:true,
+          payment:existing,
+          paymentUrl
+        };
+      }
+
       return {
-        existing:true,
-        payment:existing
+        existing:false,
+        paymentId:existing.id,
+        orderId:locked.id,
+        amount:Number(locked.total),
+        idempotencyKey,
+        customer:{
+          userId,
+          givenNames:customerName,
+          email:customerEmail
+        }
       };
     }
 
+    const placeholder=(
+      await client.query(
+        `insert into payments(
+          order_id,
+          user_id,
+          provider,
+          reference,
+          amount,
+          status,
+          raw_reference,
+          idempotency_key,
+          expires_at
+        )
+        values(
+          $1,
+          $2,
+          $3,
+          null,
+          $4,
+          'PENDING',
+          $5,
+          $6,
+          now()+interval '30 minutes'
+        )
+        returning *`,
+        [
+          locked.id,
+          userId,
+          loadEnv().PAYMENT_PROVIDER||'generic-json',
+          Number(locked.total),
+          {
+            state:'PROVIDER_PENDING'
+          },
+          idempotencyKey
+        ]
+      )
+    ).rows[0];
+
+    existing=placeholder;
+
     return {
       existing:false,
+      paymentId:existing.id,
       orderId:locked.id,
       amount:Number(locked.total),
       idempotencyKey,
@@ -86,17 +158,14 @@ async function createForOrder(userId,order,returnUrl){
   if(prepared.existing){
     return {
       payment:prepared.payment,
-      paymentUrl:
-        prepared.payment.raw_reference?.paymentUrl||
-        prepared.payment.raw_reference?.payment_url||
-        null,
+      paymentUrl:prepared.paymentUrl,
       duplicate:true
     };
   }
 
   /*
-   * Provider API is now outside the DB transaction.
-   * Retries use the same idempotency key.
+   * Provider call is outside the DB transaction.
+   * The local placeholder already protects reserved_stock.
    */
   const result=await provider().createPayment({
     orderId:prepared.orderId,
@@ -107,75 +176,76 @@ async function createForOrder(userId,order,returnUrl){
   });
 
   /*
-   * Transaction #2 hanya menyimpan hasil provider secara atomic.
+   * Transaction #2:
+   * attach the provider result to the existing local payment intent.
+   *
+   * Provider expiry is preferred, but never allow NULL to remove the
+   * local safety expiry that protects reserved_stock.
    */
-  try{
-    return await withTransaction(async(client)=>{
-      const concurrent=(
-        await client.query(
-          "select * from payments where order_id=$1 and status='PENDING' order by created_at desc limit 1 for update",
-          [prepared.orderId]
-        )
-      ).rows[0];
+  const expiresAt=
+    result.expiresAt &&
+    Number.isFinite(Date.parse(String(result.expiresAt)))
+      ? result.expiresAt
+      : new Date(Date.now()+30*60*1000).toISOString();
 
-      if(concurrent){
-        return {
-          payment:concurrent,
-          paymentUrl:
-            concurrent.raw_reference?.paymentUrl||
-            concurrent.raw_reference?.payment_url||
-            result.paymentUrl||
-            null,
-          duplicate:true
-        };
-      }
+  const saved=await withTransaction(async(client)=>{
+    const current=(
+      await client.query(
+        'select * from payments where id=$1 for update',
+        [prepared.paymentId]
+      )
+    ).rows[0];
 
-      const p=(
-        await client.query(
-          'insert into payments(order_id,user_id,provider,reference,amount,status,raw_reference,idempotency_key,expires_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *',
-          [
-            prepared.orderId,
-            userId,
-            loadEnv().PAYMENT_PROVIDER||'generic-json',
-            result.reference,
-            prepared.amount,
-            'PENDING',
-            {...(result.raw||{}),paymentUrl:result.paymentUrl||null},
-            prepared.idempotencyKey,
-            result.expiresAt||null
-          ]
-        )
-      ).rows[0];
-
-      return {
-        payment:p,
-        paymentUrl:result.paymentUrl
-      };
-    });
-  }catch(error){
-    if(error?.code==='23505'){
-      const concurrent=(
-        await query(
-          "select * from payments where order_id=$1 and status='PENDING' order by created_at desc limit 1",
-          [prepared.orderId]
-        )
-      ).rows[0];
-
-      if(concurrent){
-        return {
-          payment:concurrent,
-          paymentUrl:
-            concurrent.raw_reference?.paymentUrl||
-            concurrent.raw_reference?.payment_url||
-            result.paymentUrl||
-            null,
-          duplicate:true
-        };
-      }
+    if(!current){
+      throw notFound('Payment record not found.');
     }
 
-    throw error;
-  }
+    if(current.status!=='PENDING'){
+      return current;
+    }
+
+    const updated=(
+      await client.query(
+        `update payments
+         set provider=$2,
+             reference=$3,
+             amount=$4,
+             raw_reference=$5,
+             idempotency_key=$6,
+             expires_at=$7,
+             updated_at=now()
+         where id=$1
+         returning *`,
+        [
+          prepared.paymentId,
+          loadEnv().PAYMENT_PROVIDER||'generic-json',
+          result.reference,
+          prepared.amount,
+          {
+            ...(result.raw||{}),
+            paymentUrl:result.paymentUrl||null
+          },
+          prepared.idempotencyKey,
+          expiresAt
+        ]
+      )
+    ).rows[0];
+
+    if(!updated){
+      throw new Error('Payment provider result could not be persisted.');
+    }
+
+    return updated;
+  });
+
+  return {
+    payment:saved,
+    paymentUrl:
+      saved.raw_reference?.paymentUrl||
+      saved.raw_reference?.payment_url||
+      result.paymentUrl||
+      null
+  };
 }
 
 async function getStatus(id,userId){
@@ -199,7 +269,31 @@ async function processWebhook(rawBody,signature,payload){
   if(!parsed.eventId||!parsed.reference)throw badRequest('INVALID_WEBHOOK','Webhook payload is incomplete.');
   return withTransaction(async(client)=>{
     const providerName=loadEnv().PAYMENT_PROVIDER||'generic-json';
-    const payment=(await client.query('select * from payments where reference=$1 for update',[parsed.reference])).rows[0];
+    let payment=null;
+
+    if(parsed.reference){
+      payment=(
+        await client.query(
+          'select * from payments where reference=$1 for update',
+          [parsed.reference]
+        )
+      ).rows[0]||null;
+    }
+
+    /*
+     * Recovery path for the rare case where the provider succeeded but
+     * the local result update failed. Providers include orderId in
+     * metadata, so the signed webhook can recover the placeholder.
+     */
+    if(!payment&&parsed.orderId){
+      payment=(
+        await client.query(
+          "select * from payments where order_id=$1 and status in ('PENDING','PAID') order by created_at desc limit 1 for update",
+          [parsed.orderId]
+        )
+      ).rows[0]||null;
+    }
+
     if(!payment){
       const recorded=await recordWebhookEvent(client,{paymentId:null,providerName,eventId:parsed.eventId,payload});
       if(!recorded)return {duplicate:true};

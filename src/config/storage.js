@@ -119,6 +119,36 @@ async function copy(bucket, fromPath, toPath) {
 
   return data;
 }
-function publicUrl(bucket, path) { return supabaseAdmin().storage.from(bucket).getPublicUrl(path).data.publicUrl; }
+function publicObjectPath(path){
+  return String(path||'').replace(/^public-assets\//,'');
+}
+
+function publicUrl(bucket,path){
+  const objectPath=
+    bucket===envRef?.PUBLIC_ASSET_BUCKET
+      ? publicObjectPath(path)
+      : path;
+
+  return supabaseAdmin()
+    .storage
+    .from(bucket)
+    .getPublicUrl(objectPath)
+    .data
+    .publicUrl;
+}
 async function signedUrl(bucket, path, expiresIn) { const { data, error } = await supabaseAdmin().storage.from(bucket).createSignedUrl(path, expiresIn); if (error) throw error; return data.signedUrl; }
-module.exports = { initStorage, uploadBuffer, createSignedUploadUrl, fileExists, fileInfo, listObjects, resumableUploadUrl, remove, copy, publicUrl, signedUrl, getBucket };
+module.exports = {
+  initStorage,
+  uploadBuffer,
+  createSignedUploadUrl,
+  fileExists,
+  fileInfo,
+  listObjects,
+  resumableUploadUrl,
+  remove,
+  copy,
+  publicUrl,
+  publicObjectPath,
+  signedUrl,
+  getBucket
+};
