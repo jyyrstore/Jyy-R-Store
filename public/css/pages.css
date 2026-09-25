@@ -1096,3 +1096,235 @@ button[aria-busy="true"]{
 }
 
 /* PROFILE PAGE FINAL UIUX END */
+
+/* =========================================================
+   OWNER USERS TABLE & FILTER UX
+   ========================================================= */
+
+.owner-users-toolbar{
+  padding:16px;
+}
+
+.owner-users-filter{
+  display:grid;
+  grid-template-columns:
+    minmax(0,1fr)
+    minmax(150px,180px)
+    minmax(150px,180px)
+    auto
+    auto;
+  align-items:end;
+  gap:12px;
+  min-width:0;
+  margin:0;
+}
+
+.owner-users-filter-field{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  min-width:0;
+}
+
+.owner-users-filter-field>span{
+  color:var(--muted);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.owner-users-filter-field input,
+.owner-users-filter-field select{
+  width:100%;
+  min-width:0;
+  height:44px;
+  padding:0 12px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--deep);
+  color:var(--text);
+  outline:0;
+  transition:
+    border-color .16s ease,
+    box-shadow .16s ease,
+    background .16s ease;
+}
+
+.owner-users-filter-field input::placeholder{
+  color:#6f7480;
+}
+
+.owner-users-filter-field input:hover,
+.owner-users-filter-field select:hover{
+  border-color:var(--border-strong);
+}
+
+.owner-users-filter-field input:focus,
+.owner-users-filter-field select:focus{
+  border-color:var(--primary-2);
+  box-shadow:0 0 0 3px rgba(167,139,250,.10);
+}
+
+.owner-users-filter-submit,
+.owner-users-filter-reset{
+  min-width:104px;
+  height:44px;
+  white-space:nowrap;
+}
+
+.owner-users-filter-submit>.icon{
+  width:17px;
+  height:17px;
+  max-width:17px;
+  max-height:17px;
+}
+
+.owner-users-table{
+  width:100%;
+  min-width:860px;
+  table-layout:fixed;
+}
+
+.owner-users-col-user{
+  width:28%;
+}
+
+.owner-users-col-role{
+  width:10%;
+}
+
+.owner-users-col-status{
+  width:11%;
+}
+
+.owner-users-col-balance{
+  width:12%;
+}
+
+.owner-users-col-orders{
+  width:8%;
+}
+
+.owner-users-col-registered{
+  width:17%;
+}
+
+.owner-users-col-action{
+  width:14%;
+}
+
+.owner-users-table th,
+.owner-users-table td{
+  vertical-align:middle;
+}
+
+.owner-users-table th:nth-child(7),
+.owner-users-table td:nth-child(7){
+  text-align:right;
+}
+
+.owner-users-table td:first-child{
+  min-width:0;
+  white-space:normal;
+}
+
+.owner-users-username,
+.owner-users-email{
+  display:block;
+  min-width:0;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.owner-users-table td:nth-child(2),
+.owner-users-table td:nth-child(3),
+.owner-users-table td:nth-child(4),
+.owner-users-table td:nth-child(5),
+.owner-users-table td:nth-child(6){
+  white-space:nowrap;
+}
+
+.owner-users-table .status-badge{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.owner-users-table .table-actions{
+  justify-content:flex-end;
+}
+
+@media(max-width:980px){
+  .owner-users-filter{
+    grid-template-columns:
+      minmax(0,1fr)
+      minmax(150px,1fr)
+      minmax(150px,1fr);
+  }
+
+  .owner-users-search{
+    grid-column:1/-1;
+  }
+
+  .owner-users-filter-submit,
+  .owner-users-filter-reset{
+    width:100%;
+  }
+}
+
+@media(max-width:600px){
+  .owner-users-toolbar{
+    padding:12px;
+  }
+
+  .owner-users-filter{
+    grid-template-columns:minmax(0,1fr);
+    gap:10px;
+  }
+
+  .owner-users-search{
+    grid-column:auto;
+  }
+
+  .owner-users-filter-submit,
+  .owner-users-filter-reset{
+    width:100%;
+  }
+
+  .owner-users-table{
+    min-width:0;
+    width:100%;
+    table-layout:fixed;
+  }
+
+  .owner-users-table td:first-child{
+    white-space:normal;
+  }
+
+  .owner-users-username{
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+
+  .owner-users-email{
+    white-space:normal;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+
+  .owner-users-table td:nth-child(2),
+  .owner-users-table td:nth-child(3),
+  .owner-users-table td:nth-child(4),
+  .owner-users-table td:nth-child(5),
+  .owner-users-table td:nth-child(6){
+    white-space:normal;
+  }
+
+  .owner-users-table .status-badge{
+    white-space:normal;
+  }
+}

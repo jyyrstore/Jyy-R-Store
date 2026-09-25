@@ -587,18 +587,23 @@ function ownerPage(section){
       }
 
       else if(section==='users'){
-        const repo=require('../repositories/profiles.repository');
+        const repo=require('../repositories/users.repository');
         const pager=ownerPager(req);
 
-        data.items=await repo.list({
-          ...req.query,
+        const filters={
+          search:req.query.search||'',
+          role:req.query.role||'',
+          status:req.query.status||'',
           limit:pager.limit,
           offset:pager.offset
-        });
+        };
 
-        const total=await repo.count({
-          search:req.query.search||''
-        });
+        const [items,total]=await Promise.all([
+          repo.list(filters),
+          repo.count(filters)
+        ]);
+
+        data.items=items;
 
         data.ownerPagination=
           paginationMeta(

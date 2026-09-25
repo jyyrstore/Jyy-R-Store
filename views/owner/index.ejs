@@ -25,7 +25,111 @@
           <div class="panel"><h2>Status Pesanan</h2><div class="status-bars"><% (analytics.status||[]).forEach(s=>{ const max=Math.max(...(analytics.status||[]).map(x=>Number(x.count)||0),1); %><div><div class="bar-label"><span><%= s.status %></span><b><%= s.count %></b></div><div class="bar"><span style="width:<%= Math.min(100,Number(s.count)/max*100) %>%"></span></div></div><% }) %></div></div>
         </div>
       <% } else if(ownerSection==='products'){ %>
-        <div class="toolbar panel"><form class="filter-bar" method="get"><input name="search" value="<%= req.query.search||'' %>" placeholder="Cari nama/slug"><select name="status"><option value="">Semua status</option><option value="DRAFT" <%= req.query.status==='DRAFT'?'selected':'' %>>Draft</option><option value="PUBLISHED" <%= req.query.status==='PUBLISHED'?'selected':'' %>>Tersedia</option><option value="ARCHIVED" <%= req.query.status==='ARCHIVED'?'selected':'' %>>Diarsipkan</option></select><button class="button button-secondary">Filter</button></form></div>
+        <div class="toolbar panel">
+          <form class="owner-filter-bar" method="get">
+            <label class="owner-filter-field owner-filter-search">
+              <span class="owner-filter-label">Cari produk</span>
+              <span class="owner-filter-input-wrap">
+                <%- icon('search') %>
+                <input
+                  name="search"
+                  value="<%= req.query.search||'' %>"
+                  placeholder="Cari nama/slug"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-label="Cari produk berdasarkan nama atau slug"
+                >
+              </span>
+            </label>
+
+            <div class="owner-filter-field owner-filter-status">
+              <span class="owner-filter-label">Status</span>
+
+              <div
+                class="owner-filter-dropdown"
+                data-owner-filter-dropdown
+              >
+                <input
+                  type="hidden"
+                  name="status"
+                  value="<%= req.query.status||'' %>"
+                  data-owner-filter-value
+                >
+
+                <button
+                  class="owner-filter-trigger"
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  data-owner-filter-trigger
+                >
+                  <span data-owner-filter-label>
+                    <%= req.query.status==='DRAFT'
+                      ? 'Draft'
+                      : req.query.status==='PUBLISHED'
+                        ? 'Tersedia'
+                        : req.query.status==='ARCHIVED'
+                          ? 'Diarsipkan'
+                          : 'Semua status' %>
+                  </span>
+                  <span class="owner-filter-chevron" aria-hidden="true"></span>
+                </button>
+
+                <div
+                  class="owner-filter-menu"
+                  role="listbox"
+                  aria-label="Pilih status produk"
+                  data-owner-filter-menu
+                >
+                  <button
+                    type="button"
+                    class="owner-filter-option <%= !req.query.status?'active':'' %>"
+                    role="option"
+                    aria-selected="<%= !req.query.status ? 'true' : 'false' %>"
+                    data-owner-filter-option=""
+                  >
+                    <span>Semua status</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="owner-filter-option <%= req.query.status==='DRAFT'?'active':'' %>"
+                    role="option"
+                    aria-selected="<%= req.query.status==='DRAFT' ? 'true' : 'false' %>"
+                    data-owner-filter-option="DRAFT"
+                  >
+                    <span>Draft</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="owner-filter-option <%= req.query.status==='PUBLISHED'?'active':'' %>"
+                    role="option"
+                    aria-selected="<%= req.query.status==='PUBLISHED' ? 'true' : 'false' %>"
+                    data-owner-filter-option="PUBLISHED"
+                  >
+                    <span>Tersedia</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="owner-filter-option <%= req.query.status==='ARCHIVED'?'active':'' %>"
+                    role="option"
+                    aria-selected="<%= req.query.status==='ARCHIVED' ? 'true' : 'false' %>"
+                    data-owner-filter-option="ARCHIVED"
+                  >
+                    <span>Diarsipkan</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button class="button button-primary owner-filter-submit" type="submit">
+              <%- icon('search') %>
+              <span>Filter</span>
+            </button>
+          </form>
+        </div>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stock</th><th>Content</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
           <% if(!items?.length){ %><tr><td colspan="7"><div class="empty-state compact"><%- icon('package') %><h3>Belum ada produk</h3><p>Buat produk, lengkapi content, lalu publish saat semuanya siap.</p></div></td></tr><% } %>
           <% (items||[]).forEach(row=>{ %><tr><td><strong><%= row.name %></strong><small class="muted block">/<%= row.slug %></small></td><td><%= row.category_name||'—' %></td><td><%= formatIDR(row.price) %></td><td><%= row.stock %></td><td><span class="status-badge"><%= row.content_count||0 %></span></td><td><span class="status-badge status-<%= String(row.status).toLowerCase() %>"><%= labelStatus(row.status) %></span></td><td><div class="table-actions"><button class="button button-secondary button-small" data-owner-edit-product='<%- JSON.stringify({...row,thumbnail_url:row.thumbnail_path?assetUrl(publicAssetBucket,row.thumbnail_path):null}).replace(/'/g,"&#39;") %>'>Edit</button><button class="button button-secondary button-small"
@@ -55,14 +159,152 @@
       <% } else if(ownerSection==='categories'){ %>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Name</th><th>Slug</th><th>Active</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="4"><div class="empty-state compact"><%- icon('layers') %><h3>Belum ada kategori</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><%= row.name %></td><td><%= row.slug %></td><td><%= row.is_active?'Aktif':'Nonaktif' %></td><td><button class="button button-secondary button-small" data-owner-edit-category='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button></td></tr><% }) %></tbody></table></div></div>
       <% } else if(ownerSection==='users'){ %>
-        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>User</th><th>Role</th><th>Status</th><th>Balance</th><th>Orders</th><th>Registered</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="7"><div class="empty-state compact"><%- icon('user') %><h3>Belum ada user</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><strong><%= row.username %></strong><small class="muted block"><%= row.email %></small></td><td><%= row.role %></td><td><span class="status-badge status-<%= String(row.status).toLowerCase() %>"><%= labelStatus(row.status) %></span></td><td><%= formatIDR(row.balance) %></td><td><%= row.orders %></td><td><%= formatDate(row.created_at) %></td><td><div class="table-actions"><button class="button button-secondary button-small" data-owner-user="<%= row.id %>" data-owner-username="<%= row.username %>" data-owner-role="<%= row.role %>" data-owner-status="<%= row.status %>">Kelola</button></div></td></tr><% }) %></tbody></table></div>
+        <%
+          const userSearch=String(req.query.search||'');
+          const userRole=String(req.query.role||'').toUpperCase();
+          const userStatus=String(req.query.status||'').toUpperCase();
+          const hasUserFilters=!!(userSearch||userRole||userStatus);
+        %>
+
+        <div class="panel owner-users-toolbar">
+          <form class="owner-users-filter" method="get">
+            <label class="owner-users-filter-field owner-users-search">
+              <span>Cari pengguna</span>
+              <input
+                name="search"
+                value="<%= userSearch %>"
+                placeholder="Cari username atau email"
+                autocomplete="off"
+                spellcheck="false"
+              >
+            </label>
+
+            <label class="owner-users-filter-field">
+              <span>Role</span>
+              <select name="role">
+                <option value="" <%= !userRole?'selected':'' %>>Semua role</option>
+                <option value="USER" <%= userRole==='USER'?'selected':'' %>>User</option>
+                <option value="MODERATOR" <%= userRole==='MODERATOR'?'selected':'' %>>Moderator</option>
+                <option value="ADMIN" <%= userRole==='ADMIN'?'selected':'' %>>Admin</option>
+                <option value="OWNER" <%= userRole==='OWNER'?'selected':'' %>>Owner</option>
+              </select>
+            </label>
+
+            <label class="owner-users-filter-field">
+              <span>Status</span>
+              <select name="status">
+                <option value="" <%= !userStatus?'selected':'' %>>Semua status</option>
+                <option value="ACTIVE" <%= userStatus==='ACTIVE'?'selected':'' %>>Aktif</option>
+                <option value="SUSPENDED" <%= userStatus==='SUSPENDED'?'selected':'' %>>Suspended</option>
+                <option value="BANNED" <%= userStatus==='BANNED'?'selected':'' %>>Banned</option>
+                <option value="PENDING" <%= userStatus==='PENDING'?'selected':'' %>>Pending</option>
+              </select>
+            </label>
+
+            <button class="button button-primary owner-users-filter-submit" type="submit">
+              <%- icon('search') %>
+              <span>Filter</span>
+            </button>
+
+            <% if(hasUserFilters){ %>
+              <a class="button button-secondary owner-users-filter-reset" href="/owner/users">
+                Reset
+              </a>
+            <% } %>
+          </form>
+        </div>
+
+        <div class="panel table-panel">
+          <div class="table-scroll">
+            <table class="owner-users-table">
+              <colgroup>
+                <col class="owner-users-col-user">
+                <col class="owner-users-col-role">
+                <col class="owner-users-col-status">
+                <col class="owner-users-col-balance">
+                <col class="owner-users-col-orders">
+                <col class="owner-users-col-registered">
+                <col class="owner-users-col-action">
+              </colgroup>
+
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Balance</th>
+                  <th>Orders</th>
+                  <th>Registered</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <% if(!items?.length){ %>
+                  <tr>
+                    <td colspan="7">
+                      <div class="empty-state compact">
+                        <%- icon('user') %>
+                        <h3>Belum ada user</h3>
+                        <p>Tidak ada pengguna yang cocok dengan filter.</p>
+                      </div>
+                    </td>
+                  </tr>
+                <% } %>
+
+                <% (items||[]).forEach(row=>{ %>
+                  <tr>
+                    <td data-label="User">
+                      <strong class="owner-users-username"><%= row.username %></strong>
+                      <small class="muted block owner-users-email"><%= row.email %></small>
+                    </td>
+
+                    <td data-label="Role">
+                      <%= row.role %>
+                    </td>
+
+                    <td data-label="Status">
+                      <span class="status-badge status-<%= String(row.status).toLowerCase() %>">
+                        <%= labelStatus(row.status) %>
+                      </span>
+                    </td>
+
+                    <td data-label="Balance">
+                      <%= formatIDR(row.balance) %>
+                    </td>
+
+                    <td data-label="Orders">
+                      <%= row.orders %>
+                    </td>
+
+                    <td data-label="Registered">
+                      <%= formatDate(row.created_at) %>
+                    </td>
+
+                    <td data-label="Aksi">
+                      <div class="table-actions">
+                        <button
+                          class="button button-secondary button-small"
+                          data-owner-user="<%= row.id %>"
+                          data-owner-username="<%= row.username %>"
+                          data-owner-role="<%= row.role %>"
+                          data-owner-status="<%= row.status %>"
+                        >Kelola</button>
+                      </div>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+
 <%- include('../partials/pagination',{
   pagination:ownerPagination,
   param:'page',
   query:req.query,
   label:'Pagination pengguna'
 }) %>
-</div>
+        </div>
       <% } else if(['orders','payments','deposits'].includes(ownerSection)){ %>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><% const keys=dataKeys(ownerSection); keys.forEach(k=>{ %><th><%= k.replace(/_/g,' ') %></th><% }) %><% if(ownerSection==='payments'||ownerSection==='deposits'){ %><th>Created</th><% } %><% if(ownerSection==='orders'){ %><th>Aksi</th><% } %></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="<%= keys.length+((ownerSection==='payments'||ownerSection==='deposits')?1:0)+((ownerSection==='orders')?1:0) %>"><div class="empty-state compact"><%- icon('inbox') %><h3>Belum ada data</h3><p>Coba ubah filter atau rentang data.</p></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><% keys.forEach(k=>{ %><td><%= formatCell(row,k) %></td><% }) %><% if(ownerSection==='payments'||ownerSection==='deposits'){ %><td><%= formatDate(row.created_at) %></td><% } %><% if(ownerSection==='orders'){ %><td><div class="table-actions"><button class="button button-secondary button-small" data-owner-order-inspect='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Lihat</button><% if(row.status==='PAID'){ %><button class="button button-secondary button-small" data-owner-order-status="<%= row.id %>" data-status="PROCESSING">Proses</button><% } else if(row.status==='PROCESSING'){ %><button class="button button-success button-small" data-owner-order-status="<%= row.id %>" data-status="COMPLETED">Selesaikan</button><% } %><% if(row.status==='PENDING'){ %><button class="button button-danger button-small" data-owner-order-status="<%= row.id %>" data-status="CANCELLED">Batalkan</button><% } %></div></td><% } %></tr><% }) %></tbody></table></div>
 <%- include('../partials/pagination',{
@@ -131,6 +373,74 @@
 <% } %>
 </div>
 </section>
+
+<% if(ownerSection==='products'){ %>
+<script nonce="<%= cspNonce %>">
+(() => {
+  const root = document.querySelector('[data-owner-filter-dropdown]');
+  if (!root) return;
+
+  const trigger = root.querySelector('[data-owner-filter-trigger]');
+  const menu = root.querySelector('[data-owner-filter-menu]');
+  const value = root.querySelector('[data-owner-filter-value]');
+  const label = root.querySelector('[data-owner-filter-label]');
+  const options = [...root.querySelectorAll('[data-owner-filter-option]')];
+
+  if (!trigger || !menu || !value || !label) return;
+
+  const close = () => {
+    root.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+  };
+
+  const open = () => {
+    root.classList.add('open');
+    trigger.setAttribute('aria-expanded', 'true');
+  };
+
+  trigger.addEventListener('click', (event) => {
+    event.preventDefault();
+    root.classList.contains('open') ? close() : open();
+  });
+
+  options.forEach(option => {
+    option.addEventListener('click', () => {
+      const nextValue = option.dataset.ownerFilterOption || '';
+      value.value = nextValue;
+
+      label.textContent =
+        nextValue === 'DRAFT'
+          ? 'Draft'
+          : nextValue === 'PUBLISHED'
+            ? 'Tersedia'
+            : nextValue === 'ARCHIVED'
+              ? 'Diarsipkan'
+              : 'Semua status';
+
+      options.forEach(item => {
+        const selected = (item.dataset.ownerFilterOption || '') === nextValue;
+        item.classList.toggle('active', selected);
+        item.setAttribute('aria-selected', selected ? 'true' : 'false');
+      });
+
+      close();
+      trigger.focus();
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!root.contains(event.target)) close();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      close();
+      trigger.focus();
+    }
+  });
+})();
+</script>
+<% } %>
 
 <% if(ownerSection==='dashboard' || ownerSection==='reports'){ %>
 <script nonce="<%= cspNonce %>">

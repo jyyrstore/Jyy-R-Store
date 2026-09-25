@@ -190,3 +190,62 @@ test('profile CSS is responsive',()=>{
   assert.match(source,/\.profile-login-item/);
   assert.match(source,/@media\(max-width:600px\)/);
 });
+
+
+test('owner users UI uses filtered admin repository and responsive table labels',()=>{
+  const page=read('src/controllers/page.controller.js');
+  const view=read('views/owner/index.ejs');
+  const repo=read('src/repositories/users.repository.js');
+  const css=read('public/css/pages.css');
+
+  assert.match(
+    page,
+    /require\('\.\.\/repositories\/users\.repository'\)/
+  );
+
+  assert.match(
+    page,
+    /repo\.list\(filters\)/
+  );
+
+  assert.match(
+    page,
+    /repo\.count\(filters\)/
+  );
+
+  assert.match(
+    repo,
+    /USER_ROLES/
+  );
+
+  assert.match(
+    repo,
+    /USER_STATUSES/
+  );
+
+  assert.match(
+    repo,
+    /async function count/
+  );
+
+  for(const label of [
+    'User',
+    'Role',
+    'Status',
+    'Balance',
+    'Orders',
+    'Registered',
+    'Aksi'
+  ]){
+    assert.match(
+      view,
+      new RegExp(`data-label="${label}"`)
+    );
+  }
+
+  assert.match(view,/name="search"/);
+  assert.match(view,/name="role"/);
+  assert.match(view,/name="status"/);
+  assert.match(css,/\.owner-users-table/);
+  assert.match(css,/\.owner-users-filter/);
+});

@@ -1,6 +1,20 @@
 <section class="page-shell"><div class="page-header"><div><div class="eyebrow">Notifikasi</div><h1>Notifikasi</h1></div></div><div class="stack-list"><% notifications.forEach(n=>{ %><article class="notification-card <%= n.is_read?'read':'unread' %><%= (n.link || !n.is_read) ? ' has-actions' : '' %>" data-notification-id="<%= n.id %>">
   <div class="content-icon">
-    <%- icon(n.type==='PAYMENT'?'check':n.type==='TICKET'?'ticket':'info') %>
+    <%- icon(
+      n.type==='PAYMENT'
+        ? 'check'
+        : n.type==='TICKET'
+          ? 'ticket'
+          : n.type==='ORDER'
+            ? 'clipboard-list'
+            : n.type==='DEPOSIT'
+              ? 'deposit'
+              : n.type==='SYSTEM'
+                ? 'server'
+                : n.type==='PROMOTION'
+                  ? 'trophy'
+                  : 'info'
+    ) %>
   </div>
 
   <div class="notification-content">
