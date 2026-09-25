@@ -381,3 +381,188 @@ test('global picker system removes user-facing native selectors',()=>{
     /\.jyyr-file-picker/
   );
 });
+
+
+// PRODUCT CONTENT ACCESS CONSISTENCY V3
+
+test('public product detail is metadata-only and keeps VIEW tracking',()=>{
+  const api=read('src/controllers/api.controller.js');
+  const page=read('src/controllers/page.controller.js');
+  const service=read('src/services/product/product.service.js');
+
+  const apiMatch=api.match(
+    /const productController=\{[\s\S]*?\nconst cartController=\{/
+  );
+
+  assert.ok(apiMatch);
+
+  const apiProduct=apiMatch[0];
+
+  assert.ok(
+    apiProduct.includes(
+      'product.detailBySlug('
+    )
+  );
+
+  assert.ok(
+    apiProduct.includes(
+      'req.user?.id'
+    )
+  );
+
+  assert.ok(
+    !apiProduct.includes(
+      'delete p.contents'
+    )
+  );
+
+  const pageMatch=page.match(
+    /async function productDetail\(req,res,next\)\{[\s\S]*?\n\s*async function dashboard/
+  );
+
+  assert.ok(pageMatch);
+
+  const productDetail=pageMatch[0];
+
+  assert.ok(
+    productDetail.includes(
+      'products.detailBySlug('
+    )
+  );
+
+  assert.ok(
+    productDetail.includes(
+      'req.user?.id'
+    )
+  );
+
+  assert.ok(
+    !productDetail.includes(
+      'product.contents'
+    )
+  );
+
+  assert.ok(
+    !productDetail.includes(
+      'delivery.repository'
+    )
+  );
+
+  assert.ok(
+    !service.includes(
+      'product.contents=await products.contents(product.id)'
+    )
+  );
+
+  assert.ok(
+    service.includes(
+      "products.event(product.id,userId,'VIEW')"
+    )
+  );
+});
+
+test('product content delete keeps public/private bucket routing',()=>{
+  const source=read('src/controllers/api.controller.js');
+
+  assert.ok(
+    source.includes(
+      "const legacyPublic=path.startsWith('public-assets/')"
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'loadEnv().PUBLIC_ASSET_BUCKET'
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'loadEnv().PRIVATE_PRODUCT_BUCKET'
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      "path.replace(/^public-assets\\//,'')"
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'storage.remove(bucket,objectPath)'
+    )
+  );
+});
+
+test('product duplicate preserves legacy public storage semantics',()=>{
+  const source=read(
+    'src/repositories/products.repository.js'
+  );
+
+  assert.ok(
+    source.includes(
+      'const sourceBucket=legacyPublic'
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'const sourceObjectPath=legacyPublic'
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'const destinationObjectPath='
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'const destinationBucket=legacyPublic'
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'storagePath=legacyPublic'
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'bucket:destinationBucket'
+    )
+  );
+});
+
+test('product content preview migration is idempotent',()=>{
+  const source=read(
+    'database/migrations/035_product_content_preview_invariant.sql'
+  );
+
+  assert.ok(
+    source.includes(
+      'if not exists'
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'pg_constraint'
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      'product_contents_preview_invariant'
+    )
+  );
+
+  assert.ok(
+    source.includes(
+      "is_preview = (access_type = 'PREVIEW')"
+    )
+  );
+});

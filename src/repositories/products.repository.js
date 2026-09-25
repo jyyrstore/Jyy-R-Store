@@ -169,20 +169,39 @@ async function duplicate(id){
         let storagePath=null;
 
         if(c.storage_path){
+          const sourcePath=String(c.storage_path);
+          const legacyPublic=sourcePath.startsWith('public-assets/');
+
+          const sourceBucket=legacyPublic
+            ? env.PUBLIC_ASSET_BUCKET
+            : env.PRIVATE_PRODUCT_BUCKET;
+
+          const sourceObjectPath=legacyPublic
+            ? sourcePath.replace(/^public-assets\//,'')
+            : sourcePath;
+
           const ext=(String(c.storage_path).match(/\.[a-z0-9]+$/i)||[''])[0];
 
-          storagePath=
+          const destinationObjectPath=
             `products/${copy.id}/${crypto.randomUUID()}${ext}`;
 
+          const destinationBucket=legacyPublic
+            ? env.PUBLIC_ASSET_BUCKET
+            : env.PRIVATE_PRODUCT_BUCKET;
+
+          storagePath=legacyPublic
+            ? `public-assets/${destinationObjectPath}`
+            : destinationObjectPath;
+
           await storage.copy(
-            env.PRIVATE_PRODUCT_BUCKET,
-            c.storage_path,
-            storagePath
+            sourceBucket,
+            sourceObjectPath,
+            destinationObjectPath
           );
 
           createdObjects.push({
-            bucket:env.PRIVATE_PRODUCT_BUCKET,
-            path:storagePath
+            bucket:destinationBucket,
+            path:destinationObjectPath
           });
         }
 

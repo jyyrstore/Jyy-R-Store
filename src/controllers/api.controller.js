@@ -44,7 +44,21 @@ const authController={
 
 const productController={
  list:async(req,res)=>{const data=await product.catalog(req.query); const items=data.items.map(p=>({...p,thumbnail_url:p.thumbnail_path?storage.publicUrl(loadEnv().PUBLIC_ASSET_BUCKET,p.thumbnail_path):null}));return ok(res,{...data,items})},
- detail:async(req,res)=>{const p=await product.detailBySlug(req.params.slug,req.user?.id); if(p.thumbnail_path)p.thumbnail_url=storage.publicUrl(loadEnv().PUBLIC_ASSET_BUCKET,p.thumbnail_path);return ok(res,p)},
+ detail:async(req,res)=>{
+    const p=await product.detailBySlug(
+      req.params.slug,
+      req.user?.id
+    );
+
+    if(p.thumbnail_path){
+      p.thumbnail_url=storage.publicUrl(
+        loadEnv().PUBLIC_ASSET_BUCKET,
+        p.thumbnail_path
+      );
+    }
+
+    return ok(res,p)
+  },
  categories:async(req,res)=>ok(res,await categories.list(true)),
  create:async(req,res)=>ok(res,await product.create(req.body),201),
  update:async(req,res)=>ok(res,await product.update(req.params.id,req.body)),
@@ -160,7 +174,7 @@ const p=await repo.addContent({
   access_type:accessType,
   is_preview:accessType==='PREVIEW'
 });await recordOwnerAudit(req,{action:'CREATE_PRODUCT_CONTENT',entityType:'product_content',entityId:p.id,metadata:{productId:req.params.id,type:p.type}});return ok(res,p,201)},productContents:async(req,res)=>ok(res,await require('../repositories/products.repository').contents(req.params.id)),
- productContentDelete:async(req,res)=>{const repo=require('../repositories/products.repository');const deleted=await repo.deleteContent(req.params.contentId,req.params.id);if(!deleted)throw Object.assign(new Error('Content tidak ditemukan pada product tersebut.'),{status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true});if(deleted.storage_path){const ref=(await query('select 1 from product_contents where storage_path=$1 limit 1',[deleted.storage_path])).rowCount;if(!ref)await storage.remove(loadEnv().PRIVATE_PRODUCT_BUCKET,deleted.storage_path).catch(()=>{});}await recordOwnerAudit(req,{action:'DELETE_PRODUCT_CONTENT',entityType:'product_content',entityId:req.params.contentId,metadata:{productId:req.params.id}});return ok(res,{})},
+ productContentDelete:async(req,res)=>{const repo=require('../repositories/products.repository');const deleted=await repo.deleteContent(req.params.contentId,req.params.id);if(!deleted)throw Object.assign(new Error('Content tidak ditemukan pada product tersebut.'),{status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true});if(deleted.storage_path){const path=String(deleted.storage_path);const legacyPublic=path.startsWith('public-assets/');const bucket=legacyPublic?loadEnv().PUBLIC_ASSET_BUCKET:loadEnv().PRIVATE_PRODUCT_BUCKET;const objectPath=legacyPublic?path.replace(/^public-assets\//,''):path;const ref=(await query('select 1 from product_contents where storage_path=$1 limit 1',[deleted.storage_path])).rowCount;if(!ref)await storage.remove(bucket,objectPath).catch(()=>{});}await recordOwnerAudit(req,{action:'DELETE_PRODUCT_CONTENT',entityType:'product_content',entityId:req.params.contentId,metadata:{productId:req.params.id}});return ok(res,{})},
  categories:async(req,res)=>ok(res,await categories.list(false)),
  categoryCreate:async(req,res)=>ok(res,await categories.create({...req.body,slug:makeSlug(req.body.slug||req.body.name)}),201),
  categoryUpdate:async(req,res)=>ok(res,await categories.update(req.params.id,{...req.body,slug:makeSlug(req.body.slug||req.body.name)})),
