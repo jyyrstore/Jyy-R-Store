@@ -1,5 +1,41 @@
-<aside class="sidebar" id="sidebar">
+<%
+const ownerMode=profile?.role==='OWNER' &&
+  (req.path==='/owner' || req.path.startsWith('/owner/'));
+
+const activeOwnerSection=req.path.split('/')[2] || 'dashboard';
+
+const ownerNav=[['dashboard','Dashboard','dashboard'],['products','Produk','package'],['categories','Kategori','layers'],['orders','Pesanan','clipboard-list'],['payments','Pembayaran','credit-card'],['deposits','Deposit','deposit'],['users','Pengguna','users'],['roles','Peran','key'],['tickets','Tiket','ticket'],['messages','Pesan','message'],['services','Layanan','wrench'],['information','Informasi','info'],['faq','FAQ','help-circle'],['notifications','Notifikasi','bell'],['maintenance','Pemeliharaan','tool'],['storage','Penyimpanan','database'],['activity','Log Aktivitas','activity'],['login-history','Riwayat Login','log-in'],['reports','Laporan','bar-chart'],['top-orders','Pesanan Teratas','trophy'],['security','Keamanan','shield'],['refunds','Pengembalian','rotate-ccw'],['settings','Pengaturan','sliders'],['system','Sistem','server']];
+%>
+<aside class="sidebar <%= ownerMode?'sidebar-owner':'' %>" id="sidebar">
   <div class="sidebar-inner">
+    <% if (ownerMode) { %>
+      <a class="nav-link sidebar-owner-back" href="/dashboard">
+        <span class="sidebar-back-arrow" aria-hidden="true">←</span>
+        <span>Kembali ke Dashboard</span>
+      </a>
+
+      <div class="sidebar-section-label">Owner Panel</div>
+
+      <% ownerNav.forEach(([key,label,ic])=>{ %>
+        <a
+          class="nav-link <%= activeOwnerSection===key?'active':'' %>"
+          href="/owner/<%= key %>"
+        >
+          <%- icon(ic) %>
+          <span><%= label %></span>
+        </a>
+      <% }) %>
+
+      <% if (currentUser) { %>
+        <div class="sidebar-section-label">Profil & Sesi</div>
+        <a class="nav-link <%= req.path.startsWith('/profile')?'active':'' %>" href="/profile">
+          <%- icon('user') %><span>Profil</span>
+        </a>
+        <button class="nav-link nav-button" data-logout>
+          <%- icon('logout') %><span>Keluar</span>
+        </button>
+      <% } %>
+    <% } else { %>
     <div class="sidebar-section-label">Toko</div>
     <a class="nav-link <%= req.path==='/'?'active':'' %>" href="/"><%- icon('home') %><span>Beranda</span></a>
     <a class="nav-link <%= req.path==='/store'?'active':'' %>" href="/store"><%- icon('package') %><span>Toko</span></a>
@@ -35,6 +71,7 @@
       <div class="sidebar-section-label">Profil & Sesi</div>
       <a class="nav-link <%= req.path.startsWith('/profile')?'active':'' %>" href="/profile"><%- icon('user') %><span>Profil</span></a>
       <button class="nav-link nav-button" data-logout><%- icon('logout') %><span>Keluar</span></button>
+    <% } %>
     <% } %>
   </div>
 </aside>

@@ -286,13 +286,17 @@ else
 fi
 
 echo
+echo
 echo "=== OWNER ROUTE / SIDEBAR CONSISTENCY ==="
 
 node - <<'NODE'
 const fs = require('fs');
 
 const routes = fs.readFileSync('src/routes/index.js', 'utf8');
-const sidebar = fs.readFileSync('views/partials/owner-sidebar.ejs', 'utf8');
+const sidebar = fs.readFileSync('views/partials/sidebar.ejs', 'utf8');
+const ownerPage = fs.readFileSync('views/owner/index.ejs', 'utf8');
+
+const ownerPartial = 'views/partials/owner-sidebar.ejs';
 
 const routeMatch = routes.match(
   /const ownerSections=\[([^\]]+)\]/
@@ -303,30 +307,100 @@ if (!routeMatch) {
   process.exit(1);
 }
 
-const routeSections = [...routeMatch[1].matchAll(/'([^']+)'/g)]
-  .map(m => m[1]);
+const routeSections = [
+  ...routeMatch[1].matchAll(/'([^']+)'/g)
+].map(m => m[1]);
 
 const navMatch = sidebar.match(
-  /const ownerNav=\[([\s\S]*?)\];/
+  /const ownerNav=([\s\S]*?);/
 );
 
 if (!navMatch) {
-  console.error('❌ ownerNav tidak ditemukan');
+  console.error('❌ ownerNav tidak ditemukan di sidebar utama');
   process.exit(1);
 }
 
-const navSections = [...navMatch[1].matchAll(/\['([^']+)'/g)]
-  .map(m => m[1]);
+const navSections = [
+  ...navMatch[1].matchAll(/\['([^']+)'/g)
+].map(m => m[1]);
 
-const missing = navSections.filter(x => !routeSections.includes(x));
+if (!sidebar.includes(
+  "const ownerMode=profile?.role==='OWNER'"
+)) {
+  console.error('❌ ownerMode tidak ditemukan di sidebar utama');
+  process.exit(1);
+}
+
+if (!sidebar.includes(
+  "href=\"/owner/<%= key %>\""
+)) {
+  console.error('❌ Dynamic Owner navigation tidak ditemukan');
+  process.exit(1);
+}
+
+if (!sidebar.includes(
+  'href="/dashboard"'
+) || !sidebar.includes(
+  'Kembali ke Dashboard'
+)) {
+  console.error('❌ Tombol kembali ke Dashboard tidak ditemukan');
+  process.exit(1);
+}
+
+if (ownerPage.includes(
+  "partials/owner-sidebar"
+)) {
+  console.error('❌ owner/index.ejs masih memakai partial owner-sidebar lama');
+  process.exit(1);
+}
+
+if (fs.existsSync(ownerPartial)) {
+  console.error(
+    '❌ views/partials/owner-sidebar.ejs masih ada. ' +
+    'Arsitektur sekarang menggunakan sidebar utama.'
+  );
+  process.exit(1);
+}
+
+if (navSections.length !== routeSections.length) {
+  console.error(
+    `❌ Jumlah Owner menu (${navSections.length}) ` +
+    `berbeda dengan Owner routes (${routeSections.length})`
+  );
+  process.exit(1);
+}
+
+const missing = routeSections.filter(
+  section => !navSections.includes(section)
+);
+
+const extra = navSections.filter(
+  section => !routeSections.includes(section)
+);
 
 if (missing.length) {
-  console.error('❌ Sidebar memiliki route Owner yang belum terdaftar:');
+  console.error('❌ Route Owner belum ada di sidebar:');
   console.error(missing.join(', '));
   process.exit(1);
 }
 
-console.log(`✅ ${navSections.length} Owner sidebar sections memiliki route`);
+if (extra.length) {
+  console.error('❌ Sidebar memiliki menu Owner tanpa route:');
+  console.error(extra.join(', '));
+  process.exit(1);
+}
+
+if (navSections.join('|') !== routeSections.join('|')) {
+  console.error(
+    '❌ Urutan Owner menu di sidebar berbeda dengan ownerSections.'
+  );
+  process.exit(1);
+}
+
+console.log(
+  `✅ ${navSections.length} Owner sidebar sections ` +
+  `sinkron dengan routes`
+);
 NODE
 
 if [ $? -eq 0 ]; then
@@ -335,7 +409,6 @@ else
   fail "Owner route/sidebar consistency"
 fi
 
-echo
 echo "=== STALE CSS REFERENCES ==="
 
 STALE_CSS=0

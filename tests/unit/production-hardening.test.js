@@ -894,3 +894,120 @@ test('payment webhook can recover placeholder by order id',()=>{
     /from payments where order_id=\$1/
   );
 });
+
+
+// OWNER SIDEBAR -> MAIN SIDEBAR V2
+
+test('owner mode replaces the main sidebar content instead of nesting a second sidebar',()=>{
+  const sidebar=read('views/partials/sidebar.ejs');
+  const owner=read('views/owner/index.ejs');
+  const navigation=read('public/js/navigation.js');
+  const navigationCss=read('public/css/navigation.css');
+  const responsiveCss=read('public/css/responsive.css');
+  const routes=read('src/routes/index.js');
+  const ownerPartial=path.join(root,'views/partials/owner-sidebar.ejs');
+
+  assert.match(
+    sidebar,
+    /const ownerMode=profile\?\.role==='OWNER'/
+  );
+
+  assert.match(
+    sidebar,
+    /req\.path==='\/owner' \|\| req\.path\.startsWith\('\/owner\/'\)/
+  );
+
+  assert.match(
+    sidebar,
+    /<% if \(ownerMode\) \{ %>[\s\S]*?Kembali ke Dashboard[\s\S]*?<% \} else \{ %>/
+  );
+
+  assert.doesNotMatch(
+    sidebar,
+    /\bownerSection\b/
+  );
+
+  assert.match(
+    sidebar,
+    /sidebar-owner-back/
+  );
+
+  assert.match(
+    sidebar,
+    /href="\/dashboard"[\s\S]*?Kembali ke Dashboard/
+  );
+
+  const routeMatch=routes.match(
+    /const ownerSections=\[([\s\S]*?)\];/
+  );
+
+  assert.ok(routeMatch);
+
+  const sections=[...routeMatch[1].matchAll(/'([^']+)'/g)]
+    .map(match=>match[1]);
+
+  assert.equal(
+    sections.length,
+    24
+  );
+
+  assert.match(
+    sidebar,
+    /href="\/owner\/<%= key %>"/
+  );
+
+  const ownerNavMatch=sidebar.match(
+    /const ownerNav=(\[[\s\S]*?\]);/
+  );
+
+  assert.ok(ownerNavMatch);
+
+  const ownerNavKeys=[...ownerNavMatch[1].matchAll(
+    /\['([^']+)'/g
+  )].map(match=>match[1]);
+
+  assert.deepEqual(
+    ownerNavKeys,
+    sections
+  );
+
+  assert.match(
+    sidebar,
+    /<div class="sidebar-section-label">Profil & Sesi<\/div>/
+  );
+
+  assert.match(
+    sidebar,
+    /data-logout/
+  );
+
+  assert.doesNotMatch(
+    owner,
+    /partials\/owner-sidebar/
+  );
+
+  assert.doesNotMatch(
+    owner,
+    /class="owner-layout"/
+  );
+
+  assert.doesNotMatch(
+    navigationCss,
+    /\.owner-layout|\.owner-sidebar/
+  );
+
+  assert.doesNotMatch(
+    responsiveCss,
+    /\.owner-layout|\.owner-sidebar/
+  );
+
+  assert.match(
+    navigation,
+    /document\.querySelector\('\.sidebar'\)/
+  );
+
+  assert.equal(
+    fs.existsSync(ownerPartial),
+    false
+  );
+});

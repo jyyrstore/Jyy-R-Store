@@ -1,8 +1,6 @@
 <script nonce="<%= cspNonce %>">window.__OWNER_CATEGORIES=<%- JSON.stringify(typeof categories !== "undefined" ? categories : []) %>;</script>
 <section class="page-shell owner-page">
-  <div class="owner-layout">
-    <%- include('../partials/owner-sidebar') %>
-    <div class="owner-content">
+  <div class="owner-content">
       <div class="page-header">
         <div><div class="eyebrow">Owner</div><h1><%= ownerSection==='dashboard'?'Ringkasan':ownerSection.replace(/(^|-)/g,m=>m.toUpperCase()).replace(/-/g,' ') %></h1><p>Semua aksi sensitif tetap diverifikasi server-side dan dicatat ke activity log.</p></div>
         <% if(['products','categories','services','faq','information','notifications'].includes(ownerSection)){ %>
@@ -510,7 +508,6 @@
   label:'Pagination refund'
 }) %>
 <% } %>
-</div>
 </section>
 
 <% if(ownerSection==='products'){ %>
