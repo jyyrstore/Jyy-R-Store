@@ -58,6 +58,16 @@ else
 fi
 
 echo
+echo
+echo "=== NPM LINT ==="
+
+if npm run lint; then
+  pass "npm run lint"
+else
+  fail "npm run lint"
+fi
+
+echo
 echo "=== NPM VERIFY ==="
 
 if npm run verify; then

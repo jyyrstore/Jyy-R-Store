@@ -20,10 +20,117 @@ async function createWalletOrder(userId,idempotencyKey){ const existing=await qu
   await carts.clear(userId,client); await notifications.create({user_id:userId,type:'ORDER',title:'Pembelian berhasil',body:`Order ${order.order_number} berhasil dibayar dengan saldo.`,link:`/orders/${order.id}`},client); await notifications.create({user_id:userId,type:'PAYMENT',title:'Pembayaran berhasil',body:`Pembayaran ${order.order_number} berhasil.`,link:`/orders/${order.id}`},client);
   return {order};
  }); }
-async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){ const existing=idempotencyKey?(await query('select * from orders where user_id=$1 and idempotency_key=$2',[userId,idempotencyKey])).rows[0]:null; if(existing) return {order:existing,duplicate:true}; const cartData=await preview(userId); if(!cartData.items.length) throw badRequest('CART_EMPTY','Cart kosong.');
- return withTransaction(async(client)=>{ const productIds=cartData.items.map(i=>i.product_id); const rows=(await client.query('select id,stock,reserved_stock,status,name,price from products where id=any($1::uuid[]) for update',[productIds])).rows; const by=new Map(rows.map(r=>[r.id,r])); for(const i of cartData.items){ const p=by.get(i.product_id); if(!p||p.status!=='PUBLISHED'||Number(p.stock)-Number(p.reserved_stock)<Number(i.quantity)) throw badRequest('INSUFFICIENT_STOCK',`Stock ${p?.name||'produk'} tidak mencukupi.`); }
- const order=(await client.query("insert into orders(order_number,user_id,subtotal,total,payment_method,status,idempotency_key) values($1,$2,$3,$3,'GATEWAY','PENDING',$4) returning *",[orderNumber(),userId,cartData.total,idempotencyKey||null])).rows[0]; for(const i of cartData.items){ await client.query('insert into order_items(order_id,product_id,product_name,unit_price,quantity,line_total) values($1,$2,$3,$4,$5,$6)',[order.id,i.product_id,i.name,i.price,i.quantity,i.lineTotal]); await client.query('update products set reserved_stock=reserved_stock+$2 where id=$1',[i.product_id,i.quantity]); }
- return {order,items:cartData.items}; }); }
+async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){
+  const existing=idempotencyKey
+    ? (await query(
+        'select * from orders where user_id=$1 and idempotency_key=$2',
+        [userId,idempotencyKey]
+      )).rows[0]
+    : null;
+
+  if(existing){
+    return {
+      order:existing,
+      duplicate:true
+    };
+  }
+
+  return withTransaction(async(client)=>{
+    const cartRes=await client.query(
+      `select
+         ci.id item_id,
+         ci.product_id,
+         ci.quantity,
+         p.name,
+         p.price,
+         p.stock,
+         p.reserved_stock,
+         p.status,
+         p.id
+       from cart_items ci
+       join carts c on c.id=ci.cart_id
+       join products p on p.id=ci.product_id
+       where c.user_id=$1
+       for update`,
+      [userId]
+    );
+
+    if(!cartRes.rows.length){
+      throw badRequest('CART_EMPTY','Cart kosong.');
+    }
+
+    const items=cartRes.rows.map(i=>({
+      ...i,
+      quantity:Number(i.quantity),
+      price:Number(i.price)
+    }));
+
+    let total=0;
+
+    for(const i of items){
+
+      if(i.status!=='PUBLISHED'){
+        throw badRequest(
+          'PRODUCT_UNAVAILABLE',
+          `Produk ${i.name} tidak tersedia.`
+        );
+      }
+
+      if(
+        Number(i.stock)-Number(i.reserved_stock)
+        < Number(i.quantity)
+      ){
+        throw badRequest(
+          'INSUFFICIENT_STOCK',
+          `Stock ${i.name} tidak mencukupi.`
+        );
+      }
+
+      i.lineTotal=Number(i.price)*Number(i.quantity);
+      total+=i.lineTotal;
+    }
+
+    total=idr(total);
+
+    const order=(await client.query(
+      "insert into orders(order_number,user_id,subtotal,total,payment_method,status,idempotency_key) values($1,$2,$3,$3,'GATEWAY','PENDING',$4) returning *",
+      [
+        orderNumber(),
+        userId,
+        total,
+        idempotencyKey||null
+      ]
+    )).rows[0];
+
+    for(const i of items){
+
+      await client.query(
+        'insert into order_items(order_id,product_id,product_name,unit_price,quantity,line_total) values($1,$2,$3,$4,$5,$6)',
+        [
+          order.id,
+          i.product_id,
+          i.name,
+          i.price,
+          i.quantity,
+          i.lineTotal
+        ]
+      );
+
+      await client.query(
+        'update products set reserved_stock=reserved_stock+$2 where id=$1',
+        [
+          i.product_id,
+          i.quantity
+        ]
+      );
+    }
+
+    return {
+      order,
+      items
+    };
+  });
+}
 
 async function ownerUpdateStatus(ownerId,orderId,status){
   const allowed=new Set(['PENDING','PAID','PROCESSING','COMPLETED','CANCELLED']);

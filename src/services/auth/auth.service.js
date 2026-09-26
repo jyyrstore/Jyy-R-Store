@@ -1,167 +1,168 @@
+const { maskIp, parseUserAgent } = require('../../utils/normalization');
 const { supabasePublic }=require('../../config/supabase');
-const profiles=require('../../repositories/profiles.repository'); const {parseUserAgent}=require('../../utils/normalization');
+const profiles=require('../../repositories/profiles.repository');
 const { query }=require('../../config/database'); const {loadEnv}=require('../../config/env');
 
 async function register({email,password,username}){
-  const existing=await profiles.findByUsername(username);
-  if(existing) throw Object.assign(new Error('Username sudah digunakan.'),{status:409,code:'USERNAME_EXISTS',expose:true});
+ const existing=await profiles.findByUsername(username);
+ if(existing) throw Object.assign(new Error('Username sudah digunakan.'),{status:409,code:'USERNAME_EXISTS',expose:true});
 
-  const client=supabasePublic();
-  const {data,error}=await client.auth.signUp({
-    email,
-    password,
-    options:{
-      data:{username},
-      emailRedirectTo:`${loadEnv().APP_URL}/auth/callback`
-    }
-  });
+ const client=supabasePublic();
+ const {data,error}=await client.auth.signUp({
+ email,
+ password,
+ options:{
+ data:{username},
+ emailRedirectTo:`${loadEnv().APP_URL}/auth/callback`
+ }
+ });
 
-  if(error) throw Object.assign(new Error(error.message),{status:400,code:'REGISTER_FAILED',expose:true});
-  if(data.user) await profiles.create({id:data.user.id,username,email});
-  return data;
+ if(error) throw Object.assign(new Error(error.message),{status:400,code:'REGISTER_FAILED',expose:true});
+ if(data.user) await profiles.create({id:data.user.id,username,email});
+ return data;
 }
 
 async function login({email,password},{ip,userAgent}={}){
-  const client=supabasePublic();
-  const {data,error}=await client.auth.signInWithPassword({email,password});
+ const client=supabasePublic();
+ const {data,error}=await client.auth.signInWithPassword({email,password});
 
-  if(error){
-    const loginMeta=parseUserAgent(userAgent);
+ if(error){
+ const loginMeta=parseUserAgent(userAgent);
 
-    await query(
-      "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values(null,$1,$2,$3,'FAILED',now())",
-      [loginMeta.device,loginMeta.browser,ip||null]
-    ).catch(()=>{});
+ await query(
+ "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values(null,$1,$2,$3,'FAILED',now())",
+ [loginMeta.device,loginMeta.browser,maskIp(ip)]
+ ).catch(()=>{});
 
-    throw Object.assign(new Error('Email atau password tidak valid.'),{
-      status:401,
-      code:'INVALID_CREDENTIALS',
-      expose:true
-    });
-  }
+ throw Object.assign(new Error('Email atau password tidak valid.'),{
+ status:401,
+ code:'INVALID_CREDENTIALS',
+ expose:true
+ });
+ }
 
-  const profile=await profiles.findById(data.user.id);
+ const profile=await profiles.findById(data.user.id);
 
-  if(profile?.status==='BANNED'){
-    const loginMeta=parseUserAgent(userAgent);
+ if(profile?.status==='BANNED'){
+ const loginMeta=parseUserAgent(userAgent);
 
-    await query(
-      "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
-      [data.user.id,loginMeta.device,loginMeta.browser,ip||null]
-    ).catch(()=>{});
+ await query(
+ "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
+ [data.user.id,loginMeta.device,loginMeta.browser,maskIp(ip)]
+ ).catch(()=>{});
 
-    throw Object.assign(new Error('Akun dinonaktifkan.'),{
-      status:403,
-      code:'ACCOUNT_BANNED',
-      expose:true
-    });
-  }
+ throw Object.assign(new Error('Akun dinonaktifkan.'),{
+ status:403,
+ code:'ACCOUNT_BANNED',
+ expose:true
+ });
+ }
 
-  if(profile?.status==='SUSPENDED'){
-    const loginMeta=parseUserAgent(userAgent);
+ if(profile?.status==='SUSPENDED'){
+ const loginMeta=parseUserAgent(userAgent);
 
-    await query(
-      "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
-      [data.user.id,loginMeta.device,loginMeta.browser,ip||null]
-    ).catch(()=>{});
+ await query(
+ "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
+ [data.user.id,loginMeta.device,loginMeta.browser,maskIp(ip)]
+ ).catch(()=>{});
 
-    throw Object.assign(new Error('Akun sedang ditangguhkan.'),{
-      status:403,
-      code:'ACCOUNT_SUSPENDED',
-      expose:true
-    });
-  }
+ throw Object.assign(new Error('Akun sedang ditangguhkan.'),{
+ status:403,
+ code:'ACCOUNT_SUSPENDED',
+ expose:true
+ });
+ }
 
-  if(!profile){
-    await profiles.create({
-      id:data.user.id,
-      username:data.user.email.split('@')[0].slice(0,32),
-      email:data.user.email
-    });
-  }
+ if(!profile){
+ await profiles.create({
+ id:data.user.id,
+ username:data.user.email.split('@')[0].slice(0,32),
+ email:data.user.email
+ });
+ }
 
-  await query('update profiles set last_login_at=now() where id=$1',[data.user.id]);
-  await query('insert into wallets(user_id) values($1) on conflict do nothing',[data.user.id]);
-  const loginMeta=parseUserAgent(userAgent);
+ await query('update profiles set last_login_at=now() where id=$1',[data.user.id]);
+ await query('insert into wallets(user_id) values($1) on conflict do nothing',[data.user.id]);
+ const loginMeta=parseUserAgent(userAgent);
 
-  await query(
-    "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'SUCCESS',now())",
-    [data.user.id,loginMeta.device,loginMeta.browser,ip||null]
-  );
+ await query(
+ "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'SUCCESS',now())",
+ [data.user.id,loginMeta.device,loginMeta.browser,maskIp(ip)]
+ );
 
-  return data;
+ return data;
 }
 
 async function logout(){
-  try{
-    await supabasePublic().auth.signOut();
-  }catch{/* logout failure is intentionally ignored */}
+ try{
+ await supabasePublic().auth.signOut();
+ }catch{/* logout failure is intentionally ignored */}
 }
 
 async function exchangeCode(code){
-  const {data,error}=await supabasePublic().auth.exchangeCodeForSession(code);
+ const {data,error}=await supabasePublic().auth.exchangeCodeForSession(code);
 
-  if(error){
-    throw Object.assign(new Error('Kode autentikasi tidak valid atau sudah kedaluwarsa.'),{
-      status:400,
-      code:'AUTH_CODE_INVALID',
-      expose:true
-    });
-  }
+ if(error){
+ throw Object.assign(new Error('Kode autentikasi tidak valid atau sudah kedaluwarsa.'),{
+ status:400,
+ code:'AUTH_CODE_INVALID',
+ expose:true
+ });
+ }
 
-  return data;
+ return data;
 }
 
 async function sendPasswordReset(email){
-  const {error}=await supabasePublic().auth.resetPasswordForEmail(
-    email,
-    {
-      redirectTo:`${loadEnv().APP_URL}/auth/callback?next=/auth/reset-password`
-    }
-  );
+ const {error}=await supabasePublic().auth.resetPasswordForEmail(
+ email,
+ {
+ redirectTo:`${loadEnv().APP_URL}/auth/callback?next=/auth/reset-password`
+ }
+ );
 
-  if(error){
-    throw Object.assign(new Error('Tidak dapat mengirim email reset password.'),{
-      status:400,
-      code:'RESET_FAILED',
-      expose:true
-    });
-  }
+ if(error){
+ throw Object.assign(new Error('Tidak dapat mengirim email reset password.'),{
+ status:400,
+ code:'RESET_FAILED',
+ expose:true
+ });
+ }
 }
 
 async function updatePassword({accessToken,refreshToken},password){
-  if(!accessToken||!refreshToken){
-    throw Object.assign(new Error('Sesi reset password tidak valid.'),{
-      status:401,
-      code:'RESET_SESSION_INVALID',
-      expose:true
-    });
-  }
+ if(!accessToken||!refreshToken){
+ throw Object.assign(new Error('Sesi reset password tidak valid.'),{
+ status:401,
+ code:'RESET_SESSION_INVALID',
+ expose:true
+ });
+ }
 
-  const client=supabasePublic();
+ const client=supabasePublic();
 
-  const {error:setError}=await client.auth.setSession({
-    access_token:accessToken,
-    refresh_token:refreshToken
-  });
+ const {error:setError}=await client.auth.setSession({
+ access_token:accessToken,
+ refresh_token:refreshToken
+ });
 
-  if(setError){
-    throw Object.assign(new Error('Sesi reset password tidak valid.'),{
-      status:401,
-      code:'RESET_SESSION_INVALID',
-      expose:true
-    });
-  }
+ if(setError){
+ throw Object.assign(new Error('Sesi reset password tidak valid.'),{
+ status:401,
+ code:'RESET_SESSION_INVALID',
+ expose:true
+ });
+ }
 
-  const {error}=await client.auth.updateUser({password});
+ const {error}=await client.auth.updateUser({password});
 
-  if(error){
-    throw Object.assign(new Error('Password gagal diperbarui.'),{
-      status:400,
-      code:'PASSWORD_UPDATE_FAILED',
-      expose:true
-    });
-  }
+ if(error){
+ throw Object.assign(new Error('Password gagal diperbarui.'),{
+ status:400,
+ code:'PASSWORD_UPDATE_FAILED',
+ expose:true
+ });
+ }
 }
 
 module.exports={register,login,logout,exchangeCode,sendPasswordReset,updatePassword};

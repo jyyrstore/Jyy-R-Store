@@ -291,5 +291,6 @@ test('scheduled expiry route is protected and configured for GitHub Actions Cron
   assert.match(cron,/CRON_SECRET/);
   assert.match(workflow,/cron:\s*'\*\/5 \* \* \* \*'/);
   assert.match(workflow,/secrets\.CRON_SECRET/);
-  assert.match(workflow,/https:\/\/jyyrstore\.vercel\.app\/api\/cron\/expire/);
+  assert.match(workflow,/APP_URL:\s*\$\{\{\s*secrets\.APP_URL\s*\}\}/);
+assert.match(workflow,/\$\{APP_URL%\/\}\/api\/cron\/expire/);
 });

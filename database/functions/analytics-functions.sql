@@ -8,3 +8,6 @@ select jsonb_build_object(
 ); $$;
 revoke all on function public.owner_analytics(timestamptz,timestamptz) from public,anon,authenticated;
 grant execute on function public.owner_analytics(timestamptz,timestamptz) to service_role;
+
+alter function public.owner_analytics(timestamptz,timestamptz)
+  set search_path = pg_catalog, public;

@@ -1,7 +1,7 @@
 # Deployment
 
 1. Provide the real owner-supplied environment variables through the deployment platform secret manager. Do not commit `.env`.
-2. Use Node 22 or newer.
+2. Use Node.js 24.x.
 3. Run `npm install` in CI so `package-lock.json` is generated/verified from the resolved dependency set.
 4. Run `npm run build`, `npm test`, and `npm run verify` before promotion.
 5. Run `npm run migrate` against the target Supabase PostgreSQL project before the application begins accepting traffic.

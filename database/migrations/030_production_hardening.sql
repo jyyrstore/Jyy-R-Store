@@ -36,19 +36,3 @@ create index if not exists idx_ticket_messages_sender_id on public.ticket_messag
 create index if not exists idx_ticket_messages_ticket_id on public.ticket_messages(ticket_id);
 create index if not exists idx_tickets_user_id on public.tickets(user_id);
 create index if not exists idx_wallet_transactions_wallet_id on public.wallet_transactions(wallet_id);
-
-alter function public.owner_analytics(timestamptz,timestamptz)
-  set search_path = pg_catalog, public;
-
-alter function public.touch_order_paid(uuid)
-  set search_path = pg_catalog, public;
-
-alter function public.audit_sensitive_change()
-  set search_path = pg_catalog, public;
-
-alter function public.set_updated_at()
-  set search_path = pg_catalog, public;
-
-revoke execute on function public.rls_auto_enable() from public;
-revoke execute on function public.rls_auto_enable() from anon, authenticated;
-grant execute on function public.rls_auto_enable() to service_role;

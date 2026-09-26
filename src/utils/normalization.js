@@ -1,5 +1,33 @@
 // Small input normalization helper for deterministic formats; not a policy engine.
 
+function maskIp(ip){
+  const value=String(ip||'').trim();
+
+  if(!value){
+    return null;
+  }
+
+  if(value.includes(':')){
+    const parts=value.split(':').filter(Boolean);
+
+    return parts.length
+      ? parts.slice(0,4).join(':')+'::'
+      : null;
+  }
+
+  const parts=value.split('.');
+
+  if(
+    parts.length===4 &&
+    parts.every(part=>/^\d+$/.test(part))
+  ){
+    return `${parts[0]}.${parts[1]}.${parts[2]}.0`;
+  }
+
+  return null;
+}
+
+
 function parseUserAgent(userAgent){
   const ua=String(userAgent||'').trim();
 
@@ -58,6 +86,4 @@ function parseUserAgent(userAgent){
   return {device,browser};
 }
 
-module.exports={
-  parseUserAgent
-};
+module.exports={parseUserAgent,maskIp};

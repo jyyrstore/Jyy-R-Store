@@ -10,7 +10,7 @@ Authentication state lives in a server session; authorization is enforced server
 
 ## Development
 
-Requirements: Node.js 22+ and a Supabase/PostgreSQL project when real data flows are exercised.
+Requirements: Node.js 24.x and a Supabase/PostgreSQL project when real data flows are exercised.
 
 ```bash
 cp .env.example .env

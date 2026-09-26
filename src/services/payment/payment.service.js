@@ -1,6 +1,7 @@
 const { withTransaction, query }=require('../../config/database');
 const provider=()=>require('../../config/payment').paymentProvider();
 const delivery=require('../../repositories/delivery.repository');
+const carts=require('../../repositories/cart.repository');
 const notifications=require('../../repositories/notification.repository');
 const { badRequest, notFound, forbidden }=require('../../utils/error');
 const {loadEnv}=require('../../config/env');
@@ -362,7 +363,7 @@ async function processWebhook(rawBody,signature,payload){
 
     if(!payment.order_id){
       const dep=(await client.query('select * from deposits where payment_id=$1 for update',[payment.id])).rows[0];
-      if(dep && next==='PAID' && dep.status!=='SUCCESS'){
+      if(dep && next==='PAID' && dep.status==='PENDING'){
         const wallet=(await client.query('select * from wallets where user_id=$1 for update',[payment.user_id])).rows[0] || (await client.query('insert into wallets(user_id) values($1) returning *',[payment.user_id])).rows[0];
         const before=Number(wallet.balance), after=before+Number(dep.amount);
         await client.query("update wallets set balance=$2,updated_at=now() where user_id=$1",[payment.user_id,after]);
@@ -388,6 +389,7 @@ async function processWebhook(rawBody,signature,payload){
         await delivery.createEntitlement({userId:payment.user_id,productId:i.product_id,orderId:order.id},client);
       }
       await client.query("update orders set status='PAID',paid_at=coalesce(paid_at,now()),updated_at=now() where id=$1",[order.id]);
+      await carts.clear(payment.user_id,client);
       await notifications.create({user_id:payment.user_id,type:'PAYMENT',title:'Pembayaran berhasil',body:`Pembayaran untuk ${order.order_number} berhasil diverifikasi.`,link:`/orders/${order.id}`},client);
       await notifications.create({user_id:payment.user_id,type:'ORDER',title:'Produk siap digunakan',body:`Order ${order.order_number} sudah dibayar dan akses content tersedia.`,link:`/orders/${order.id}`},client);
     } else if(['FAILED','EXPIRED','CANCELLED'].includes(next) && order.status==='PENDING'){
