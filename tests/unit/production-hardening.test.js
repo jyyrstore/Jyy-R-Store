@@ -971,7 +971,7 @@ test('all UI icons use the central icon registry',()=>{
 
   assert.match(
     modal,
-    /window\.JYYRIcon\?\.\('x'\)/
+    /window\.JYYRIcon\?\.\('circle-x'/
   );
 });
 

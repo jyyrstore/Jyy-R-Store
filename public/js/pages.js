@@ -772,7 +772,7 @@
             <div class="owner-upload-status" data-upload-status>Belum ada upload berjalan.</div>
 
             <div class="product-modal-actions">
-              <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x')||''}Tutup</button>
+              <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Tutup</button>
               <button class="button button-primary" type="submit">Simpan Content</button>
             </div>
           </form>
@@ -784,7 +784,7 @@
       toast.error(err.message);
     }
   }
-  function formButtons(label='Simpan'){return `<div class="inline-actions"><button class="button button-primary">${esc(label)}</button><button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x')||''}Batal</button></div>`}
+  function formButtons(label='Simpan'){return `<div class="inline-actions"><button class="button button-primary">${esc(label)}</button><button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Batal</button></div>`}
 
   document.addEventListener('error',e=>{const img=e.target;if(img?.matches?.('[data-image-fallback]')){img.hidden=true;img.nextElementSibling?.removeAttribute('hidden')} if(img?.matches?.('[data-image-fallback-hide]'))img.hidden=true;},{capture:true});
   document.addEventListener('change',e=>{
@@ -1165,7 +1165,7 @@
   </section>
 
   <div class="product-modal-actions">
-    <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x')||''}Batal</button>
+    <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Batal</button>
     <button class="button button-primary" type="submit">Simpan Produk</button>
   </div>
 </form>`,
@@ -1293,7 +1293,7 @@
           </section>
 
           <div class="product-modal-actions">
-            <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x')||''}Batal</button>
+            <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Batal</button>
             <button class="button button-primary" type="submit">Simpan Perubahan</button>
           </div>
         </form>
@@ -1340,7 +1340,7 @@
     const rs=e.target.closest('[data-user-reset]');if(rs){try{await ownerAction('/api/owner/users/'+rs.dataset.userReset+'/reset-sessions');toast.success('Session user direset.')}catch(err){toast.error(err.message)}}
     const du=e.target.closest('[data-user-delete]');if(du&&await window.JYYRModal.confirm('Anonymize account ini? Histori order/payment dipertahankan.')){try{await ownerAction('/api/owner/users/'+du.dataset.userDelete,{},'DELETE','User dianonymisasi.');location.reload()}catch(err){toast.error(err.message)}}
     const cr=e.target.closest('[data-user-role]');if(cr){const role=document.getElementById('user-role-select')?.value;if(role&&await window.JYYRModal.confirm('Ubah role user?')){try{await ownerAction('/api/owner/users/'+cr.dataset.userRole+'/change-role',{role});location.reload()}catch(err){toast.error(err.message)}}}
-    const oi=e.target.closest('[data-owner-order-inspect]');if(oi){let d;try{d=JSON.parse(oi.dataset.ownerOrderInspect)}catch{return}open(`<div class="stack-form"><h2>Order ${esc(d.order_number||d.id)}</h2><div class="summary-row"><span>User</span><b>${esc(d.username||'—')}</b></div><div class="summary-row"><span>Total</span><b>${money(d.total)}</b></div><div class="summary-row"><span>Status</span><b>${esc(d.status)}</b></div><div class="summary-row"><span>Payment</span><b>${esc(d.payment_method||'—')}</b></div><p class="muted">Payment gateway tetap harus dikonfirmasi oleh webhook resmi. Owner hanya dapat menjalankan transisi fulfillment yang valid.</p><button class="button button-secondary button-block" type="button" data-modal-close>${window.JYYRIcon?.('circle-x')||''}Tutup</button></div>`)}
+    const oi=e.target.closest('[data-owner-order-inspect]');if(oi){let d;try{d=JSON.parse(oi.dataset.ownerOrderInspect)}catch{return}open(`<div class="stack-form"><h2>Order ${esc(d.order_number||d.id)}</h2><div class="summary-row"><span>User</span><b>${esc(d.username||'—')}</b></div><div class="summary-row"><span>Total</span><b>${money(d.total)}</b></div><div class="summary-row"><span>Status</span><b>${esc(d.status)}</b></div><div class="summary-row"><span>Payment</span><b>${esc(d.payment_method||'—')}</b></div><p class="muted">Payment gateway tetap harus dikonfirmasi oleh webhook resmi. Owner hanya dapat menjalankan transisi fulfillment yang valid.</p><button class="button button-secondary button-block" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Tutup</button></div>`)}
     const os=e.target.closest('[data-owner-order-status]');if(os){if(!(await window.JYYRModal.confirm(`Ubah status order ke ${os.dataset.status}?`)))return;try{await ownerAction('/api/owner/orders/'+os.dataset.ownerOrderStatus+'/status',{status:os.dataset.status},'POST','Status order diperbarui.');location.reload()}catch(err){toast.error(err.message)}}
     const rb=e.target.closest('[data-owner-refund-order]');if(rb){open(`<form data-refund-form class="stack-form"><h2>Refund Order</h2><input type="hidden" name="order_id" value="${esc(rb.dataset.ownerRefundOrder)}"><label class="field"><span>Alasan</span><textarea name="reason" minlength="5" required></textarea></label>${formButtons('Process Refund')}</form>`)}
     const om=e.target.closest('[data-owner-message]');if(om){open(`<form data-owner-message-form class="stack-form"><h2>Balas Pesan</h2><input type="hidden" name="user_id" value="${esc(om.dataset.ownerMessage)}"><label class="field"><span>Pesan</span><textarea name="body" minlength="1" maxlength="10000" required></textarea></label>${formButtons('Kirim Pesan')}</form>`)}

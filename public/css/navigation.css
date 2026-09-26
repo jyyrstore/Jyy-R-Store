@@ -1,2 +1,14 @@
 .nav-link{display:flex;align-items:center;gap:11px;min-height:44px;padding:0 12px;border:1px solid transparent;border-radius:var(--radius-md);color:var(--muted);font-size:14px}.nav-link:hover{background:rgba(255,255,255,.04);color:var(--text)}.nav-link.active{color:var(--text);background:rgba(167,139,250,.10);border-color:rgba(167,139,250,.24)}.nav-link svg{width:32px;height:32px;max-width:32px;max-height:32px;min-width:32px;min-height:32px;flex:0 0 32px;display:block;transform:scale(.8);transform-origin:center}.profile-chip{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:13px}.avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:rgba(139,92,246,.14);border:1px solid rgba(139,92,246,.3);color:var(--primary-2);font-weight:800}.drawer-backdrop{display:none}.bottom-nav{display:none}.owner-content{min-width:0}
 .sidebar-owner .sidebar-owner-back{margin-bottom:4px;background:rgba(255,255,255,.03);border-color:var(--border);color:var(--text)}.sidebar-owner .sidebar-owner-back:hover{background:rgba(255,255,255,.06);color:var(--text)}.sidebar-back-arrow{width:32px;height:32px;display:grid;place-items:center;flex:0 0 32px;font-size:24px;line-height:1;color:inherit}
+
+.sidebar-back-arrow>.icon{
+  width:24px;
+  height:24px;
+  max-width:24px;
+  max-height:24px;
+  min-width:24px;
+  min-height:24px;
+  flex:0 0 24px;
+  display:block;
+  transform:none;
+}

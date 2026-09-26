@@ -73,7 +73,7 @@
       <div class="modal" role="dialog" aria-modal="true" aria-label="Dialog">
         ${html}
         <button class="icon-button modal-close" type="button" aria-label="Close" data-modal-close>
-          ${window.JYYRIcon?.('circle-x')||''}
+          ${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}
         </button>
       </div>
     </div>`;
@@ -139,7 +139,7 @@
               class="button button-secondary"
               type="button"
               data-jyyr-confirm-cancel
-            >${window.JYYRIcon?.('circle-x')||''}Batal</button>
+            >${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Batal</button>
             <button
               class="button button-primary"
               type="button"
