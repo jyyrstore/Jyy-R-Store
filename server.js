@@ -17,7 +17,7 @@ const { maintenanceMiddleware } = require('./src/middleware/maintenance.middlewa
 const { notFound } = require('./src/middleware/not-found.middleware');
 const { errorHandler } = require('./src/middleware/error.middleware');
 const { generalRateLimit, sensitiveRateLimit } = require('./src/middleware/security.middleware');
-const { icon } = require('./src/utils/icons');
+const { icon, icons } = require('./src/utils/icons');
 const { apiRouter, pageRouter, cronRouter, webhookRouter } = require('./src/routes');
 
 const PACKAGE_VERSION = require('./package.json').version;
@@ -76,6 +76,7 @@ async function createApp() {
   app.locals.staticAsset = staticAsset;
   app.locals.appUrl = env.APP_URL;
   app.locals.icon = icon;
+  app.locals.iconPaths = icons;
   app.locals.assetUrl = (bucket, filePath) => filePath ? storage.publicUrl(bucket, filePath) : null;
   app.locals.formatIDR = (value) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value || 0));
   app.locals.formatDate = (value) => value ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—';

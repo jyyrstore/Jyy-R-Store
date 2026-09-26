@@ -37,7 +37,21 @@
   <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
   <div id="modal-root"></div>
   <script nonce="<%= cspNonce %>">
-    window.JYYR = { user: <%- JSON.stringify(profile || null) %>, csrf: <%- JSON.stringify(csrfToken || '') %> };
+    window.JYYR = {
+      user: <%- JSON.stringify(profile || null) %>,
+      csrf: <%- JSON.stringify(csrfToken || '') %>,
+      icons: <%- JSON.stringify(iconPaths || {}) %>
+    };
+
+    window.JYYRIcon = function(name, cls='icon', label=''){
+      const registry=window.JYYR?.icons||{};
+      const body=registry[name]||registry.info||'';
+      const aria=label
+        ? ` role="img" aria-label="${String(label).replace(/"/g,'&quot;')}"`
+        : ' aria-hidden="true"';
+
+      return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"${aria}>${body}</svg>`;
+    };
   </script>
   <script defer src="<%= staticAsset('/js/api.js') %>"></script>
   <script defer src="<%= staticAsset('/js/navigation.js') %>"></script>

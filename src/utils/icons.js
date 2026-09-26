@@ -53,4 +53,4 @@ const icons = {
   spinner: '<path d="M12 3a9 9 0 0 1 9 9"/><path d="M12 21a9 9 0 0 1-9-9"/>'
 };
 function icon(name, cls='icon', label='') { const body = icons[name] || icons.info; const aria = label ? ` role="img" aria-label="${String(label).replace(/"/g,'&quot;')}"` : ' aria-hidden="true"'; return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"${aria}>${body}</svg>`; }
-module.exports = { icon };
+module.exports = { icon, icons };

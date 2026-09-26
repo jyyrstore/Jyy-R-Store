@@ -899,6 +899,82 @@ test('payment webhook can recover placeholder by order id',()=>{
 
 // OWNER SIDEBAR -> MAIN SIDEBAR V2
 
+
+// CENTRAL ICON REGISTRY V1
+
+test('all UI icons use the central icon registry',()=>{
+  const icons=read('src/utils/icons.js');
+  const server=read('server.js');
+  const app=read('views/app.ejs');
+  const pages=read('public/js/pages.js');
+  const modal=read('public/js/modal.js');
+
+  assert.match(
+    icons,
+    /module\.exports\s*=\s*\{\s*icon\s*,\s*icons\s*\}/
+  );
+
+  assert.match(
+    server,
+    /const\s+\{\s*icon\s*,\s*icons\s*\}\s*=\s*require\('\.\/src\/utils\/icons'\)/
+  );
+
+  assert.match(
+    server,
+    /app\.locals\.icon\s*=\s*icon/
+  );
+
+  assert.match(
+    server,
+    /app\.locals\.iconPaths\s*=\s*icons/
+  );
+
+  assert.match(
+    app,
+    /icons:\s*<%- JSON\.stringify\(iconPaths \|\| \{\}\) %>/
+  );
+
+  assert.match(
+    app,
+    /window\.JYYRIcon\s*=\s*function\(\s*name,\s*cls='icon',\s*label=''\s*\)/
+  );
+
+  assert.doesNotMatch(
+    app,
+    /<(?:path|circle|rect|ellipse|line|polyline|polygon)\b/i
+  );
+
+  assert.doesNotMatch(
+    pages,
+    /const svg=name=>\(\{/
+  );
+
+  assert.doesNotMatch(
+    pages,
+    /<svg\b/i
+  );
+
+  assert.doesNotMatch(
+    modal,
+    /<svg\b/i
+  );
+
+  assert.match(
+    pages,
+    /window\.JYYRIcon\?\.\(type==='LINK'\?'plus':'package'\)/
+  );
+
+  assert.match(
+    pages,
+    /window\.JYYRIcon\?\.\('package'\)/
+  );
+
+  assert.match(
+    modal,
+    /window\.JYYRIcon\?\.\('x'\)/
+  );
+});
+
 test('owner mode replaces the main sidebar content instead of nesting a second sidebar',()=>{
   const sidebar=read('views/partials/sidebar.ejs');
   const owner=read('views/owner/index.ejs');

@@ -151,7 +151,6 @@
     hydrateCartBadge();
     hydrateNotificationBadge();
   }
-  const svg=name=>({plus:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',x:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>',package:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16.5 9.4-9-5.1M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>'}[name]||'');
 
   async function ownerAction(url,body={},method='POST',ok='Selesai'){const r=await api.request(url,{method,body});toast.success(ok);return r;}
   let tusLoaderPromise=null;
@@ -446,7 +445,7 @@
             return `
               <article class="owner-content-row ${valid?'is-valid':'is-invalid'}">
                 <div class="owner-content-row-main">
-                  <div class="owner-content-icon">${svg(type==='LINK'?'plus':'package')}</div>
+                  <div class="owner-content-icon">${window.JYYRIcon?.(type==='LINK'?'plus':'package')||''}</div>
                   <div class="owner-content-row-copy">
                     <strong>${esc(c.title||('Content '+(i+1)))}</strong>
                     <span>${esc(meta)}</span>
@@ -473,7 +472,7 @@
           }).join('')
         : `
           <div class="owner-content-empty">
-            <div class="owner-content-empty-icon">${svg('package')}</div>
+            <div class="owner-content-empty-icon">${window.JYYRIcon?.('package')||''}</div>
             <strong>Belum ada content</strong>
             <p>Tambahkan file, gambar, video, audio, teks, atau link yang akan diberikan kepada pembeli.</p>
           </div>
