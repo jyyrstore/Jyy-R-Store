@@ -73,7 +73,7 @@
       <div class="modal" role="dialog" aria-modal="true" aria-label="Dialog">
         ${html}
         <button class="icon-button modal-close" type="button" aria-label="Close" data-modal-close>
-          ${window.JYYRIcon?.('x')||''}
+          ${window.JYYRIcon?.('circle-x')||''}
         </button>
       </div>
     </div>`;

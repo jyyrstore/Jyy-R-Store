@@ -1225,3 +1225,12 @@ body.no-scroll{
 .password-visibility-toggle:hover{
   color:var(--text);
 }
+.icon-circle-x{
+  width:1.2em;
+  height:1.2em;
+  max-width:none;
+  max-height:none;
+  flex:0 0 1.2em;
+  display:block;
+  overflow:visible;
+}
