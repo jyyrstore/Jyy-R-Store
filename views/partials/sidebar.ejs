@@ -6,7 +6,7 @@ const ownerMode=profile?.role==='OWNER' &&
 
 const activeOwnerSection=currentPath.split('/')[2] || 'dashboard';
 
-const ownerNav=[['dashboard','Dashboard','dashboard'],['products','Produk','package'],['categories','Kategori','layers'],['orders','Pesanan','clipboard-list'],['payments','Pembayaran','credit-card'],['deposits','Deposit','deposit'],['users','Pengguna','users'],['roles','Peran','key'],['tickets','Tiket','ticket'],['messages','Pesan','message'],['services','Layanan','wrench'],['information','Informasi','info'],['faq','FAQ','help-circle'],['notifications','Notifikasi','bell'],['maintenance','Pemeliharaan','tool'],['storage','Penyimpanan','database'],['activity','Log Aktivitas','activity'],['login-history','Riwayat Login','log-in'],['reports','Laporan','bar-chart'],['top-orders','Pesanan Teratas','trophy'],['security','Keamanan','shield'],['refunds','Pengembalian','rotate-ccw'],['settings','Pengaturan','sliders'],['system','Sistem','server']];
+const ownerNav=[['dashboard','Dashboard','bar-chart-outlined'],['products','Produk','shop-twotone'],['categories','Kategori','layers'],['orders','Pesanan','transaction-history'],['payments','Pembayaran','credit-card'],['deposits','Deposit','wallet-plus'],['users','Pengguna','interface-user-circle-circle-geometric'],['roles','Peran','key'],['tickets','Tiket','user-headset-outline'],['messages','Pesan','message'],['services','Layanan','layanan'],['information','Informasi','text-box-multiple-outline'],['faq','FAQ','help-circle'],['notifications','Notifikasi','bell'],['maintenance','Pemeliharaan','tool'],['storage','Penyimpanan','server-security'],['activity','Log Aktivitas','activity'],['login-history','Riwayat Login','log-in'],['reports','Laporan','bar-chart-outlined'],['top-orders','Pesanan Teratas','trophy'],['security','Keamanan','shield-key-outline'],['refunds','Pengembalian','money-bill-transfer'],['settings','Pengaturan','sliders'],['system','Sistem','server-security']];
 %>
 <aside class="sidebar <%= ownerMode?'sidebar-owner':'' %>" id="sidebar">
   <div class="sidebar-inner">
@@ -40,33 +40,33 @@ const ownerNav=[['dashboard','Dashboard','dashboard'],['products','Produk','pack
     <% } else { %>
     <div class="sidebar-section-label">Toko</div>
     <a class="nav-link <%= req.path==='/'?'active':'' %>" href="/"><%- icon('home') %><span>Beranda</span></a>
-    <a class="nav-link <%= req.path==='/store'?'active':'' %>" href="/store"><%- icon('package') %><span>Toko</span></a>
+    <a class="nav-link <%= req.path==='/store'?'active':'' %>" href="/store"><%- icon('shop-twotone') %><span>Toko</span></a>
 
     <% if (currentUser) { %>
       <div class="sidebar-section-label">Akun</div>
-      <a class="nav-link <%= req.path==='/dashboard'?'active':'' %>" href="/dashboard"><%- icon('dashboard') %><span>Dashboard</span></a>
-      <a class="nav-link <%= req.path.startsWith('/orders')?'active':'' %>" href="/orders"><%- icon('history') %><span>Pesanan</span></a>
-      <a class="nav-link <%= req.path.startsWith('/delivery')?'active':'' %>" href="/delivery"><%- icon('download') %><span>Produk Saya</span></a>
-      <a class="nav-link <%= req.path==='/history'?'active':'' %>" href="/history"><%- icon('history') %><span>Riwayat</span></a>
+      <a class="nav-link <%= req.path==='/dashboard'?'active':'' %>" href="/dashboard"><%- icon('bar-chart-outlined') %><span>Dashboard</span></a>
+      <a class="nav-link <%= req.path.startsWith('/orders')?'active':'' %>" href="/orders"><%- icon('transaction-history') %><span>Pesanan</span></a>
+      <a class="nav-link <%= req.path.startsWith('/delivery')?'active':'' %>" href="/delivery"><%- icon('archive-box-arrow-down') %><span>Produk Saya</span></a>
+      <a class="nav-link <%= req.path==='/history'?'active':'' %>" href="/history"><%- icon('dialog-history') %><span>Riwayat</span></a>
       <a class="nav-link <%= req.path.startsWith('/deposit')?'active':'' %>" href="/deposit"><%- icon('wallet') %><span>Wallet</span></a>
 
       <div class="sidebar-section-label">Bantuan</div>
       <a class="nav-link <%= req.path.startsWith('/messages')?'active':'' %>" href="/messages"><%- icon('message') %><span>Pesan</span></a>
-      <a class="nav-link <%= req.path.startsWith('/tickets')?'active':'' %>" href="/tickets"><%- icon('ticket') %><span>Tiket</span></a>
+      <a class="nav-link <%= req.path.startsWith('/tickets')?'active':'' %>" href="/tickets"><%- icon('user-headset-outline') %><span>Tiket</span></a>
       <a class="nav-link <%= req.path.startsWith('/notifications')?'active':'' %>" href="/notifications"><%- icon('bell') %><span>Notifikasi</span></a>
     <% } %>
 
     <div class="sidebar-section-label">Sumber Daya</div>
     <% if (currentUser) { %>
-      <a class="nav-link" href="/services"><%- icon('settings') %><span>Layanan</span></a>
+      <a class="nav-link" href="/services"><%- icon('layanan') %><span>Layanan</span></a>
       <a class="nav-link" href="/top-order"><%- icon('trophy') %><span>Top Order</span></a>
     <% } %>
     <a class="nav-link <%= req.path.startsWith('/faq')?'active':'' %>" href="/faq"><%- icon('help-circle') %><span>FAQ</span></a>
-    <a class="nav-link <%= req.path.startsWith('/security')?'active':'' %>" href="/security"><%- icon('shield') %><span>Keamanan</span></a>
+    <a class="nav-link <%= req.path.startsWith('/security')?'active':'' %>" href="/security"><%- icon('shield-key-outline') %><span>Keamanan</span></a>
 
     <% if (profile?.role === 'OWNER') { %>
       <div class="sidebar-section-label">Management</div>
-      <a class="nav-link <%= req.path.startsWith('/owner')?'active':'' %>" href="/owner"><%- icon('dashboard') %><span>Owner Panel</span></a>
+      <a class="nav-link <%= req.path.startsWith('/owner')?'active':'' %>" href="/owner"><%- icon('bar-chart-outlined') %><span>Owner Panel</span></a>
     <% } %>
 
     <% if (currentUser) { %>

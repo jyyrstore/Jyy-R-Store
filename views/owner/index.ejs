@@ -4,7 +4,7 @@
       <div class="page-header">
         <div><div class="eyebrow">Owner</div><h1><%= ownerSection==='dashboard'?'Ringkasan':ownerSection.replace(/(^|-)/g,m=>m.toUpperCase()).replace(/-/g,' ') %></h1><p>Semua aksi sensitif tetap diverifikasi server-side dan dicatat ke activity log.</p></div>
         <% if(['products','categories','services','faq','information','notifications'].includes(ownerSection)){ %>
-          <button class="button button-primary" data-owner-create="<%= ownerSection %>"><%- icon('plus') %> Tambah</button>
+          <button class="button button-primary" data-owner-create="<%= ownerSection %>"><%- icon('circle-plus') %> Tambah</button>
         <% } %>
       </div>
 
@@ -199,7 +199,7 @@
           </form>
         </div>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Produk</th><th>Kategori</th><th>Harga</th><th>Stock</th><th>Content</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
-          <% if(!items?.length){ %><tr><td colspan="7"><div class="empty-state compact"><%- icon('package') %><h3>Belum ada produk</h3><p>Buat produk, lengkapi content, lalu publish saat semuanya siap.</p></div></td></tr><% } %>
+          <% if(!items?.length){ %><tr><td colspan="7"><div class="empty-state compact"><%- icon('shop-twotone') %><h3>Belum ada produk</h3><p>Buat produk, lengkapi content, lalu publish saat semuanya siap.</p></div></td></tr><% } %>
           <% (items||[]).forEach(row=>{ %><tr><td><strong><%= row.name %></strong><small class="muted block">/<%= row.slug %></small></td><td><%= row.category_name||'—' %></td><td><%= formatIDR(row.price) %></td><td><%= row.stock %></td><td><span class="status-badge"><%= row.content_count||0 %></span></td><td><span class="status-badge status-<%= String(row.status).toLowerCase() %>"><%= labelStatus(row.status) %></span></td><td><div class="table-actions"><button class="button button-secondary button-small" data-owner-edit-product='<%- JSON.stringify({...row,thumbnail_url:row.thumbnail_path?assetUrl(publicAssetBucket,row.thumbnail_path):null}).replace(/'/g,"&#39;") %>'>Edit</button><button class="button button-secondary button-small"
   data-owner-content="<%= row.id %>"
   data-owner-product-name="<%- row.name.replace(/"/g,'&quot;') %>"
@@ -329,7 +329,7 @@
                   <tr>
                     <td colspan="7">
                       <div class="empty-state compact">
-                        <%- icon('user') %>
+                        <%- icon('interface-user-circle-circle-geometric') %>
                         <h3>Belum ada user</h3>
                         <p>Tidak ada pengguna yang cocok dengan filter.</p>
                       </div>
@@ -400,7 +400,7 @@
 }) %>
 </div>
       <% } else if(ownerSection==='tickets'){ %>
-        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Ticket</th><th>User</th><th>Subject</th><th>Status</th><th>Created</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="6"><div class="empty-state compact"><%- icon('ticket') %><h3>Belum ada ticket</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><%= row.ticket_number %></td><td><%= row.username %></td><td><%= row.subject %></td><td><%= row.status %></td><td><%= formatDate(row.created_at) %></td><td><button class="button button-secondary button-small" data-owner-ticket="<%= row.id %>" data-owner-ticket-number="<%= row.ticket_number %>">Balas / Status</button></td></tr><% }) %></tbody></table></div>
+        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Ticket</th><th>User</th><th>Subject</th><th>Status</th><th>Created</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="6"><div class="empty-state compact"><%- icon('user-headset-outline') %><h3>Belum ada ticket</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><%= row.ticket_number %></td><td><%= row.username %></td><td><%= row.subject %></td><td><%= row.status %></td><td><%= formatDate(row.created_at) %></td><td><button class="button button-secondary button-small" data-owner-ticket="<%= row.id %>" data-owner-ticket-number="<%= row.ticket_number %>">Balas / Status</button></td></tr><% }) %></tbody></table></div>
 <%- include('../partials/pagination',{
   pagination:ownerPagination,
   param:'page',
@@ -409,7 +409,7 @@
 }) %>
 </div>
       <% } else if(ownerSection==='services'){ %>
-        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Layanan</th><th>Kategori</th><th>Harga</th><th>Status</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="5"><div class="empty-state compact"><%- icon('settings') %><h3>Belum ada layanan</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><strong><%= row.name %></strong><small class="muted block"><%= row.description||'—' %></small></td><td><%= row.category||'—' %></td><td><%= formatIDR(row.price) %></td><td><%= row.is_active?labelStatus('ACTIVE'):labelStatus('INACTIVE') %></td><td><button class="button button-secondary button-small" data-owner-edit-service='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button></td></tr><% }) %></tbody></table></div></div>
+        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Layanan</th><th>Kategori</th><th>Harga</th><th>Status</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="5"><div class="empty-state compact"><%- icon('layanan') %><h3>Belum ada layanan</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><strong><%= row.name %></strong><small class="muted block"><%= row.description||'—' %></small></td><td><%= row.category||'—' %></td><td><%= formatIDR(row.price) %></td><td><%= row.is_active?labelStatus('ACTIVE'):labelStatus('INACTIVE') %></td><td><button class="button button-secondary button-small" data-owner-edit-service='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button></td></tr><% }) %></tbody></table></div></div>
       <% } else if(ownerSection==='faq'){ %>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Kategori</th><th>Question</th><th>Tersedia</th><th>Aksi</th></tr></thead><tbody><% (items||[]).forEach(row=>{ %><tr><td><%= row.category %></td><td><%= row.question %></td><td><%= row.is_published?'Ya':'Tidak' %></td><td><button class="button button-secondary button-small" data-owner-edit-faq='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button></td></tr><% }) %></tbody></table></div></div>
       <% } else if(ownerSection==='information'){ %>
@@ -494,9 +494,9 @@
 }) %>
 </div><% } %>
       <% } else if(ownerSection==='top-orders'){ %>
-        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Rank</th><th>Product</th><th>Purchases</th><th>Revenue Activity</th><th>Views</th><th>Cart Adds</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="6"><div class="empty-state compact"><%- icon('package') %><h3>Belum ada data top order</h3></div></td></tr><% } %><% (items||[]).forEach((row,i)=>{ %><tr><td><strong>#<%= i+1 %></strong></td><td><%= row.name %></td><td><%= row.purchase_count||0 %></td><td><%= formatIDR(Number(row.price||0)*Number(row.purchase_count||0)) %></td><td><%= row.view_count||0 %></td><td><%= row.cart_add_count||0 %></td></tr><% }) %></tbody></table></div></div>
+        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Rank</th><th>Product</th><th>Purchases</th><th>Revenue Activity</th><th>Views</th><th>Cart Adds</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="6"><div class="empty-state compact"><%- icon('shop-twotone') %><h3>Belum ada data top order</h3></div></td></tr><% } %><% (items||[]).forEach((row,i)=>{ %><tr><td><strong>#<%= i+1 %></strong></td><td><%= row.name %></td><td><%= row.purchase_count||0 %></td><td><%= formatIDR(Number(row.price||0)*Number(row.purchase_count||0)) %></td><td><%= row.view_count||0 %></td><td><%= row.cart_add_count||0 %></td></tr><% }) %></tbody></table></div></div>
       <% } else if(ownerSection==='refunds'){ %>
-        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Order</th><th>User</th><th>Amount</th><th>Status</th><th>Created</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="6"><div class="empty-state compact"><%- icon('credit-card') %><h3>Belum ada refund</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><%= row.order_number||row.order_id %></td><td><%= row.username||row.user_id %></td><td><%= formatIDR(row.amount) %></td><td><%= row.status %></td><td><%= formatDate(row.created_at) %></td><td><% if(row.status==='PENDING'){ %><button class="button button-primary button-small" data-owner-refund-order="<%= row.order_id %>">Proses</button><% } %></td></tr><% }) %></tbody></table></div></div>
+        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Order</th><th>User</th><th>Amount</th><th>Status</th><th>Created</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="6"><div class="empty-state compact"><%- icon('money-bill-transfer') %><h3>Belum ada refund</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><%= row.order_number||row.order_id %></td><td><%= row.username||row.user_id %></td><td><%= formatIDR(row.amount) %></td><td><%= row.status %></td><td><%= formatDate(row.created_at) %></td><td><% if(row.status==='PENDING'){ %><button class="button button-primary button-small" data-owner-refund-order="<%= row.order_id %>">Proses</button><% } %></td></tr><% }) %></tbody></table></div></div>
       <% } %>
     </div>
 
