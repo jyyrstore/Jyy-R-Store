@@ -54,7 +54,7 @@ function poolMax() {
     return configured;
   }
 
-  return isVercelRuntime() ? 1 : 5;
+  return isVercelRuntime() ? 1 : 10;
 }
 
 function createPool(env) {
