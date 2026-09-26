@@ -1207,3 +1207,21 @@ body.no-scroll{
     overflow-wrap:anywhere;
   }
 }
+.password-field-wrap{
+  position:relative;
+  width:100%;
+}
+.password-field-wrap>input{
+  padding-right:52px;
+}
+.password-visibility-toggle{
+  position:absolute;
+  top:50%;
+  right:0;
+  transform:translateY(-50%);
+  z-index:2;
+  color:var(--muted);
+}
+.password-visibility-toggle:hover{
+  color:var(--text);
+}

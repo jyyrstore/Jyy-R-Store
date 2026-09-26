@@ -139,7 +139,7 @@
               class="button button-secondary"
               type="button"
               data-jyyr-confirm-cancel
-            >Batal</button>
+            >${window.JYYRIcon?.('circle-x')||''}Batal</button>
             <button
               class="button button-primary"
               type="button"

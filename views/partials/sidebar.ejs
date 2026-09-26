@@ -6,13 +6,13 @@ const ownerMode=profile?.role==='OWNER' &&
 
 const activeOwnerSection=currentPath.split('/')[2] || 'dashboard';
 
-const ownerNav=[['dashboard','Dashboard','bar-chart-outlined'],['products','Produk','shop-twotone'],['categories','Kategori','layers'],['orders','Pesanan','transaction-history'],['payments','Pembayaran','credit-card'],['deposits','Deposit','wallet-plus'],['users','Pengguna','interface-user-circle-circle-geometric'],['roles','Peran','key'],['tickets','Tiket','user-headset-outline'],['messages','Pesan','message'],['services','Layanan','layanan'],['information','Informasi','text-box-multiple-outline'],['faq','FAQ','help-circle'],['notifications','Notifikasi','bell'],['maintenance','Pemeliharaan','tool'],['storage','Penyimpanan','server-security'],['activity','Log Aktivitas','activity'],['login-history','Riwayat Login','log-in'],['reports','Laporan','bar-chart-outlined'],['top-orders','Pesanan Teratas','trophy'],['security','Keamanan','shield-key-outline'],['refunds','Pengembalian','money-bill-transfer'],['settings','Pengaturan','sliders'],['system','Sistem','server-security']];
+const ownerNav=[['dashboard','Dashboard','nav-dashboards'],['products','Produk','shop-twotone'],['categories','Kategori','layers'],['orders','Pesanan','transaction-history'],['payments','Pembayaran','credit-card'],['deposits','Deposit','wallet-plus'],['users','Pengguna','interface-user-circle-circle-geometric'],['roles','Peran','user-id-outline'],['tickets','Tiket','user-headset-outline'],['messages','Pesan','message'],['services','Layanan','layanan'],['information','Informasi','text-box-multiple-outline'],['faq','FAQ','help-circle'],['notifications','Notifikasi','bell'],['maintenance','Pemeliharaan','wrench'],['storage','Penyimpanan','server-security'],['activity','Log Aktivitas','user-time'],['login-history','Riwayat Login','log-in'],['reports','Laporan','bar-chart-outlined'],['top-orders','Pesanan Teratas','trophy'],['security','Keamanan','shield-key-outline'],['refunds','Pengembalian','money-bill-transfer'],['settings','Pengaturan','gear'],['system','Sistem','server-security']];
 %>
 <aside class="sidebar <%= ownerMode?'sidebar-owner':'' %>" id="sidebar">
   <div class="sidebar-inner">
     <% if (ownerMode) { %>
       <a class="nav-link sidebar-owner-back" href="/dashboard">
-        <span class="sidebar-back-arrow" aria-hidden="true">←</span>
+        <span class="sidebar-back-arrow" aria-hidden="true"><%- icon('back') %></span>
         <span>Kembali ke Dashboard</span>
       </a>
 
@@ -44,7 +44,7 @@ const ownerNav=[['dashboard','Dashboard','bar-chart-outlined'],['products','Prod
 
     <% if (currentUser) { %>
       <div class="sidebar-section-label">Akun</div>
-      <a class="nav-link <%= req.path==='/dashboard'?'active':'' %>" href="/dashboard"><%- icon('bar-chart-outlined') %><span>Dashboard</span></a>
+      <a class="nav-link <%= req.path==='/dashboard'?'active':'' %>" href="/dashboard"><%- icon('nav-dashboards') %><span>Dashboard</span></a>
       <a class="nav-link <%= req.path.startsWith('/orders')?'active':'' %>" href="/orders"><%- icon('transaction-history') %><span>Pesanan</span></a>
       <a class="nav-link <%= req.path.startsWith('/delivery')?'active':'' %>" href="/delivery"><%- icon('archive-box-arrow-down') %><span>Produk Saya</span></a>
       <a class="nav-link <%= req.path==='/history'?'active':'' %>" href="/history"><%- icon('dialog-history') %><span>Riwayat</span></a>

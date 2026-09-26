@@ -3,6 +3,55 @@
   const money=v=>window.JYYR.formatIDR(v), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const csrf=()=>window.JYYR?.csrf||'';
 
+  function enhancePasswordFields(){
+    document
+      .querySelectorAll(
+        'input[type="password"]:not([data-password-visibility-ready])'
+      )
+      .forEach(input=>{
+        input.dataset.passwordVisibilityReady='1';
+
+        const wrapper=document.createElement('div');
+        wrapper.className='password-field-wrap';
+
+        input.parentNode?.insertBefore(wrapper,input);
+        wrapper.appendChild(input);
+
+        const button=document.createElement('button');
+        button.type='button';
+        button.className='icon-button password-visibility-toggle';
+        button.setAttribute('aria-label','Lihat sandi');
+        button.title='Lihat sandi';
+        button.innerHTML=window.JYYRIcon?.('eye')||'';
+
+        button.addEventListener('click',()=>{
+          const showing=input.type==='text';
+
+          input.type=showing?'password':'text';
+
+          const iconName=showing?'eye':'eye-closed';
+          const label=showing?'Lihat sandi':'Sembunyikan sandi';
+
+          button.innerHTML=window.JYYRIcon?.(iconName)||'';
+          button.setAttribute('aria-label',label);
+          button.title=label;
+        });
+
+        wrapper.appendChild(button);
+      });
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener(
+      'DOMContentLoaded',
+      enhancePasswordFields,
+      {once:true}
+    );
+  }else{
+    enhancePasswordFields();
+  }
+
+
   const pickerSelect=({
     name,
     value='',
@@ -95,7 +144,7 @@
         class="button button-secondary jyyr-file-clear"
         data-jyyr-file-clear
         hidden
-      >Hapus</button>
+      >${window.JYYRIcon?.('trash-can')||''}Hapus</button>
     </div>
   `;
 
@@ -464,7 +513,7 @@
                   data-owner-content-product="${esc(productId)}"
                   data-owner-content-name="${esc(productName)}"
                   data-owner-content-status="${esc(productStatus)}"
-                  data-owner-content-has-thumbnail="${coverReady===true?'1':'0'}">
+                  data-owner-content-has-thumbnail="${coverReady===true?'1':'0'}">${window.JYYRIcon?.('trash-can')||''}
                   Hapus
                 </button>
               </article>
@@ -735,7 +784,7 @@
       toast.error(err.message);
     }
   }
-  function formButtons(label='Simpan'){return `<div class="inline-actions"><button class="button button-primary">${esc(label)}</button><button class="button button-secondary" type="button" data-modal-close>Batal</button></div>`}
+  function formButtons(label='Simpan'){return `<div class="inline-actions"><button class="button button-primary">${esc(label)}</button><button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x')||''}Batal</button></div>`}
 
   document.addEventListener('error',e=>{const img=e.target;if(img?.matches?.('[data-image-fallback]')){img.hidden=true;img.nextElementSibling?.removeAttribute('hidden')} if(img?.matches?.('[data-image-fallback-hide]'))img.hidden=true;},{capture:true});
   document.addEventListener('change',e=>{
@@ -1116,7 +1165,7 @@
   </section>
 
   <div class="product-modal-actions">
-    <button class="button button-secondary" type="button" data-modal-close>Batal</button>
+    <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x')||''}Batal</button>
     <button class="button button-primary" type="submit">Simpan Produk</button>
   </div>
 </form>`,
@@ -1244,7 +1293,7 @@
           </section>
 
           <div class="product-modal-actions">
-            <button class="button button-secondary" type="button" data-modal-close>Batal</button>
+            <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x')||''}Batal</button>
             <button class="button button-primary" type="submit">Simpan Perubahan</button>
           </div>
         </form>
@@ -1258,7 +1307,7 @@
     const unpublish=e.target.closest('[data-owner-unpublish]');if(unpublish){if(!(await window.JYYRModal.confirm('Unpublish produk ini?')))return;try{await ownerAction('/api/owner/products/'+unpublish.dataset.ownerUnpublish+'/unpublish',{},'POST','Produk di-unpublish.');location.reload()}catch(err){toast.error(err.message)}}
     const dup=e.target.closest('[data-owner-duplicate]');if(dup){if(!(await window.JYYRModal.confirm('Duplikat produk ini?')))return;try{await ownerAction('/api/owner/products/'+dup.dataset.ownerDuplicate+'/duplicate',{},'POST','Produk diduplikasi.');location.reload()}catch(err){toast.error(err.message)}}
     const delp=e.target.closest('[data-owner-delete-product]');if(delp){if(!(await window.JYYRModal.confirm('Arsipkan produk ini? Data transaksi tidak dihapus.')))return;try{await ownerAction('/api/owner/products/'+delp.dataset.ownerDeleteProduct+'/delete',{},'DELETE','Produk diarsipkan.');location.reload()}catch(err){toast.error(err.message)}}
-    const user=e.target.closest('[data-owner-user]');if(user){const id=user.dataset.ownerUser,status=user.dataset.ownerStatus,role=user.dataset.ownerRole;open(`<div class="stack-form"><h2>Kelola ${esc(user.dataset.ownerUsername)}</h2><p class="muted">Status: ${esc(status)} · Role: ${esc(role)}</p><div class="button-grid"><button class="button button-secondary" data-user-ban="${id}">Ban</button><button class="button button-secondary" data-user-unban="${id}">Unban</button><button class="button button-secondary" data-user-suspend="${id}">Suspend</button><button class="button button-secondary" data-user-unsuspend="${id}">Unsuspend</button><button class="button button-secondary" data-user-reset="${id}">Reset Sessions</button><button class="button button-danger" data-user-delete="${id}">Delete (Anonymize)</button></div><label class="field"><span>Role</span>${pickerSelect({
+    const user=e.target.closest('[data-owner-user]');if(user){const id=user.dataset.ownerUser,status=user.dataset.ownerStatus,role=user.dataset.ownerRole;open(`<div class="stack-form"><h2>Kelola ${esc(user.dataset.ownerUsername)}</h2><p class="muted">Status: ${esc(status)} · Role: ${esc(role)}</p><div class="button-grid"><button class="button button-secondary" data-user-ban="${id}">Ban</button><button class="button button-secondary" data-user-unban="${id}">Unban</button><button class="button button-secondary" data-user-suspend="${id}">Suspend</button><button class="button button-secondary" data-user-unsuspend="${id}">Unsuspend</button><button class="button button-secondary" data-user-reset="${id}">Reset Sessions</button><button class="button button-danger" data-user-delete="${id}">${window.JYYRIcon?.('trash-can')||''}Delete (Anonymize)</button></div><label class="field"><span>Role</span>${pickerSelect({
       name:'owner_role',
       value:role,
       id:'user-role-select',
