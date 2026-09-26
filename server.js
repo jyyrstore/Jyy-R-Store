@@ -66,6 +66,24 @@ async function createApp() {
   initEmail(env);
 
   const app = express();
+
+  const queryParser = app.get('query parser fn') || require('querystring').parse;
+
+  app.use((req, res, next) => {
+    const rawUrl = String(req.url || '');
+    const queryStart = rawUrl.indexOf('?');
+    const rawQuery = queryStart === -1 ? '' : rawUrl.slice(queryStart + 1);
+
+    Object.defineProperty(req, 'query', {
+      value: queryParser(rawQuery),
+      enumerable: true,
+      configurable: true,
+      writable: false
+    });
+
+    next();
+  });
+
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
   app.set('view engine', 'ejs');
