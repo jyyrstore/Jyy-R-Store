@@ -6,7 +6,7 @@ const ownerMode=profile?.role==='OWNER' &&
 
 const activeOwnerSection=currentPath.split('/')[2] || 'dashboard';
 
-const ownerNav=[['dashboard','Dashboard','nav-dashboards'],['products','Produk','shop-twotone'],['categories','Kategori','layers'],['orders','Pesanan','transaction-history'],['payments','Pembayaran','credit-card'],['deposits','Deposit','wallet-plus'],['users','Pengguna','interface-user-circle-circle-geometric'],['roles','Peran','user-id-outline'],['tickets','Tiket','user-headset-outline'],['messages','Pesan','message'],['services','Layanan','layanan'],['information','Informasi','text-box-multiple-outline'],['faq','FAQ','help-circle'],['notifications','Notifikasi','bell'],['maintenance','Pemeliharaan','wrench'],['storage','Penyimpanan','server-security'],['activity','Log Aktivitas','user-time'],['login-history','Riwayat Login','log-in'],['reports','Laporan','bar-chart-outlined'],['top-orders','Pesanan Teratas','trophy'],['security','Keamanan','shield-key-outline'],['refunds','Pengembalian','money-bill-transfer'],['settings','Pengaturan','gear'],['system','Sistem','server-security']];
+const ownerNav=[['dashboard','Dashboard','dashboard-owner'],['products','Produk','shop-twotone'],['categories','Kategori','layers'],['orders','Pesanan','transaction-history'],['payments','Pembayaran','credit-card'],['deposits','Deposit','wallet-plus'],['users','Pengguna','interface-user-circle-circle-geometric'],['roles','Peran','user-id-outline'],['tickets','Tiket','user-headset-outline'],['messages','Pesan','message'],['services','Layanan','layanan'],['information','Informasi','text-box-multiple-outline'],['faq','FAQ','help-circle'],['notifications','Notifikasi','bell'],['maintenance','Pemeliharaan','wrench'],['storage','Penyimpanan','server-security'],['activity','Log Aktivitas','user-time'],['login-history','Riwayat Login','log-in'],['reports','Laporan','bar-chart-outlined'],['top-orders','Pesanan Teratas','trophy'],['security','Keamanan','shield-key-outline'],['refunds','Pengembalian','money-bill-transfer'],['settings','Pengaturan','gear'],['system','Sistem','server-security']];
 %>
 <aside class="sidebar <%= ownerMode?'sidebar-owner':'' %>" id="sidebar">
   <div class="sidebar-inner">
@@ -66,7 +66,7 @@ const ownerNav=[['dashboard','Dashboard','nav-dashboards'],['products','Produk',
 
     <% if (profile?.role === 'OWNER') { %>
       <div class="sidebar-section-label">Management</div>
-      <a class="nav-link <%= req.path.startsWith('/owner')?'active':'' %>" href="/owner"><%- icon('bar-chart-outlined') %><span>Owner Panel</span></a>
+      <a class="nav-link <%= req.path.startsWith('/owner')?'active':'' %>" href="/owner"><%- icon('dashboard-owner') %><span>Owner Panel</span></a>
     <% } %>
 
     <% if (currentUser) { %>
