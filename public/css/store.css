@@ -1,12 +1,11 @@
 .catalog-filter-bar{
   grid-template-columns:
-    repeat(4,minmax(0,1fr))
-    max-content;
+    1fr 1fr;
 }
 
 .catalog-filter-bar .filter-search{
-  grid-column:1 / span 4;
-  grid-row:1;
+  grid-column:1/-1;
+  grid-row:auto;
   min-width:0;
   width:100%;
 }
@@ -18,40 +17,14 @@
 }
 
 .catalog-filter-bar .filter-submit{
-  grid-column:5;
-  grid-row:1;
+  grid-column:1/-1;
+  grid-row:auto;
   width:100%;
   min-width:0;
   height:44px;
   min-height:44px;
   white-space:nowrap;
   align-self:center;
-}
-
-@media(min-width:1200px){
-  .catalog-filter-bar{
-    grid-template-columns:
-      minmax(280px,2.2fr)
-      minmax(170px,1.15fr)
-      minmax(120px,.8fr)
-      minmax(120px,.8fr)
-      minmax(150px,1fr)
-      max-content;
-  }
-
-  .catalog-filter-bar .filter-search{
-    grid-column:auto;
-    grid-row:auto;
-  }
-
-  .catalog-filter-bar .filter-submit{
-    grid-column:auto;
-    grid-row:auto;
-    width:max-content;
-    height:44px;
-    min-height:44px;
-    align-self:center;
-  }
 }
 
 .product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
