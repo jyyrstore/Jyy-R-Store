@@ -2,7 +2,7 @@ const { withTransaction, query }=require('../../config/database');
 const provider=()=>require('../../config/payment').paymentProvider();
 const delivery=require('../../repositories/delivery.repository');
 const carts=require('../../repositories/cart.repository');
-const notifications=require('../../repositories/notification.repository');
+const notifications=require('../notification/notification.service');
 const { badRequest, notFound, forbidden }=require('../../utils/error');
 const {loadEnv}=require('../../config/env');
 const profiles=require('../../repositories/profiles.repository');
@@ -369,7 +369,7 @@ async function processWebhook(rawBody,signature,payload){
         await client.query("update wallets set balance=$2,updated_at=now() where user_id=$1",[payment.user_id,after]);
         await client.query("insert into wallet_transactions(wallet_id,user_id,type,amount,balance_before,balance_after,reference,status) values($1,$2,'DEPOSIT',$3,$4,$5,$6,'COMPLETED')",[wallet.id,payment.user_id,dep.amount,before,after,dep.reference||parsed.reference]);
         await client.query("update deposits set status='SUCCESS',webhook_status='PAID',paid_at=now(),updated_at=now() where id=$1",[dep.id]);
-        await notifications.create({user_id:payment.user_id,type:'DEPOSIT',title:'Deposit berhasil',body:`Deposit ${dep.reference||parsed.reference} sebesar Rp${Number(dep.amount).toLocaleString('id-ID')} berhasil ditambahkan.`,link:'/deposit'},client);
+        await notifications.notify(payment.user_id,{type:'DEPOSIT',title:'Deposit berhasil',body:`Deposit ${dep.reference||parsed.reference} sebesar Rp${Number(dep.amount).toLocaleString('id-ID')} berhasil ditambahkan.`,link:'/deposit'},client);
       } else if(dep && ['FAILED','EXPIRED','CANCELLED','REFUNDED'].includes(next) && dep.status==='PENDING'){
         const depStatus=next==='REFUNDED'?'REFUNDED':next;
         await client.query('update deposits set status=$2,webhook_status=$3,updated_at=now() where id=$1',[dep.id,depStatus,next]);
@@ -390,8 +390,8 @@ async function processWebhook(rawBody,signature,payload){
       }
       await client.query("update orders set status='PAID',paid_at=coalesce(paid_at,now()),updated_at=now() where id=$1",[order.id]);
       await carts.clear(payment.user_id,client);
-      await notifications.create({user_id:payment.user_id,type:'PAYMENT',title:'Pembayaran berhasil',body:`Pembayaran untuk ${order.order_number} berhasil diverifikasi.`,link:`/orders/${order.id}`},client);
-      await notifications.create({user_id:payment.user_id,type:'ORDER',title:'Produk siap digunakan',body:`Order ${order.order_number} sudah dibayar dan akses content tersedia.`,link:`/orders/${order.id}`},client);
+      await notifications.notify(payment.user_id,{type:'PAYMENT',title:'Pembayaran berhasil',body:`Pembayaran untuk ${order.order_number} berhasil diverifikasi.`,link:`/orders/${order.id}`},client);
+      await notifications.notify(payment.user_id,{type:'ORDER',title:'Produk siap digunakan',body:`Order ${order.order_number} sudah dibayar dan akses content tersedia.`,link:`/orders/${order.id}`},client);
     } else if(['FAILED','EXPIRED','CANCELLED'].includes(next) && order.status==='PENDING'){
       await client.query("update orders set status=$2,updated_at=now() where id=$1",[order.id,next]);
       const items=(await client.query('select product_id,quantity from order_items where order_id=$1',[order.id])).rows;

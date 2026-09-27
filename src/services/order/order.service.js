@@ -1,7 +1,7 @@
 const { withTransaction, query }=require('../../config/database');
 const carts=require('../../repositories/cart.repository');
 const products=require('../../repositories/products.repository');
-const notifications=require('../../repositories/notification.repository');
+const notifications=require('../notification/notification.service');
 const delivery=require('../../repositories/delivery.repository');
 const { randomId }=require('../../utils/crypto');
 const { idr }=require('../../utils/currency');
@@ -17,7 +17,7 @@ async function createWalletOrder(userId,idempotencyKey){ const existing=await qu
   const order=(await client.query("insert into orders(order_number,user_id,subtotal,total,payment_method,status,idempotency_key,paid_at) values($1,$2,$3,$3,'BALANCE','PAID',$4,now()) returning *",[orderNumber(),userId,total,idempotencyKey||null])).rows[0];
   for(const i of cartRes.rows){ await client.query('insert into order_items(order_id,product_id,product_name,unit_price,quantity,line_total) values($1,$2,$3,$4,$5,$6)',[order.id,i.product_id,i.name,i.price,i.quantity,Number(i.price)*Number(i.quantity)]); await client.query('update products set stock=stock-$2,purchase_count=purchase_count+$2 where id=$1',[i.product_id,i.quantity]); await client.query("insert into product_events(product_id,user_id,event_type) values($1,$2,'PURCHASE')",[i.product_id,userId]); await delivery.createEntitlement({userId,productId:i.product_id,orderId:order.id},client); }
   const before=Number(wallet.balance); const after=before-total; await client.query('update wallets set balance=$2,updated_at=now() where user_id=$1',[userId,after]); await client.query("insert into wallet_transactions(wallet_id,user_id,type,amount,balance_before,balance_after,reference,status) values($1,$2,'PURCHASE',$3,$4,$5,$6,'COMPLETED')",[wallet.id,userId,total,before,after,order.order_number]);
-  await carts.clear(userId,client); await notifications.create({user_id:userId,type:'ORDER',title:'Pembelian berhasil',body:`Order ${order.order_number} berhasil dibayar dengan saldo.`,link:`/orders/${order.id}`},client); await notifications.create({user_id:userId,type:'PAYMENT',title:'Pembayaran berhasil',body:`Pembayaran ${order.order_number} berhasil.`,link:`/orders/${order.id}`},client);
+  await carts.clear(userId,client); await notifications.notify(userId,{type:'ORDER',title:'Pembelian berhasil',body:`Order ${order.order_number} berhasil dibayar dengan saldo.`,link:`/orders/${order.id}`},client); await notifications.notify(userId,{type:'PAYMENT',title:'Pembayaran berhasil',body:`Pembayaran ${order.order_number} berhasil.`,link:`/orders/${order.id}`},client);
   return {order};
  }); }
 async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){
@@ -148,7 +148,7 @@ async function ownerUpdateStatus(ownerId,orderId,status){
     }
     const updated=(await client.query("update orders set status=$2::order_status,completed_at=case when $2::order_status='COMPLETED'::order_status then now() else completed_at end,updated_at=now() where id=$1 returning *",[orderId,status])).rows[0];
     await client.query('insert into activity_logs(actor_user_id,action,entity_type,entity_id,metadata) values($1,$2,$3,$4,$5)',[ownerId,'OWNER_ORDER_STATUS','order',orderId,{from,to:status}]);
-    await notifications.create({user_id:order.user_id,type:'ORDER',title:`Status order ${order.order_number} diperbarui`,body:`Status order sekarang ${status}.`,link:`/orders/${orderId}`},client);
+    await notifications.notify(order.user_id,{type:'ORDER',title:`Status order ${order.order_number} diperbarui`,body:`Status order sekarang ${status}.`,link:`/orders/${orderId}`},client);
     return updated;
   });
 }

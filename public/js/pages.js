@@ -995,6 +995,49 @@
     }
   });
 
+  document.addEventListener('submit',async e=>{
+    const form=e.target.closest('[data-ticket-create-form]');
+    if(!form)return;
+
+    e.preventDefault();
+
+    const button=form.querySelector('button[type="submit"]');
+    const fd=new FormData(form);
+
+    const body={
+      category:String(fd.get('category')||'').trim(),
+      subject:String(fd.get('subject')||'').trim(),
+      priority:String(fd.get('priority')||'NORMAL').trim(),
+      message:String(fd.get('message')||'').trim()
+    };
+
+    if(button){
+      button.disabled=true;
+      button.setAttribute('aria-busy','true');
+    }
+
+    try{
+      await api.request(
+        '/api/tickets',
+        {
+          method:'POST',
+          body
+        }
+      );
+
+      window.JYYRModal.close();
+      toast.success('Tiket berhasil dibuat.');
+      location.reload();
+    }catch(err){
+      toast.error(err.message);
+    }finally{
+      if(button){
+        button.disabled=false;
+        button.removeAttribute('aria-busy');
+      }
+    }
+  });
+
   document.addEventListener('click',async e=>{
     const profileEdit=
       e.target.closest('[data-profile-edit-open]');
@@ -1013,6 +1056,91 @@
       return;
     }
 
+
+    const openTicket=e.target.closest('[data-open-ticket-form]');
+    if(openTicket){
+
+      const priorityOptions=[
+        ['LOW','Rendah'],
+        ['NORMAL','Normal'],
+        ['HIGH','Tinggi'],
+        ['URGENT','Mendesak']
+      ];
+
+      window.JYYRModal?.open(`
+        <form class="stack-form" data-ticket-create-form>
+          <div>
+            <div class="eyebrow">Bantuan</div>
+            <h2 style="margin:4px 0 5px">Buat Tiket</h2>
+            <p class="muted" style="margin:0">
+              Jelaskan masalahmu agar tim support dapat membantu.
+            </p>
+          </div>
+
+          <label class="field">
+            <span>Kategori</span>
+            <input
+              name="category"
+              type="text"
+              maxlength="40"
+              minlength="2"
+              required
+              autocomplete="off"
+              placeholder="Contoh: Pembayaran"
+            >
+          </label>
+
+          <label class="field">
+            <span>Subjek</span>
+            <input
+              name="subject"
+              type="text"
+              maxlength="120"
+              minlength="3"
+              required
+              autocomplete="off"
+              placeholder="Ringkas masalahmu"
+            >
+          </label>
+
+          <label class="field">
+            <span>Prioritas</span>
+            ${pickerSelect({
+              name:'priority',
+              value:'NORMAL',
+              options:priorityOptions
+            })}
+          </label>
+
+          <label class="field">
+            <span>Pesan</span>
+            <textarea
+              name="message"
+              rows="6"
+              maxlength="10000"
+              minlength="2"
+              required
+              placeholder="Jelaskan masalah secara detail..."
+            ></textarea>
+          </label>
+
+          <div class="inline-actions">
+            <button
+              class="button button-secondary"
+              type="button"
+              data-modal-close
+            >Batal</button>
+
+            <button
+              class="button button-primary"
+              type="submit"
+            >Buat Tiket</button>
+          </div>
+        </form>
+      `);
+
+      return;
+    }
 
     const retry=e.target.closest('[data-retry]'); if(retry){location.reload();return}
     const searchRetry=e.target.closest('[data-search-retry]'); if(searchRetry){search();return}

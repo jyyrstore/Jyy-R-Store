@@ -1,7 +1,7 @@
 const repo=require('../../repositories/service.repository');
 const {withTransaction}=require('../../config/database');
 const {badRequest,notFound,forbidden}=require('../../utils/error');
-const notifications=require('../../repositories/notification.repository');
+const notifications=require('../notification/notification.service');
 const {randomId}=require('../../utils/crypto');
 async function list(active=true){return repo.list(active)}
 async function create(d){return repo.create(d)}
@@ -20,7 +20,7 @@ async function purchaseWithBalance(userId,serviceId,requestData){
     await client.query('update wallets set balance=$2,updated_at=now() where user_id=$1',[userId,after]);
     await client.query("insert into wallet_transactions(wallet_id,user_id,type,amount,balance_before,balance_after,reference,status,metadata) values($1,$2,'PURCHASE',$3,$4,$5,$6,'COMPLETED',$7)",[wallet.id,userId,price, before, after, order.id,{kind:'SERVICE',serviceId}]);
     const serviceOrder=(await client.query('insert into service_orders(user_id,service_id,order_id,request_data,status) values($1,$2,$3,$4,\'PENDING\') returning *',[userId,serviceId,order.id,requestData||{}])).rows[0];
-    await notifications.create({user_id:userId,type:'ORDER',title:'Pesanan service dibuat',body:`Service ${service.name} berhasil dipesan.`,link:`/orders/${order.id}`},client);
+    await notifications.notify(userId,{type:'ORDER',title:'Pesanan service dibuat',body:`Service ${service.name} berhasil dipesan.`,link:`/orders/${order.id}`},client);
     await client.query('insert into activity_logs(actor_user_id,action,entity_type,entity_id,metadata) values($1,$2,$3,$4,$5)',[userId,'CREATE_SERVICE_ORDER','service_order',serviceOrder.id,{serviceId,orderId:order.id,amount:price}]);
     return {serviceOrder,order,wallet:{balance:after},service};
   });

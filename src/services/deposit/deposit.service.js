@@ -1,4 +1,4 @@
-const { withTransaction, query }=require('../../config/database'); const deposits=require('../../repositories/deposits.repository'); const payments=require('../../repositories/payments.repository'); const notifications=require('../../repositories/notification.repository'); const provider=()=>require('../../config/payment').paymentProvider(); const {loadEnv}=require('../../config/env'); const {badRequest}=require('../../utils/error');
+const { withTransaction, query }=require('../../config/database'); const deposits=require('../../repositories/deposits.repository'); const payments=require('../../repositories/payments.repository'); const provider=()=>require('../../config/payment').paymentProvider(); const {loadEnv}=require('../../config/env'); const {badRequest}=require('../../utils/error');
 async function create(userId,{amount,idempotencyKey,returnUrl}){
   if(!Number.isInteger(amount)||amount<1000) throw badRequest('INVALID_DEPOSIT','Minimum deposit adalah Rp 1.000.');
 

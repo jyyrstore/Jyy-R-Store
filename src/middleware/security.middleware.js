@@ -6,6 +6,7 @@ const {loadEnv}=require('../config/env');
 const {requestPath}=require('../utils/request-path');
 
 const limiterCache=new Map();
+const developmentRequestCache=new Map();
 
 
 const sensitiveApiPrefixes=[
@@ -192,13 +193,74 @@ function loggingMiddleware(req,res,next){
   const start=Date.now();
 
   res.on('finish',()=>{
+    const path=requestPath(req);
+    const isDevelopment=
+      process.env.NODE_ENV !== 'production';
+
+    const isStaticAsset=
+      req.method === 'GET' &&
+      (
+        path.startsWith('/css/') ||
+        path.startsWith('/js/') ||
+        path.startsWith('/favicon/')
+      );
+
+    const isNotModified=
+      res.statusCode === 304;
+
+    if(
+      isDevelopment &&
+      (
+        isStaticAsset ||
+        isNotModified
+      )
+    ){
+      return;
+    }
+
+    if(
+      isDevelopment &&
+      req.method === 'GET' &&
+      !path.startsWith('/api/')
+    ){
+      const dedupeKey=[
+        req.method,
+        path,
+        res.statusCode,
+        req.user?.id || 'guest'
+      ].join('|');
+
+      const now=Date.now();
+      const previous=developmentRequestCache.get(dedupeKey);
+
+      if(previous && now-previous < 1500){
+        return;
+      }
+
+      developmentRequestCache.set(
+        dedupeKey,
+        now
+      );
+
+      if(developmentRequestCache.size>200){
+        for(const [
+          key,
+          timestamp
+        ] of developmentRequestCache){
+          if(now-timestamp>5000){
+            developmentRequestCache.delete(key);
+          }
+        }
+      }
+    }
+
     log(
       'info',
       'request',
       {
         requestId:req.id,
         method:req.method,
-        path:requestPath(req),
+        path,
         status:res.statusCode,
         durationMs:Date.now()-start,
         userId:req.user?.id||null

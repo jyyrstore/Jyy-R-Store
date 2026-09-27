@@ -546,12 +546,12 @@ body.no-scroll{
 
   .modal{
     width:100%;
-    height:calc(
+    height:auto;
+    max-height:calc(
       var(--jyyr-modal-vh,100dvh)
       - max(10px,env(safe-area-inset-top))
       - max(10px,env(safe-area-inset-bottom))
     );
-    max-height:none;
     min-height:0;
     border-radius:18px 18px 14px 14px;
     padding:18px;
