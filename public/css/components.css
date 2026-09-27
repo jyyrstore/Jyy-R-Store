@@ -291,6 +291,7 @@
   align-items:center;
   justify-content:center;
   padding:16px;
+  min-height:100dvh;
   background:rgba(0,0,0,.76);
   z-index:var(--z-modal,100);
 }
@@ -298,9 +299,11 @@
 .modal{
   position:relative;
   width:min(100%,620px);
-  max-height:min(92vh,860px);
-  overflow:auto;
+  max-height:min(calc(100dvh - 32px),860px);
+  overflow-y:auto;
+  overflow-x:hidden;
   overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
   background:var(--surface);
   color:var(--text);
   border:1px solid var(--border);
@@ -342,6 +345,7 @@
 body.no-scroll{
   overflow:hidden;
 }
+
 
 /* =========================
    PRODUCT CREATE / EDIT MODAL
@@ -524,15 +528,39 @@ body.no-scroll{
 
 @media(max-width:600px){
   .modal-backdrop{
-    padding:10px;
-    align-items:flex-end;
+    position:fixed;
+    top:var(--jyyr-modal-offset-top,0px);
+    right:0;
+    bottom:auto;
+    left:0;
+    height:var(--jyyr-modal-vh,100dvh);
+    min-height:0;
+    padding:
+      max(10px,env(safe-area-inset-top))
+      10px
+      max(10px,env(safe-area-inset-bottom));
+    align-items:flex-start;
+    justify-content:center;
+    overflow:hidden;
   }
 
   .modal{
     width:100%;
-    max-height:92vh;
+    height:calc(
+      var(--jyyr-modal-vh,100dvh)
+      - max(10px,env(safe-area-inset-top))
+      - max(10px,env(safe-area-inset-bottom))
+    );
+    max-height:none;
+    min-height:0;
     border-radius:18px 18px 14px 14px;
     padding:18px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    scroll-padding-top:24px;
+    scroll-padding-bottom:140px;
   }
 
   .product-modal-grid{

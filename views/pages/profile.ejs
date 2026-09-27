@@ -31,15 +31,9 @@
   <div class="profile-card-head">
 
     <div class="profile-section-heading">
-      <div class="eyebrow">Akun</div>
-
       <h1 id="profile-page-title">
         Profil
       </h1>
-
-      <p>
-        Kelola informasi utama akun Anda.
-      </p>
     </div>
 
     <button
@@ -64,10 +58,6 @@
 
     <div class="profile-identity-copy">
 
-      <div class="eyebrow">
-        Akun Anda
-      </div>
-
       <h2
         id="profile-identity-title"
         data-profile-display
@@ -76,35 +66,26 @@
       </h2>
 
       <p
+        class="profile-identity-username"
+        data-profile-username
+        data-profile-detail="username"
+      >
+        @<%= profileUsername %>
+      </p>
+
+      <p
+        class="profile-identity-email"
+        data-profile-email
+        data-profile-detail="email"
+      >
+        <%= profile.email || 'Tidak tersedia' %>
+      </p>
+
+      <p
         class="profile-identity-bio"
         data-profile-detail="bio"
       >
         <%= profile.bio || 'Belum ada bio.' %>
-      </p>
-
-      <p class="profile-identity-meta">
-
-        <span
-          data-profile-username
-          data-profile-detail="username"
-        >
-          @<%= profileUsername %>
-        </span>
-
-        <span
-          class="profile-dot"
-          aria-hidden="true"
-        >
-          ·
-        </span>
-
-        <span
-          data-profile-email
-          data-profile-detail="email"
-        >
-          <%= profile.email || 'Tidak tersedia' %>
-        </span>
-
       </p>
 
       <p
@@ -121,6 +102,8 @@
   <div
     class="profile-account-view"
     aria-label="Informasi akun"
+    hidden
+    aria-hidden="true"
   >
 
     <section
@@ -244,7 +227,7 @@
           </div>
 
           <div>
-            <span>Total deposit</span>
+            <span>Deposit</span>
             <strong><%= formatIdr(profile.total_deposit) %></strong>
           </div>
         </article>

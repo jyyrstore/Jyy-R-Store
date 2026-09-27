@@ -2,7 +2,8 @@
   const state = {
     previousFocus: null,
     onKeydown: null,
-    pendingConfirm: null
+    pendingConfirm: null,
+    onViewportResize: null
   };
 
   function focusables(root) {
@@ -44,8 +45,35 @@
     const root=document.getElementById('modal-root');
     if(!root) return;
 
-    if(state.onKeydown) document.removeEventListener('keydown',state.onKeydown,true);
+    if(state.onKeydown){
+      document.removeEventListener(
+        'keydown',
+        state.onKeydown,
+        true
+      );
+    }
+
+    if(
+      state.onViewportResize &&
+      window.visualViewport
+    ){
+      window.visualViewport.removeEventListener(
+        'resize',
+        state.onViewportResize
+      );
+
+      window.visualViewport.removeEventListener(
+        'scroll',
+        state.onViewportResize
+      );
+    }
+
     state.onKeydown=null;
+    state.onViewportResize=null;
+
+    root.style.removeProperty('--jyyr-modal-vh');
+    root.style.removeProperty('--jyyr-modal-offset-top');
+
     root.innerHTML='';
     document.body.classList.remove('no-scroll');
 
@@ -112,6 +140,82 @@
     };
     document.addEventListener('keydown',state.onKeydown,true);
     document.body.classList.add('no-scroll');
+
+    const syncViewport=()=>{
+      if(!dialog) return;
+
+      const viewportHeight=
+        window.visualViewport?.height ||
+        window.innerHeight;
+
+      const viewportOffsetTop=
+        window.visualViewport?.offsetTop ||
+        0;
+
+      root.style.setProperty(
+        '--jyyr-modal-vh',
+        `${Math.max(0,viewportHeight)}px`
+      );
+
+      root.style.setProperty(
+        '--jyyr-modal-offset-top',
+        `${viewportOffsetTop}px`
+      );
+    };
+
+    const ensureFocusedFieldVisible=()=>{
+      const active=document.activeElement;
+
+      if(
+        active &&
+        dialog &&
+        dialog.contains(active) &&
+        (
+          active.matches('input,textarea,select') ||
+          active.isContentEditable
+        )
+      ){
+        requestAnimationFrame(()=>{
+          const dialogRect=dialog.getBoundingClientRect();
+          const activeRect=active.getBoundingClientRect();
+          const edge=24;
+
+          if(activeRect.bottom > dialogRect.bottom-edge){
+            dialog.scrollTop +=
+              activeRect.bottom -
+              (dialogRect.bottom-edge);
+          }else if(activeRect.top < dialogRect.top+edge){
+            dialog.scrollTop -=
+              (dialogRect.top+edge) -
+              activeRect.top;
+          }
+        });
+      }
+    };
+
+    syncViewport();
+
+    if(window.visualViewport){
+      state.onViewportResize=()=>{
+        syncViewport();
+        ensureFocusedFieldVisible();
+      };
+
+      window.visualViewport.addEventListener(
+        'resize',
+        state.onViewportResize
+      );
+
+      window.visualViewport.addEventListener(
+        'scroll',
+        state.onViewportResize
+      );
+    }
+
+    dialog?.addEventListener(
+      'focusin',
+      ensureFocusedFieldVisible
+    );
 
     const items=focusables(dialog||root);
     (items[0]||dialog)?.focus?.();
