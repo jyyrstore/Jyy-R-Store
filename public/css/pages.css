@@ -1,4 +1,332 @@
-.auth-links{display:flex;justify-content:space-between;margin-top:16px;font-size:13px;color:var(--primary-2)}
+.auth-shell{
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(139,92,246,.12), transparent 28%),
+    radial-gradient(circle at 84% 88%, rgba(113,167,242,.07), transparent 24%),
+    var(--bg);
+}
+
+.auth-shell::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(
+      135deg,
+      transparent 0 48%,
+      rgba(255,255,255,.018) 48% 49%,
+      transparent 49% 100%
+    );
+}
+
+.auth-card-login{
+  width:min(980px,100%);
+  max-width:980px;
+  padding:0;
+  display:grid;
+  grid-template-columns:minmax(0,.92fr) minmax(390px,1.08fr);
+  overflow:hidden;
+  background:var(--surface);
+  border-radius:15px;
+  border-color:rgba(255,255,255,.11);
+  box-shadow:0 28px 80px rgba(0,0,0,.32);
+}
+
+.auth-login-aside{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  min-width:0;
+  padding:42px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(139,92,246,.18), transparent 34%),
+    linear-gradient(160deg, rgba(139,92,246,.10), rgba(20,23,32,.12));
+  border-right:1px solid var(--border);
+}
+
+.auth-login-brand{
+  align-self:flex-start;
+  font-size:18px;
+  letter-spacing:-.025em;
+}
+
+.auth-login-brand .brand-mark{
+  width:44px;
+  height:44px;
+  border:0;
+  border-radius:var(--radius-md);
+  background:transparent;
+  color:var(--primary-2);
+}
+
+.auth-login-brand .brand-mark .icon{
+  width:24px;
+  height:24px;
+}
+.auth-card:not(.auth-card-login) .brand-center .brand-mark{
+  width:44px;
+  height:44px;
+  border:0;
+  border-radius:var(--radius-md);
+  background:transparent;
+  color:var(--primary-2);
+}
+
+.auth-card:not(.auth-card-login) .brand-center .brand-mark .icon{
+  width:24px;
+  height:24px;
+}
+
+.auth-card:not(.auth-card-login) .brand-center{
+  font-size:18px;
+  letter-spacing:-.025em;
+}
+
+.auth-login-aside-copy{
+  max-width:430px;
+  padding:56px 0 48px;
+}
+
+.auth-login-aside-copy h1{
+  margin:10px 0 14px;
+  max-width:none;
+  white-space:nowrap;
+  font-size:clamp(22px,3.2vw,36px);
+  line-height:1.08;
+  letter-spacing:-.04em;
+}
+
+.auth-login-aside-copy p{
+  max-width:44ch;
+  margin:0;
+  color:var(--muted-strong);
+  line-height:1.75;
+}
+
+.auth-login-benefits{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.auth-login-benefit{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  min-width:0;
+  padding:12px 0;
+}
+
+.auth-login-benefit-icon{
+  width:36px;
+  height:36px;
+  min-width:36px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(167,139,250,.18);
+  border-radius:11px;
+  background:rgba(139,92,246,.08);
+  color:var(--primary-2);
+}
+
+.auth-login-benefit-icon .icon{
+  width:18px;
+  height:18px;
+}
+
+.auth-login-benefit strong,
+.auth-login-benefit span{
+  display:block;
+}
+
+.auth-login-benefit strong{
+  font-size:13px;
+}
+
+.auth-login-benefit span{
+  margin-top:3px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.55;
+}
+
+.auth-login-main{
+  min-width:0;
+  padding:44px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+
+.auth-login-heading{
+  margin-bottom:24px;
+}
+
+.auth-login-heading .eyebrow{
+  display:block;
+}
+
+.auth-login-heading h2{
+  margin:7px 0 7px;
+  font-size:28px;
+  line-height:1.12;
+  letter-spacing:-.035em;
+}
+
+.auth-login-heading p{
+  margin:0;
+  color:var(--muted);
+  line-height:1.6;
+}
+
+.auth-login-form{
+  gap:18px;
+}
+
+.auth-login-form .field{
+  gap:8px;
+}
+
+.auth-login-form .field>span{
+  font-size:12px;
+  color:var(--muted-strong);
+}
+
+.auth-login-form .field input{
+  min-height:48px;
+  padding:12px 14px;
+  border-color:rgba(255,255,255,.10);
+  background:var(--deep);
+  transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;
+}
+
+.auth-login-form .field input:hover{
+  border-color:var(--border-strong);
+}
+
+.auth-login-form .field input:focus{
+  border-color:var(--primary-2);
+  box-shadow:0 0 0 3px rgba(167,139,250,.10);
+}
+
+.auth-login-meta{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:-5px;
+  font-size:12px;
+}
+
+.auth-login-meta a,
+.auth-login-register a{
+  color:var(--primary-2);
+  font-weight:700;
+}
+
+.auth-login-meta a:hover,
+.auth-login-register a:hover{
+  color:var(--action-hover);
+}
+
+.auth-login-submit{
+  height:48px;
+  min-height:48px;
+  margin-top:2px;
+  font-size:14px;
+}
+
+.auth-login-register{
+  margin-top:18px;
+  text-align:center;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.auth-login-note{
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  gap:7px;
+  margin:22px 0 0;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.5;
+  text-align:center;
+}
+
+.auth-login-note .icon{
+  width:15px;
+  height:15px;
+  flex:0 0 15px;
+  margin-top:1px;
+  color:var(--primary-2);
+}
+
+.auth-links{
+  display:flex;
+  justify-content:space-between;
+  margin-top:16px;
+  font-size:13px;
+  color:var(--primary-2);
+}
+
+@media(max-width:760px){
+  .auth-card-login{
+    grid-template-columns:1fr;
+  }
+
+  .auth-login-aside{
+    padding:28px 24px 22px;
+    border-right:0;
+    border-bottom:1px solid var(--border);
+  }
+
+  .auth-login-aside-copy{
+    padding:34px 0 20px;
+  }
+
+  .auth-login-aside-copy h1{
+    max-width:none;
+    font-size:24px;
+  }
+
+  .auth-login-benefits{
+    display:none;
+  }
+
+  .auth-login-main{
+    padding:28px 24px 30px;
+  }
+}
+
+@media(max-width:480px){
+  .auth-shell{
+    padding:14px;
+    place-items:center;
+  }
+
+  .auth-card-login{
+    margin-top:8px;
+  }
+
+  .auth-login-aside,
+  .auth-login-main{
+    padding-left:20px;
+    padding-right:20px;
+  }
+
+  .auth-login-brand .brand-mark{
+    width:34px;
+    height:34px;
+  }
+
+  .auth-login-heading h2{
+    font-size:24px;
+  }
+}
+
 
 
 /* Owner Store product flow */
@@ -61,7 +389,7 @@
   min-width:0;
   padding:14px;
   border:1px solid var(--border);
-  border-radius:15px;
+  border-radius:15px 0 15px 0;
   background:rgba(255,255,255,.02);
 }
 
@@ -495,7 +823,7 @@ button[aria-busy="true"]{
       transparent 34%
     ),
     var(--surface);
-  border-radius:15px 0 15px 0;
+  border-radius:15px;
 }
 .profile-card-head{
   display:flex;

@@ -1422,10 +1422,18 @@ body.no-scroll{
   right:0;
   transform:translateY(-50%);
   z-index:2;
+  border:0;
+  background:transparent;
+  box-shadow:none;
   color:var(--muted);
 }
 .password-visibility-toggle:hover{
   color:var(--text);
+  background:transparent;
+}
+.password-visibility-toggle .icon{
+  width:20px;
+  height:20px;
 }
 .icon-circle-x{
   width:1.2em;

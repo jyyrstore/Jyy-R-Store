@@ -1,1 +1,215 @@
-<div class="auth-card"><a class="brand brand-center" href="/"><span class="brand-mark"><%- icon('shop-twotone') %></span><span>Jyy'R Store</span></a><% if(error){ %><div class="alert alert-error"><%- icon('circle-alert') %><span><%= error %></span></div><% } %><% if(mode==='login'){ %><h1>Masuk</h1><p>Gunakan akun Jyy'R Store.</p><form class="stack-form" data-auth-form="login"><label class="field"><span>Email</span><input type="email" name="email" autocomplete="email" required></label><label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label><button class="button button-primary button-block">Masuk</button></form><div class="auth-links"><a href="/auth/forgot-password">Lupa password?</a><a href="/auth/register">Buat akun</a></div><% } else if(mode==='register'){ %><h1>Buat akun</h1><p>Daftar untuk membeli produk dan menggunakan wallet.</p><form class="stack-form" data-auth-form="register" action="/auth/register" method="POST"><input type="hidden" name="_csrf" value="<%= csrfToken || '' %>"><label class="field"><span>Username</span><input name="username" required minlength="3" maxlength="32"></label><label class="field"><span>Email</span><input type="email" name="email" required></label><label class="field"><span>Password</span><input type="password" name="password" minlength="8" required></label><button class="button button-primary button-block">Daftar</button></form><div class="auth-links"><a href="/auth/login">Sudah punya akun?</a></div><% } else if(mode==='forgot'){ %><h1>Reset password</h1><p>Kami akan mengirim instruksi ke email akun.</p><form class="stack-form" data-auth-form="forgot"><label class="field"><span>Email</span><input type="email" name="email" required></label><button class="button button-primary button-block">Kirim</button></form><div class="auth-links"><a href="/auth/login">Kembali ke login</a></div><% } else { %><h1>Password baru</h1><form class="stack-form" data-auth-form="reset"><label class="field"><span>Password baru</span><input type="password" name="password" minlength="8" required></label><button class="button button-primary button-block">Simpan password</button></form><% } %></div>
+<% if(mode==='login'){ %>
+<div class="auth-card auth-card-login">
+  <section class="auth-login-aside">
+    <a class="brand auth-login-brand" href="/">
+      <span class="brand-mark"><%- icon('shop-twotone') %></span>
+      <span>Jyy'R Store</span>
+    </a>
+
+    <div class="auth-login-aside-copy">
+      <span class="eyebrow accent">Akun Jyy'R Store</span>
+      <h1>Selamat datang kembali.</h1>
+      <p>
+        Masuk untuk melanjutkan belanja, mengelola wallet,
+        dan mengakses pesanan Anda.
+      </p>
+    </div>
+
+    <div class="auth-login-benefits">
+      <div class="auth-login-benefit">
+        <span class="auth-login-benefit-icon">
+          <%- icon('shop-twotone') %>
+        </span>
+        <div>
+          <strong>Semua aktivitas dalam satu akun</strong>
+          <span>Produk, pesanan, wallet, dan layanan tetap terhubung.</span>
+        </div>
+      </div>
+
+      <div class="auth-login-benefit">
+        <span class="auth-login-benefit-icon">
+          <%- icon('shield-key-outline') %>
+        </span>
+        <div>
+          <strong>Akses akun yang terkontrol</strong>
+          <span>Gunakan kredensial akun Anda untuk melanjutkan.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="auth-login-main">
+    <div class="auth-login-heading">
+      <span class="eyebrow">Masuk</span>
+      <h2>Masuk ke akun Anda</h2>
+      <p>Gunakan email dan password yang terdaftar.</p>
+    </div>
+
+    <% if(error){ %>
+      <div class="alert alert-error">
+        <%- icon('circle-alert') %>
+        <span><%= error %></span>
+      </div>
+    <% } %>
+
+    <form class="stack-form auth-login-form" data-auth-form="login">
+      <label class="field">
+        <span>Email</span>
+        <input
+          type="email"
+          name="email"
+          autocomplete="email"
+          placeholder="nama@email.com"
+          required
+        >
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <input
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          placeholder="Masukkan password"
+          required
+        >
+      </label>
+
+      <div class="auth-login-meta">
+        <a href="/auth/forgot-password">Lupa password?</a>
+      </div>
+
+      <button class="button button-primary button-block auth-login-submit">
+        Masuk
+      </button>
+    </form>
+
+    <div class="auth-login-register">
+      Belum punya akun?
+      <a href="/auth/register">Buat akun baru</a>
+    </div>
+
+    <p class="auth-login-note">
+      <%- icon('shield-key-outline') %>
+      <span>Jangan bagikan password akun Anda kepada orang lain.</span>
+    </p>
+  </section>
+</div>
+
+<% } else { %>
+
+<div class="auth-card">
+  <a class="brand brand-center" href="/">
+    <span class="brand-mark"><%- icon('shop-twotone') %></span>
+    <span>Jyy'R Store</span>
+  </a>
+
+  <% if(error){ %>
+    <div class="alert alert-error">
+      <%- icon('circle-alert') %>
+      <span><%= error %></span>
+    </div>
+  <% } %>
+
+  <% if(mode==='register'){ %>
+    <h1>Buat akun</h1>
+    <p>Daftar untuk membeli produk<br>dan menggunakan wallet.</p>
+
+    <form
+      class="stack-form"
+      data-auth-form="register"
+      action="/auth/register"
+      method="POST"
+    >
+      <input
+        type="hidden"
+        name="_csrf"
+        value="<%= csrfToken || '' %>"
+      >
+
+      <label class="field">
+        <span>Username</span>
+        <input
+          name="username"
+          required
+          minlength="3"
+          maxlength="32"
+        >
+      </label>
+
+      <label class="field">
+        <span>Email</span>
+        <input
+          type="email"
+          name="email"
+          required
+        >
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <input
+          type="password"
+          name="password"
+          minlength="8"
+          required
+        >
+      </label>
+
+      <button class="button button-primary button-block">
+        Daftar
+      </button>
+    </form>
+
+    <div class="auth-links">
+      <a href="/auth/login">Sudah punya akun?</a>
+    </div>
+
+  <% } else if(mode==='forgot'){ %>
+
+    <h1>Reset password</h1>
+    <p>Kami akan mengirim instruksi ke email akun.</p>
+
+    <form class="stack-form" data-auth-form="forgot">
+      <label class="field">
+        <span>Email</span>
+        <input
+          type="email"
+          name="email"
+          required
+        >
+      </label>
+
+      <button class="button button-primary button-block">
+        Kirim
+      </button>
+    </form>
+
+    <div class="auth-links">
+      <a href="/auth/login">Kembali ke login</a>
+    </div>
+
+  <% } else { %>
+
+    <h1>Password baru</h1>
+
+    <form class="stack-form" data-auth-form="reset">
+      <label class="field">
+        <span>Password baru</span>
+        <input
+          type="password"
+          name="password"
+          minlength="8"
+          required
+        >
+      </label>
+
+      <button class="button button-primary button-block">
+        Simpan password
+      </button>
+    </form>
+
+  <% } %>
+</div>
+
+<% } %>
