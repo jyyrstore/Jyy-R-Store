@@ -996,6 +996,24 @@
   });
 
   document.addEventListener('click',async e=>{
+    const profileEdit=
+      e.target.closest('[data-profile-edit-open]');
+
+    if(profileEdit){
+
+      const template=
+        document.getElementById('profile-edit-template');
+
+      if(template && window.JYYRModal?.open){
+        window.JYYRModal.open(
+          template.innerHTML
+        );
+      }
+
+      return;
+    }
+
+
     const retry=e.target.closest('[data-retry]'); if(retry){location.reload();return}
     const searchRetry=e.target.closest('[data-search-retry]'); if(searchRetry){search();return}
     const openUrl=e.target.closest('[data-open-content-url]'); if(openUrl){window.open(openUrl.dataset.openContentUrl,'_blank','noopener');return}
@@ -1469,9 +1487,13 @@
               'Belum ada bio.';
           });
 
-        pf
-          .closest('.profile-edit-disclosure')
-          ?.removeAttribute('open');
+        if(pf.closest('.modal')){
+          window.JYYRModal.close();
+        }else{
+          pf
+            .closest('.profile-edit-disclosure')
+            ?.removeAttribute('open');
+        }
 
         toast.success('Profil diperbarui.');
       }catch(err){

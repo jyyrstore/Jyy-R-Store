@@ -23,450 +23,480 @@
 
 <section class="page-shell profile-page">
 
-  <div class="page-header profile-page-header">
-    <div>
+  <section
+  class="profile-hero panel"
+  aria-labelledby="profile-page-title"
+>
+
+  <div class="profile-card-head">
+
+    <div class="profile-section-heading">
       <div class="eyebrow">Akun</div>
-      <h1>Profil</h1>
-      <p>Kelola informasi akun dan aktivitas login Anda.</p>
+
+      <h1 id="profile-page-title">
+        Profil
+      </h1>
+
+      <p>
+        Kelola informasi utama akun Anda.
+      </p>
     </div>
 
-    <div class="header-actions">
-      <a
-        class="button button-secondary button-small"
-        href="/security"
-      >
-        <%- icon('shield-user-broken') %>
-        Keamanan akun
-      </a>
-    </div>
+    <button
+      class="button button-secondary button-small profile-edit-trigger"
+      type="button"
+      data-profile-edit-open
+      aria-haspopup="dialog"
+    >
+      <%- icon('edit') %>
+      <span>Edit profil</span>
+    </button>
+
   </div>
 
-  <section
-    class="profile-hero panel"
-    aria-labelledby="profile-identity-title"
-  >
-    <div class="profile-identity">
+  <div class="profile-identity">
 
-      <div class="profile-avatar" aria-hidden="true">
-        <span data-profile-avatar>
-          <%= profileInitial %>
-        </span>
+    <div class="profile-avatar" aria-hidden="true">
+      <span data-profile-avatar>
+        <%= profileInitial %>
+      </span>
+    </div>
+
+    <div class="profile-identity-copy">
+
+      <div class="eyebrow">
+        Akun Anda
       </div>
 
-      <div class="profile-identity-copy">
-        <div class="eyebrow">Akun Anda</div>
+      <h2
+        id="profile-identity-title"
+        data-profile-display
+      >
+        <%= profileName %>
+      </h2>
 
-        <h2
-          id="profile-identity-title"
-          data-profile-display
+      <p
+        class="profile-identity-bio"
+        data-profile-detail="bio"
+      >
+        <%= profile.bio || 'Belum ada bio.' %>
+      </p>
+
+      <p class="profile-identity-meta">
+
+        <span
+          data-profile-username
+          data-profile-detail="username"
         >
-          <%= profileName %>
-        </h2>
+          @<%= profileUsername %>
+        </span>
 
-        <p>
-          @<span data-profile-username><%= profileUsername %></span>
+        <span
+          class="profile-dot"
+          aria-hidden="true"
+        >
+          ·
+        </span>
 
-          <% if (profile.email) { %>
-            <span class="profile-dot" aria-hidden="true">·</span>
-            <span data-profile-email><%= profile.email %></span>
-          <% } %>
-        </p>
+        <span
+          data-profile-email
+          data-profile-detail="email"
+        >
+          <%= profile.email || 'Tidak tersedia' %>
+        </span>
+
+      </p>
+
+      <p
+        class="profile-identity-phone"
+        data-profile-detail="phone"
+      >
+        <%= profile.phone || 'Belum ditambahkan' %>
+      </p>
+
+    </div>
+
+  </div>
+
+  <div
+    class="profile-account-view"
+    aria-label="Informasi akun"
+  >
+
+    <section
+      class="profile-detail-section"
+      aria-labelledby="profile-details-title"
+    >
+
+      <div
+        class="profile-detail-kicker"
+        id="profile-details-title"
+      >
+        Informasi akun
+      </div>
+
+      <dl class="profile-detail-list">
+
+        <div class="profile-detail-row">
+          <dt>Username</dt>
+
+          <dd data-profile-detail="username">
+            @<%= profile.username || 'user' %>
+          </dd>
+        </div>
+
+        <div class="profile-detail-row">
+          <dt>Nama tampilan</dt>
+
+          <dd data-profile-detail="display_name">
+            <%= profile.display_name || 'Belum diatur' %>
+          </dd>
+        </div>
+
+        <div class="profile-detail-row">
+          <dt>Email</dt>
+
+          <dd data-profile-detail="email">
+            <%= profile.email || 'Tidak tersedia' %>
+          </dd>
+        </div>
+
+        <div class="profile-detail-row">
+          <dt>Nomor telepon</dt>
+
+          <dd
+            class="profile-detail-value-muted"
+            data-profile-detail="phone"
+          >
+            <%= profile.phone || 'Belum ditambahkan' %>
+          </dd>
+        </div>
+
+        <div class="profile-detail-row profile-detail-row-bio">
+          <dt>Bio</dt>
+
+          <dd
+            class="profile-detail-value-muted profile-detail-bio"
+            data-profile-detail="bio"
+          >
+            <%= profile.bio || 'Belum ada bio.' %>
+          </dd>
+        </div>
+
+      </dl>
+
+    </section>
+
+  </div>
+
+  <div
+        class="profile-stat-grid"
+        aria-label="Ringkasan akun"
+      >
+
+        <article class="profile-stat-card">
+          <div class="profile-stat-icon">
+            <%- icon('shield-user-broken') %>
+          </div>
+
+          <div>
+            <span>Role</span>
+            <strong><%= labelStatus(profile.role) %></strong>
+          </div>
+        </article>
+
+        <article class="profile-stat-card">
+          <div class="profile-stat-icon">
+            <%- icon('check') %>
+          </div>
+
+          <div>
+            <span>Status</span>
+            <strong><%= labelStatus(profile.status) %></strong>
+          </div>
+        </article>
+
+        <article class="profile-stat-card">
+          <div class="profile-stat-icon">
+            <%- icon('transaction-history') %>
+          </div>
+
+          <div>
+            <span>Pesanan</span>
+            <strong><%= Number(profile.total_orders || 0) %></strong>
+          </div>
+        </article>
+
+        <article class="profile-stat-card">
+          <div class="profile-stat-icon">
+            <%- icon('wallet') %>
+          </div>
+
+          <div>
+            <span>Saldo</span>
+            <strong><%= formatIdr(profile.balance) %></strong>
+          </div>
+        </article>
+
+        <article class="profile-stat-card">
+          <div class="profile-stat-icon">
+            <%- icon('wallet-plus') %>
+          </div>
+
+          <div>
+            <span>Total deposit</span>
+            <strong><%= formatIdr(profile.total_deposit) %></strong>
+          </div>
+        </article>
+
+        <article class="profile-stat-card">
+          <div class="profile-stat-icon">
+            <%- icon('trophy') %>
+          </div>
+
+          <div>
+            <span>Top</span>
+            <strong><%= profile.top_rank ? Number(profile.top_rank) : '—' %></strong>
+          </div>
+        </article>
 
       </div>
 
-    </div>
+  <details class="profile-edit-disclosure" hidden>
+    <template id="profile-edit-template">
 
-    <div
-      class="profile-stat-grid"
-      aria-label="Ringkasan akun"
-    >
-      <article class="profile-stat-card">
-        <div class="profile-stat-icon">
-          <%- icon('shield-user-broken') %>
+      <div class="profile-edit-modal">
+
+        <div class="profile-edit-modal-head">
+
+          <div class="eyebrow">
+            Profil akun
+          </div>
+
+          <h2>
+            Edit profil
+          </h2>
+
+          <p>
+            Perbarui informasi utama akun Anda.
+          </p>
+
         </div>
 
-        <div>
-          <span>Role</span>
-          <strong><%= labelStatus(profile.role) %></strong>
-        </div>
-      </article>
+        <form
+                id="profile-form"
+                class="form-grid profile-form"
+              >
 
-      <article class="profile-stat-card">
-        <div class="profile-stat-icon">
-          <%- icon('check') %>
-        </div>
+                <label class="field">
+                  <span>Username</span>
 
-        <div>
-          <span>Status</span>
-          <strong><%= labelStatus(profile.status) %></strong>
-        </div>
-      </article>
+                  <input
+                    name="username"
+                    value="<%= profile.username || '' %>"
+                    autocomplete="username"
+                    minlength="3"
+                    maxlength="32"
+                    spellcheck="false"
+                    required
+                  />
+                </label>
 
-      <article class="profile-stat-card">
-        <div class="profile-stat-icon">
-          <%- icon('transaction-history') %>
-        </div>
+                <label class="field">
+                  <span>Nama tampilan</span>
 
-        <div>
-          <span>Pesanan</span>
-          <strong><%= Number(profile.total_orders || 0) %></strong>
-        </div>
-      </article>
+                  <input
+                    name="display_name"
+                    value="<%= profile.display_name || '' %>"
+                    autocomplete="name"
+                    maxlength="80"
+                  />
+                </label>
 
-      <article class="profile-stat-card">
-        <div class="profile-stat-icon">
-          <%- icon('wallet') %>
-        </div>
+                <label class="field full">
+                  <span>Email</span>
 
-        <div>
-          <span>Saldo</span>
-          <strong><%= formatIdr(profile.balance) %></strong>
-        </div>
-      </article>
+                  <input
+                    type="email"
+                    value="<%= profile.email || '' %>"
+                    readonly
+                    aria-readonly="true"
+                    autocomplete="email"
+                  />
 
-      <article class="profile-stat-card">
-        <div class="profile-stat-icon">
-          <%- icon('wallet-plus') %>
-        </div>
+                  <small class="field-help">
+                    Email autentikasi dikelola melalui sistem akun dan
+                    tidak diubah dari halaman ini.
+                  </small>
+                </label>
 
-        <div>
-          <span>Total deposit</span>
-          <strong><%= formatIdr(profile.total_deposit) %></strong>
-        </div>
-      </article>
+                <label class="field">
+                  <span>Nomor telepon</span>
 
-      <article class="profile-stat-card">
-        <div class="profile-stat-icon">
-          <%- icon('trophy') %>
-        </div>
+                  <input
+                    name="phone"
+                    type="tel"
+                    inputmode="tel"
+                    value="<%= profile.phone || '' %>"
+                    autocomplete="tel"
+                    maxlength="30"
+                  />
+                </label>
 
-        <div>
-          <span>Top</span>
-          <strong><%= profile.top_rank ? Number(profile.top_rank) : '—' %></strong>
-        </div>
-      </article>
-    </div>
-  </section>
+                <label class="field full">
+                  <span>Bio</span>
+
+                  <textarea
+                    name="bio"
+                    data-profile-bio
+                    rows="4"
+                    maxlength="500"
+                    placeholder="Ceritakan sedikit tentang Anda..."
+                  ><%= profile.bio || '' %></textarea>
+
+                  <small class="field-help profile-bio-help">
+                    <span>Maksimal 500 karakter.</span>
+
+                    <span>
+                      <strong data-profile-bio-count>
+                        <%= String(profile.bio || '').length %>
+                      </strong>/500
+                    </span>
+                  </small>
+                </label>
+
+                <div class="profile-form-actions full">
+                  <button
+                    class="button button-primary"
+                    id="profile-save"
+                    type="submit"
+                  >
+                    Simpan perubahan
+                  </button>
+                </div>
+
+              </form>
+
+      </div>
+
+    </template>
+  </details>
+
+</section>
 
   <div class="two-column profile-content-grid">
 
     <section
-      class="panel profile-account-panel"
-      aria-labelledby="profile-account-title"
+      class="profile-security-card"
+      aria-labelledby="profile-security-title"
     >
-      <div class="profile-account-head">
-        <div class="profile-section-heading">
-          <div class="eyebrow">Informasi</div>
-
-          <h2 id="profile-account-title">
-            Data akun
-          </h2>
-
-          <p>
-            Informasi dasar akun Anda, ditampilkan lebih ringkas agar mudah dipindai.
-          </p>
-        </div>
+      <div class="profile-security-icon">
+        <%- icon('shield-user-broken') %>
       </div>
 
-      <div
-        class="profile-account-view"
-        aria-label="Informasi akun"
+      <div class="profile-security-copy">
+        <div class="eyebrow">Proteksi akun</div>
+
+        <h2 id="profile-security-title">
+          <a href="/security" class="profile-security-title-link">
+            Keamanan akun
+          </a>
+        </h2>
+
+        <p>
+          Kelola keamanan dan perlindungan akun Anda.
+        </p>
+      </div>
+
+      <a
+        class="button button-secondary button-small profile-security-action"
+        href="/security"
       >
-        <section
-          class="profile-detail-section"
-          aria-labelledby="profile-identity-details-title"
-        >
-          <div
-            class="profile-detail-kicker"
-            id="profile-identity-details-title"
-          >
-            Identitas akun
-          </div>
-
-          <dl class="profile-detail-list">
-
-            <div class="profile-detail-row">
-              <dt>Username</dt>
-
-              <dd data-profile-detail="username">
-                @<%= profile.username || 'user' %>
-              </dd>
-            </div>
-
-            <div class="profile-detail-row">
-              <dt>Nama tampilan</dt>
-
-              <dd data-profile-detail="display_name">
-                <%= profile.display_name || 'Belum diatur' %>
-              </dd>
-            </div>
-
-            <div class="profile-detail-row">
-              <dt>Email</dt>
-
-              <dd data-profile-detail="email">
-                <%= profile.email || 'Tidak tersedia' %>
-              </dd>
-            </div>
-
-          </dl>
-        </section>
-
-        <section
-          class="profile-detail-section"
-          aria-labelledby="profile-contact-details-title"
-        >
-          <div
-            class="profile-detail-kicker"
-            id="profile-contact-details-title"
-          >
-            Informasi kontak
-          </div>
-
-          <dl class="profile-detail-list">
-
-            <div class="profile-detail-row">
-              <dt>Nomor telepon</dt>
-
-              <dd
-                class="profile-detail-value-muted"
-                data-profile-detail="phone"
-              >
-                <%= profile.phone || 'Belum ditambahkan' %>
-              </dd>
-            </div>
-
-            <div class="profile-detail-row profile-detail-row-bio">
-              <dt>Bio</dt>
-
-              <dd
-                class="profile-detail-value-muted profile-detail-bio"
-                data-profile-detail="bio"
-              >
-                <%= profile.bio || 'Belum ada bio.' %>
-              </dd>
-            </div>
-
-          </dl>
-        </section>
-      </div>
-
-      <details class="profile-edit-disclosure">
-
-        <summary
-          class="button button-secondary button-small profile-account-edit-summary"
-        >
-          <%- icon('edit') %>
-          <span>Edit profil</span>
-        </summary>
-
-        <form
-          id="profile-form"
-          class="form-grid profile-form"
-        >
-
-          <label class="field">
-            <span>Username</span>
-
-            <input
-              name="username"
-              value="<%= profile.username || '' %>"
-              autocomplete="username"
-              minlength="3"
-              maxlength="32"
-              spellcheck="false"
-              required
-            />
-          </label>
-
-          <label class="field">
-            <span>Nama tampilan</span>
-
-            <input
-              name="display_name"
-              value="<%= profile.display_name || '' %>"
-              autocomplete="name"
-              maxlength="80"
-            />
-          </label>
-
-          <label class="field full">
-            <span>Email</span>
-
-            <input
-              type="email"
-              value="<%= profile.email || '' %>"
-              readonly
-              aria-readonly="true"
-              autocomplete="email"
-            />
-
-            <small class="field-help">
-              Email autentikasi dikelola melalui sistem akun dan
-              tidak diubah dari halaman ini.
-            </small>
-          </label>
-
-          <label class="field">
-            <span>Nomor telepon</span>
-
-            <input
-              name="phone"
-              type="tel"
-              inputmode="tel"
-              value="<%= profile.phone || '' %>"
-              autocomplete="tel"
-              maxlength="30"
-            />
-          </label>
-
-          <label class="field full">
-            <span>Bio</span>
-
-            <textarea
-              name="bio"
-              data-profile-bio
-              rows="4"
-              maxlength="500"
-              placeholder="Ceritakan sedikit tentang Anda..."
-            ><%= profile.bio || '' %></textarea>
-
-            <small class="field-help profile-bio-help">
-              <span>Maksimal 500 karakter.</span>
-
-              <span>
-                <strong data-profile-bio-count>
-                  <%= String(profile.bio || '').length %>
-                </strong>/500
-              </span>
-            </small>
-          </label>
-
-          <div class="profile-form-actions full">
-            <button
-              class="button button-primary"
-              id="profile-save"
-              type="submit"
-            >
-              Simpan perubahan
-            </button>
-          </div>
-
-        </form>
-      </details>
+        Lihat keamanan
+      </a>
     </section>
 
-    <div class="profile-side-column">
+    <section
+      class="panel profile-login-panel"
+      aria-labelledby="profile-login-title"
+    >
 
-      <section
-        class="profile-security-card"
-        aria-labelledby="profile-security-title"
-      >
-        <div class="profile-security-icon">
-          <%- icon('shield-user-broken') %>
-        </div>
+      <div class="profile-section-heading">
+        <div>
+          <div class="eyebrow">Aktivitas</div>
 
-        <div class="profile-security-copy">
-          <div class="eyebrow">Proteksi akun</div>
-
-          <h2 id="profile-security-title">
-            Keamanan akun
+          <h2 id="profile-login-title">
+            Riwayat login
           </h2>
 
           <p>
-            Kelola keamanan dan perlindungan akun Anda.
+            Aktivitas autentikasi terbaru pada akun Anda.
           </p>
         </div>
+      </div>
 
-        <a
-          class="button button-secondary button-small profile-security-action"
-          href="/security"
-        >
-          Lihat keamanan
-        </a>
-      </section>
+      <div class="profile-login-list">
 
-      <section
-        class="panel profile-login-panel"
-        aria-labelledby="profile-login-title"
-      >
-        <div class="profile-section-heading">
-          <div>
-            <div class="eyebrow">Aktivitas</div>
+        <% if (loginHistory.length) { %>
 
-            <h2 id="profile-login-title">
-              Riwayat login
-            </h2>
+          <% loginHistory.forEach(l => { %>
 
-            <p>
-              Aktivitas autentikasi terbaru pada akun Anda.
-            </p>
-          </div>
-        </div>
-
-        <div class="profile-login-list">
-
-          <% if (loginHistory.length) { %>
-
-            <% loginHistory.forEach(l => { %>
-
-              <article
-                class="profile-login-item"
-                data-login-status="<%= String(l.status || '').toUpperCase() %>"
+            <article
+              class="profile-login-item"
+              data-login-status="<%= String(l.status || '').toUpperCase() %>"
+            >
+              <div
+                class="profile-login-icon"
+                aria-hidden="true"
               >
-                <div
-                  class="profile-login-icon"
-                  aria-hidden="true"
-                >
-                  <%- icon(
-                    String(l.status || '').toUpperCase() === 'SUCCESS'
-                      ? 'check'
-                      : 'alert'
-                  ) %>
-                </div>
+                <%- icon(
+                  String(l.status || '').toUpperCase() === 'SUCCESS'
+                    ? 'check'
+                    : 'alert'
+                ) %>
+              </div>
 
-                <div class="profile-login-copy">
-                  <strong>
-                    <%= labelStatus(l.status) %>
-                  </strong>
+              <div class="profile-login-copy">
+                <strong>
+                  <%= labelStatus(l.status) %>
+                </strong>
 
-                  <span>
-                    <%= l.device || 'Perangkat tidak diketahui' %>
-                  </span>
+                <span>
+                  <%= l.device || 'Perangkat tidak diketahui' %>
+                </span>
 
-                  <small>
-                    <%= l.browser || 'Browser tidak diketahui' %>
-                  </small>
-                </div>
+                <small>
+                  <%= l.browser || 'Browser tidak diketahui' %>
+                </small>
+              </div>
 
-                <time
-                  class="profile-login-time"
-                  datetime="<%= l.created_at %>"
-                >
-                  <%= formatDate(l.created_at) %>
-                </time>
-              </article>
+              <time
+                class="profile-login-time"
+                datetime="<%= l.created_at %>"
+              >
+                <%= formatDate(l.created_at) %>
+              </time>
+            </article>
 
-            <% }) %>
+          <% }) %>
 
-          <% } else { %>
+        <% } else { %>
 
-            <%- include('../partials/empty',{
-              title:'Belum ada riwayat login',
-              description:'Aktivitas login akan tampil setelah proses autentikasi.'
-            }) %>
-
-          <% } %>
-
-          <%- include('../partials/pagination',{
-            pagination:loginPagination,
-            param:'loginPage'
+          <%- include('../partials/empty',{
+            title:'Belum ada riwayat login',
+            description:'Aktivitas login akan tampil setelah proses autentikasi.'
           }) %>
 
-        </div>
-      </section>
+        <% } %>
 
-    </div>
+        <%- include('../partials/pagination',{
+          pagination:loginPagination,
+          param:'loginPage'
+        }) %>
+
+      </div>
+
+    </section>
 
   </div>
 
