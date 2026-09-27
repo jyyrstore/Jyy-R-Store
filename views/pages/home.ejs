@@ -1,11 +1,18 @@
 <section class="page-shell home-page">
+  <figure class="home-brand-banner">
+    <img
+      src="/images/banners/brand-banner.jpg"
+      alt="Jyy'R Store"
+      width="1600"
+      height="500"
+      loading="eager"
+      decoding="async"
+    >
+  </figure>
   <section class="hero">
     <div>
-      <div class="eyebrow accent">JYY'R STORE</div>
-      <h1>Produk digital dengan checkout aman dan akses terlindungi.</h1>
-      <p>Temukan produk digital dan layanan Jyy'R Store dengan pembelian mudah, pembayaran jelas, dan delivery aman.</p>
       <div class="hero-actions">
-        <a href="/store" class="button button-primary"><%- icon('package') %> Jelajahi Store</a>
+        <a href="/store" class="button button-primary"><%- icon('shop-twotone', 'icon hero-store-icon') %> Jelajahi Store</a>
         <% if (!currentUser) { %><a href="/auth/register" class="button button-secondary">Buat Akun</a><% } %>
       </div>
     </div>
