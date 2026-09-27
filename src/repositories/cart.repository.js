@@ -11,6 +11,10 @@ async function ensure(userId){
 }
 
 async function get(userId){
+  await query(
+    "delete from cart_items ci using carts c, products p where ci.cart_id=c.id and ci.product_id=p.id and c.user_id=$1 and p.status<>'PUBLISHED'",
+    [userId]
+  );
   return (
     await query(
       'select c.id,coalesce(json_agg(json_build_object(\'id\',ci.id,\'quantity\',ci.quantity,\'product_id\',p.id,\'name\',p.name,\'slug\',p.slug,\'price\',p.price,\'stock\',p.stock,\'thumbnail_path\',p.thumbnail_path)) filter(where ci.id is not null),\'[]\') items from carts c left join cart_items ci on ci.cart_id=c.id left join products p on p.id=ci.product_id where c.user_id=$1 group by c.id',
