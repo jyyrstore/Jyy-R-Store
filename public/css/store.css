@@ -760,3 +760,15 @@
   width:1.2em;
   height:1.2em;
 }
+
+.home-page > .section{
+  margin-top:0;
+}
+
+.home-page > .hero + .section .product-grid{
+  transform:translateY(-10px);
+}
+
+.home-page > .two-column > div:first-child > .eyebrow{
+  transform:translateY(10px);
+}
