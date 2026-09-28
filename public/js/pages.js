@@ -193,12 +193,93 @@
       ()=>{
         hydrateCartBadge();
         hydrateNotificationBadge();
+        bindNotificationPage();
       },
       {once:true}
     );
   }else{
     hydrateCartBadge();
     hydrateNotificationBadge();
+    bindNotificationPage();
+  }
+
+
+  function bindNotificationPage(){
+    const root=document.querySelector('[data-notifications-page]');
+    if(!root)return;
+
+    const getBoxes=()=>[
+      ...root.querySelectorAll('[data-notification-select]')
+    ];
+
+    const syncSelection=()=>{
+      const boxes=getBoxes();
+      const selected=boxes.filter(box=>box.checked);
+      const selectAll=root.querySelector(
+        '[data-notification-select-all]'
+      );
+      const deleteSelected=root.querySelector(
+        '[data-notification-delete-selected]'
+      );
+
+      const everySelected=
+        boxes.length>0 &&
+        selected.length===boxes.length;
+
+      if(selectAll){
+        selectAll.disabled=boxes.length===0;
+        selectAll.querySelector(
+          '[data-notification-selection-label]'
+        ).textContent=
+          everySelected
+            ? 'Batal pilih semua'
+            : 'Pilih semua';
+        selectAll.setAttribute(
+          'aria-pressed',
+          everySelected?'true':'false'
+        );
+      }
+
+      if(deleteSelected){
+        deleteSelected.disabled=selected.length===0;
+      }
+    };
+
+    root.addEventListener('change',event=>{
+      if(event.target.closest('[data-notification-select]')){
+        syncSelection();
+      }
+    });
+
+    root.addEventListener('click',event=>{
+      if(root.classList.contains('selection-mode'))return;
+
+      const card=event.target.closest('.notification-card');
+      if(!card || !root.contains(card))return;
+
+      if(
+        event.target.closest(
+          'a,button,input,select,textarea,[data-notification-select]'
+        )
+      ){
+        return;
+      }
+
+      root
+        .querySelectorAll('.notification-card.is-actions-open')
+        .forEach(openCard=>{
+          if(openCard!==card){
+            openCard.classList.remove('is-actions-open');
+          }
+        });
+
+      const actions=card.querySelector('.inline-actions');
+      if(!actions)return;
+
+      card.classList.toggle('is-actions-open');
+    });
+
+    syncSelection();
   }
 
   async function ownerAction(url,body={},method='POST',ok='Selesai'){const r=await api.request(url,{method,body});toast.success(ok);return r;}
@@ -1202,7 +1283,238 @@
       }
     }
     const amount=e.target.closest('[data-deposit-amount]');if(amount){document.querySelectorAll('[data-deposit-amount]').forEach(x=>x.classList.remove('selected'));amount.classList.add('selected');const custom=document.getElementById('deposit-custom');if(custom)custom.value=Number(amount.dataset.depositAmount)}
-    const read=e.target.closest('[data-read-notification]');if(read){try{await api.request('/api/notifications/'+read.dataset.readNotification+'/read',{method:'PUT'});read.closest('.notification-card')?.classList.remove('unread');read.remove();await hydrateNotificationBadge()}catch(err){toast.error(err.message)}}
+    const read=e.target.closest('[data-read-notification]');
+    if(read){
+      try{
+        await api.request(
+          '/api/notifications/'+
+          read.dataset.readNotification+
+          '/read',
+          {method:'PUT'}
+        );
+
+        read.closest('.notification-card')?.classList.remove('unread');
+        read.remove();
+        await hydrateNotificationBadge();
+      }catch(err){
+        toast.error(err.message);
+      }
+
+      return;
+    }
+
+    const selectMode=e.target.closest('[data-notification-select-mode]');
+    if(selectMode){
+      const root=selectMode.closest('[data-notifications-page]');
+
+      if(root){
+        const enabled=
+          !root.classList.contains('selection-mode');
+
+        root.classList.toggle(
+          'selection-mode',
+          enabled
+        );
+
+        selectMode.textContent=
+          enabled
+            ? 'Batal pilih'
+            : 'Pilih';
+
+        selectMode.setAttribute(
+          'aria-pressed',
+          enabled?'true':'false'
+        );
+
+        if(!enabled){
+          root
+            .querySelectorAll('[data-notification-select]')
+            .forEach(box=>{
+              box.checked=false;
+            });
+        }
+
+        const selectAll=
+          root.querySelector('[data-notification-select-all]');
+
+        const deleteSelected=
+          root.querySelector('[data-notification-delete-selected]');
+
+        if(selectAll){
+          selectAll.hidden=!enabled;
+        }
+
+        if(deleteSelected){
+          deleteSelected.hidden=!enabled;
+          deleteSelected.disabled=true;
+        }
+      }
+
+      return;
+    }
+
+    const selectAll=e.target.closest(
+      '[data-notification-select-all]'
+    );
+
+    if(selectAll){
+      const root=
+        selectAll.closest('[data-notifications-page]');
+
+      if(root){
+        const boxes=[
+          ...root.querySelectorAll(
+            '[data-notification-select]'
+          )
+        ];
+
+        const shouldSelect=
+          boxes.length>0 &&
+          boxes.some(box=>!box.checked);
+
+        boxes.forEach(box=>{
+          box.checked=shouldSelect;
+        });
+
+        selectAll.querySelector(
+          '[data-notification-selection-label]'
+        ).textContent=
+          shouldSelect
+            ? 'Batal pilih semua'
+            : 'Pilih semua';
+
+        selectAll.setAttribute(
+          'aria-pressed',
+          shouldSelect?'true':'false'
+        );
+
+        const deleteSelected=
+          root.querySelector(
+            '[data-notification-delete-selected]'
+          );
+
+        if(deleteSelected){
+          deleteSelected.disabled=!shouldSelect;
+        }
+      }
+
+      return;
+    }
+
+    const readAll=e.target.closest(
+      '[data-notification-read-all]'
+    );
+
+    if(readAll){
+      readAll.disabled=true;
+
+      try{
+        await api.request(
+          '/api/notifications/read-all',
+          {method:'PUT'}
+        );
+
+        toast.success(
+          'Semua notifikasi telah ditandai sebagai dibaca.'
+        );
+
+        location.reload();
+      }catch(err){
+        toast.error(err.message);
+        readAll.disabled=false;
+      }
+
+      return;
+    }
+
+    const deleteSelected=e.target.closest(
+      '[data-notification-delete-selected]'
+    );
+
+    if(deleteSelected){
+      const root=
+        deleteSelected.closest(
+          '[data-notifications-page]'
+        );
+
+      const ids=root
+        ? [
+            ...root.querySelectorAll(
+              '[data-notification-select]:checked'
+            )
+          ].map(box=>box.value)
+        : [];
+
+      if(!ids.length){
+        toast.error(
+          'Pilih minimal satu notifikasi.'
+        );
+        return;
+      }
+
+      const confirmed=
+        await window.JYYRModal.confirm(
+          `Hapus ${ids.length} notifikasi yang dipilih?`
+        );
+
+      if(!confirmed)return;
+
+      deleteSelected.disabled=true;
+
+      try{
+        await api.request(
+          '/api/notifications/delete-selected',
+          {
+            method:'POST',
+            body:{ids}
+          }
+        );
+
+        toast.success(
+          `${ids.length} notifikasi berhasil dihapus.`
+        );
+
+        location.reload();
+      }catch(err){
+        toast.error(err.message);
+        deleteSelected.disabled=false;
+      }
+
+      return;
+    }
+
+    const deleteAll=e.target.closest(
+      '[data-notification-delete-all]'
+    );
+
+    if(deleteAll){
+      const confirmed=
+        await window.JYYRModal.confirm(
+          'Hapus semua pesan notifikasi dari daftar kamu?'
+        );
+
+      if(!confirmed)return;
+
+      deleteAll.disabled=true;
+
+      try{
+        await api.request(
+          '/api/notifications',
+          {method:'DELETE'}
+        );
+
+        toast.success(
+          'Semua pesan berhasil dihapus.'
+        );
+
+        location.reload();
+      }catch(err){
+        toast.error(err.message);
+        deleteAll.disabled=false;
+      }
+
+      return;
+    }
     const tab=e.target.closest('[data-tab-target]');if(tab){const name=tab.dataset.tabTarget;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));tab.classList.add('active');document.querySelector(`[data-tab="${name}"]`)?.classList.add('active')}
     const dep=e.target.closest('[data-deposit-submit]');if(dep){const v=Number(document.getElementById('deposit-custom')?.value||0);if(v<1000)return toast.error('Minimum deposit Rp1.000.');dep.disabled=true;try{const r=await api.request('/api/deposit',{method:'POST',body:{amount:v,returnUrl:location.origin+'/deposit'}});if(r.paymentUrl)location.href=r.paymentUrl;else toast.success('Deposit dibuat.')}catch(err){toast.error(err.message)}finally{dep.disabled=false}}
     const checkout=e.target.closest('[data-checkout-confirm]');if(checkout){const method=document.querySelector('input[name="paymentMethod"]:checked')?.value||'BALANCE';checkout.disabled=true;try{const r=await api.request('/api/orders',{method:'POST',body:{paymentMethod:method,returnUrl:location.origin+'/orders'}});if(r.payment?.paymentUrl)location.href=r.payment.paymentUrl;else location.href='/orders/'+r.order.id}catch(err){toast.error(err.message)}finally{checkout.disabled=false}}

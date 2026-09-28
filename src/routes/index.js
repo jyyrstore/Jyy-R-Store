@@ -192,7 +192,23 @@ apiRouter.post('/tickets/:id/messages',requireAuth,validate(z.object({body:z.str
 apiRouter.post('/tickets/:id/status',requireAuth,validate(z.object({status:z.enum(['OPEN','WAITING','REPLIED','CLOSED'])})),asyncHandler(api.ticketController.status));
 apiRouter.get('/notifications',requireAuth,asyncHandler(api.notificationController.list));
 apiRouter.get('/notifications/unread',requireAuth,asyncHandler(api.notificationController.unread));
+apiRouter.put('/notifications/read-all',requireAuth,asyncHandler(api.notificationController.readAll));
 apiRouter.put('/notifications/:id/read',requireAuth,asyncHandler(api.notificationController.read));
+apiRouter.post(
+  '/notifications/delete-selected',
+  requireAuth,
+  validate(
+    z.object({
+      ids:z.array(z.string().uuid()).min(1).max(100)
+    })
+  ),
+  asyncHandler(api.notificationController.deleteSelected)
+);
+apiRouter.delete(
+  '/notifications',
+  requireAuth,
+  asyncHandler(api.notificationController.deleteAll)
+);
 apiRouter.get('/services',asyncHandler(api.serviceController.list));
 apiRouter.post('/service-orders',requireAuth,validate(z.object({serviceId:z.string().uuid(),requestData:z.record(z.any()).default({})})),asyncHandler(api.serviceController.order));
 apiRouter.get('/faq',asyncHandler(api.contentController.faq));

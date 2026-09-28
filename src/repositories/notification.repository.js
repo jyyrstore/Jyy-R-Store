@@ -61,8 +61,8 @@ async function list(userId,{limit=100,offset=0}={}){
         left join notification_reads nr
           on nr.notification_id=n.id
          and nr.user_id=$1
-        where n.user_id=$1
-           or n.user_id is null
+        where (n.user_id=$1 or n.user_id is null)
+          and nr.deleted_at is null
         order by n.created_at desc
         limit $2
         offset $3
@@ -79,8 +79,11 @@ async function count(userId){
         `
           select count(*)::int count
           from notifications n
-          where n.user_id=$1
-             or n.user_id is null
+          left join notification_reads nr
+            on nr.notification_id=n.id
+           and nr.user_id=$1
+          where (n.user_id=$1 or n.user_id is null)
+            and nr.deleted_at is null
         `,
         [userId]
       )
@@ -130,6 +133,7 @@ async function unreadCount(userId){
           on nr.notification_id=n.id
          and nr.user_id=$1
         where (n.user_id=$1 or n.user_id is null)
+          and nr.deleted_at is null
           and (
             case
               when n.user_id is null
@@ -161,6 +165,13 @@ async function markRead(id,userId){
           from notifications
           where id=$1
             and (user_id=$2 or user_id is null)
+            and not exists (
+              select 1
+              from notification_reads nr
+              where nr.notification_id=notifications.id
+                and nr.user_id=$2
+                and nr.deleted_at is not null
+            )
           for update
         `,
         [id,userId]
@@ -177,22 +188,18 @@ async function markRead(id,userId){
         insert into notification_reads(
           notification_id,
           user_id,
-          read_at
+          read_at,
+          deleted_at
         )
-        values($1,$2,now())
+        values($1,$2,now(),null)
         on conflict(notification_id,user_id)
-        do update set read_at=excluded.read_at
+        do update set
+          read_at=excluded.read_at,
+          deleted_at=null
       `,
       [id,userId]
     );
 
-    /*
-     * Personal notification:
-     * keep legacy columns synchronized for backward compatibility.
-     *
-     * Broadcast notification:
-     * NEVER modify notifications.is_read globally.
-     */
     if(target.user_id===userId){
       await client.query(
         `
@@ -248,6 +255,193 @@ async function markRead(id,userId){
   }
 }
 
+async function markAllRead(userId){
+  const client=await db().connect();
+
+  try{
+    await client.query('begin');
+
+    await client.query(
+      `
+        insert into notification_reads(
+          notification_id,
+          user_id,
+          read_at
+        )
+        select
+          n.id,
+          $1,
+          now()
+        from notifications n
+        where (n.user_id=$1 or n.user_id is null)
+          and not exists (
+            select 1
+            from notification_reads nr
+            where nr.notification_id=n.id
+              and nr.user_id=$1
+              and nr.deleted_at is not null
+          )
+        on conflict(notification_id,user_id)
+        do update set
+          read_at=excluded.read_at
+      `,
+      [userId]
+    );
+
+    await client.query(
+      `
+        update notifications n
+        set
+          is_read=true,
+          read_at=now()
+        where n.user_id=$1
+          and not exists (
+            select 1
+            from notification_reads nr
+            where nr.notification_id=n.id
+              and nr.user_id=$1
+              and nr.deleted_at is not null
+          )
+      `,
+      [userId]
+    );
+
+    await client.query('commit');
+
+    return {
+      success:true
+    };
+  }catch(error){
+    try{
+      await client.query('rollback');
+    }catch(error){void error;}
+    throw error;
+  }finally{
+    client.release();
+  }
+}
+
+async function deleteSelected(userId,notificationIds){
+  const ids=[
+    ...new Set(
+      (notificationIds||[])
+        .map(value=>String(value||'').trim())
+        .filter(Boolean)
+    )
+  ].slice(0,100);
+
+  if(!ids.length){
+    return {deleted:0};
+  }
+
+  const client=await db().connect();
+
+  try{
+    await client.query('begin');
+
+    const personal=await client.query(
+      `
+        delete from notifications
+        where id=any($2::uuid[])
+          and user_id=$1
+        returning id
+      `,
+      [userId,ids]
+    );
+
+    const broadcast=await client.query(
+      `
+        insert into notification_reads(
+          notification_id,
+          user_id,
+          read_at,
+          deleted_at
+        )
+        select
+          n.id,
+          $1,
+          now(),
+          now()
+        from notifications n
+        where n.id=any($2::uuid[])
+          and n.user_id is null
+        on conflict(notification_id,user_id)
+        do update set
+          deleted_at=excluded.deleted_at
+      `,
+      [userId,ids]
+    );
+
+    await client.query('commit');
+
+    return {
+      deleted:
+        personal.rowCount+
+        broadcast.rowCount
+    };
+  }catch(error){
+    try{
+      await client.query('rollback');
+    }catch(error){void error;}
+    throw error;
+  }finally{
+    client.release();
+  }
+}
+
+async function deleteAll(userId){
+  const client=await db().connect();
+
+  try{
+    await client.query('begin');
+
+    const personal=await client.query(
+      `
+        delete from notifications
+        where user_id=$1
+      `,
+      [userId]
+    );
+
+    const broadcast=await client.query(
+      `
+        insert into notification_reads(
+          notification_id,
+          user_id,
+          read_at,
+          deleted_at
+        )
+        select
+          n.id,
+          $1,
+          now(),
+          now()
+        from notifications n
+        where n.user_id is null
+        on conflict(notification_id,user_id)
+        do update set
+          deleted_at=excluded.deleted_at
+      `,
+      [userId]
+    );
+
+    await client.query('commit');
+
+    return {
+      deleted:
+        personal.rowCount+
+        broadcast.rowCount
+    };
+  }catch(error){
+    try{
+      await client.query('rollback');
+    }catch(error){void error;}
+    throw error;
+  }finally{
+    client.release();
+  }
+}
+
 async function countAdmin(){
   return Number(
     (
@@ -265,5 +459,8 @@ module.exports={
   adminList,
   unreadCount,
   markRead,
-  countAdmin
+  countAdmin,
+  markAllRead,
+  deleteSelected,
+  deleteAll
 };
