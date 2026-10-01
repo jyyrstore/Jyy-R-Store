@@ -106,7 +106,7 @@ pageRouter.get('/product/:slug',asyncHandler(page.productDetail));
 pageRouter.get('/search',asyncHandler(page.search));
 pageRouter.get('/services',asyncHandler(page.servicesPage));
 pageRouter.get('/faq',asyncHandler(page.faq));
-pageRouter.get('/security',asyncHandler(page.security)); pageRouter.get('/privacy',asyncHandler(page.legal)); pageRouter.get('/terms',asyncHandler(page.legal)); pageRouter.get('/refund',asyncHandler(page.legal));
+pageRouter.get('/security',asyncHandler(page.security)); pageRouter.get('/privacy',asyncHandler(page.legal)); pageRouter.get('/terms',asyncHandler(page.legal)); pageRouter.get('/refund',asyncHandler(page.legal)); pageRouter.get('/dmca',asyncHandler(page.legal));
 pageRouter.get('/auth/login',asyncHandler(page.login));
 pageRouter.get('/auth/register',asyncHandler(page.register));
 pageRouter.post('/auth/register',

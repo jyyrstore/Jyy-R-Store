@@ -1,1 +1,69 @@
-<section class="page-shell prose-page"><div class="page-header"><div><div class="eyebrow">Jyy'R Store</div><h1><%= legalTitle %></h1><p>Kebijakan publik untuk penggunaan aplikasi store.</p></div></div><div class="panel"><% if(legalKey==='privacy'){ %><h2>Data & Privacy</h2><p>Data account, order, payment, delivery, ticket, login history, dan aktivitas diproses untuk menjalankan layanan dan kontrol keamanan. Credential server tidak dikirim ke browser.</p><% } else if(legalKey==='terms'){ %><h2>Terms of Service</h2><p>Penggunaan store mencakup pembelian produk digital/service, penggunaan wallet, pembayaran, delivery, support, dan aturan konten yang berlaku.</p><% } else { %><h2>Refund Policy</h2><p>Refund mengikuti status transaksi dan kemampuan provider pembayaran. Refund wallet dapat diproses server-side dengan reason dan audit log; gateway refund tidak dijalankan jika adapter provider belum memiliki kemampuan refund resmi.</p><% } %><p class="muted">Konten ini adalah baseline yang dapat ditinjau Owner sebelum production launch.</p></div></section>
+<section class="page-shell prose-page">
+  <div class="page-header">
+    <div>
+      <div class="eyebrow">Jyy'R Store</div>
+      <h1><%= legalTitle %></h1>
+      <p>Kebijakan publik untuk penggunaan aplikasi store.</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <% if(legalKey==='privacy'){ %>
+      <h2>Data &amp; Privacy</h2>
+      <p>Data account, order, payment, delivery, ticket, login history, dan aktivitas diproses untuk menjalankan layanan dan kontrol keamanan. Credential server tidak dikirim ke browser.</p>
+
+    <% } else if(legalKey==='terms'){ %>
+      <h2>Terms of Service</h2>
+      <p>Penggunaan store mencakup pembelian produk digital/service, penggunaan wallet, pembayaran, delivery, support, dan aturan konten yang berlaku.</p>
+
+    <% } else if(legalKey==='dmca'){ %>
+      <h2>DMCA / Hak Cipta</h2>
+
+      <p>
+        Jyy'R Store menghormati hak cipta dan menerima laporan mengenai dugaan
+        pelanggaran hak cipta pada konten yang tersedia melalui layanan kami.
+      </p>
+
+      <h3>Pengajuan laporan</h3>
+      <p>
+        Untuk membantu kami meninjau laporan, sertakan informasi yang cukup
+        untuk mengidentifikasi karya berhak cipta, lokasi atau URL konten yang
+        dilaporkan, serta informasi kontak pelapor.
+      </p>
+
+      <p>
+        Jelaskan bahwa laporan dibuat atas dasar itikad baik dan bahwa
+        informasi yang diberikan akurat berdasarkan pengetahuan pelapor.
+        Sertakan pula nama lengkap atau tanda tangan elektronik pihak yang
+        berwenang mengajukan laporan.
+      </p>
+
+      <h3>Peninjauan</h3>
+      <p>
+        Setiap laporan akan ditinjau berdasarkan informasi yang diterima dan
+        konteks konten yang dilaporkan. Kami dapat meminta informasi tambahan
+        apabila laporan belum cukup untuk dilakukan peninjauan.
+      </p>
+
+      <h3>Sengketa atau keberatan</h3>
+      <p>
+        Apabila terdapat keberatan terhadap tindakan terkait konten, berikan
+        penjelasan dan informasi pendukung yang relevan agar dapat kami tinjau
+        kembali.
+      </p>
+
+      <p class="muted">
+        Halaman ini merupakan informasi umum mengenai penanganan laporan hak
+        cipta dan bukan pengganti nasihat hukum profesional.
+      </p>
+
+    <% } else { %>
+      <h2>Refund Policy</h2>
+      <p>Refund mengikuti status transaksi dan kemampuan provider pembayaran. Refund wallet dapat diproses server-side dengan reason dan audit log; gateway refund tidak dijalankan jika adapter provider belum memiliki kemampuan refund resmi.</p>
+    <% } %>
+
+    <% if(legalKey!=='dmca'){ %>
+      <p class="muted">Konten ini adalah baseline yang dapat ditinjau Owner sebelum production launch.</p>
+    <% } %>
+  </div>
+</section>
