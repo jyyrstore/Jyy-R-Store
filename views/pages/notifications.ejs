@@ -56,7 +56,7 @@
       </div>
     <% } %>
   </div>
-  <div class="stack-list"><% notifications.forEach(n=>{ %><article class="notification-card \1" data-notification-id="<%= n.id %>">
+  <div class="stack-list"><% notifications.forEach(n=>{ %><article class="notification-card \1" data-notification-id="<%= n.id %>" data-notification-link="<%= n.link || '' %>">
   <label class="notification-select">
     <input
       type="checkbox"
@@ -91,12 +91,8 @@
     <p><%= n.body %></p>
   </div>
 
-  <% if(n.link || !n.is_read){ %>
+  <% if(!n.is_read){ %>
     <div class="inline-actions">
-      <% if(n.link){ %>
-        <a class="button button-secondary button-small" href="<%= n.link %>">Buka</a>
-      <% } %>
-
       <% if(!n.is_read){ %>
         <button
           class="button button-secondary button-small"

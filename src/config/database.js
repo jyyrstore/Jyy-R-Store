@@ -85,6 +85,10 @@ async function initDatabase(env) {
   initPromise = (async () => {
     const candidate = createPool(env);
 
+    candidate.on('error',err=>{
+      console.error('[DB] Unexpected PostgreSQL pool client error:',err);
+    });
+
     try {
       await candidate.query('select 1');
       pool = candidate;

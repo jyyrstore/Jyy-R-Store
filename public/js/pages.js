@@ -259,24 +259,17 @@
 
       if(
         event.target.closest(
-          'a,button,input,select,textarea,[data-notification-select]'
+          'button,input,select,textarea,[data-notification-select]'
         )
       ){
         return;
       }
 
-      root
-        .querySelectorAll('.notification-card.is-actions-open')
-        .forEach(openCard=>{
-          if(openCard!==card){
-            openCard.classList.remove('is-actions-open');
-          }
-        });
+      const link=card.dataset.notificationLink;
 
-      const actions=card.querySelector('.inline-actions');
-      if(!actions)return;
-
-      card.classList.toggle('is-actions-open');
+      if(link){
+        window.location.href=link;
+      }
     });
 
     syncSelection();
