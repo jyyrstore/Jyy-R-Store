@@ -1,11 +1,6 @@
 <section class="page-shell">
   <%
-const statusLabel =
-      String(product.status||'').toUpperCase() === 'PUBLISHED'
-        ? 'Tersedia'
-        : '';
-
-  %>
+%>
 
   <div class="product-detail">
     <div class="detail-media">
@@ -35,13 +30,9 @@ const statusLabel =
         <strong><%= Number(product.stock) || 0 %></strong>
         <span><%= Number(product.stock) > 0 ? 'Tersedia' : 'Habis' %></span>
       </div>
-      <div class="eyebrow"><%= product.category_name || 'Produk' %></div><h1><%= product.name %></h1>
+      <div class="detail-category-card"><%= product.category_name || 'Produk' %></div><h1><%= product.name %></h1>
       <div class="detail-price"><%= formatIDR(product.price) %></div>
-      <div class="detail-meta">
-
-        <% if(statusLabel){ %><span class="badge"><%= statusLabel %></span><% } %>
-      </div>
-      <div class="detail-actions" aria-label="Aksi produk">
+<div class="detail-actions" aria-label="Aksi produk">
         <% if(currentUser && product.stock>0){ %>
           <button class="button button-secondary" data-add-cart="<%= product.id %>"><%- icon('cart') %> Keranjang</button>
           <button class="button button-primary" data-buy-now="<%= product.id %>"><%- icon('check') %> Beli Sekarang</button>
