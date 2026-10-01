@@ -1,2 +1,6 @@
 window.JYYR={...(window.JYYR||{}),formatIDR:(n)=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(n||0))};
 document.addEventListener('click',(e)=>{const logout=e.target.closest('[data-logout]'); if(logout){e.preventDefault();JYYRApi.request('/api/auth/logout',{method:'POST'}).then(()=>location.href='/').catch(err=>window.JYYRToast?.error(err.message));}});
+document.addEventListener('contextmenu',(e)=>{
+  const target=e.target.closest('a,button,img,svg,video,[role="button"]');
+  if(target)e.preventDefault();
+},true);

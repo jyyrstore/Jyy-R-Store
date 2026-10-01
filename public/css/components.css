@@ -1504,3 +1504,57 @@ body.no-scroll{
   display:block;
   overflow:visible;
 }
+
+/* =========================================================
+   GLOBAL BUTTON PRESS ANIMATION
+   ========================================================= */
+
+@keyframes jyyr-button-press{
+  0%{
+    transform:scale(1);
+  }
+  45%{
+    transform:translateY(1px) scale(.97);
+  }
+  100%{
+    transform:scale(1);
+  }
+}
+
+:is(
+  button,
+  a.button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+):active{
+  animation:jyyr-button-press .12s ease-out;
+}
+
+@media(prefers-reduced-motion:reduce){
+  :is(
+    button,
+    a.button,
+    [role="button"],
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ):active{
+    animation:none;
+  }
+}
+
+
+/* Navigation pressed state */
+.nav-link:active,
+.bottom-item:active{
+  animation:jyyr-button-press .12s ease-out;
+}
+
+@media(prefers-reduced-motion:reduce){
+  .nav-link:active,
+  .bottom-item:active{
+    animation:none;
+  }
+}
