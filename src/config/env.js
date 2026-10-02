@@ -77,6 +77,7 @@ function loadEnv() {
     WHATSAPP_SUPPORT: process.env.WHATSAPP_SUPPORT || '',
     SOCIAL_INSTAGRAM: process.env.SOCIAL_INSTAGRAM || '',
     SOCIAL_TIKTOK: process.env.SOCIAL_TIKTOK || '',
+    SOCIAL_WHATSAPP: process.env.SOCIAL_WHATSAPP || '',
     SOCIAL_YOUTUBE: process.env.SOCIAL_YOUTUBE || '',
     SOCIAL_TELEGRAM: process.env.SOCIAL_TELEGRAM || '',
     SOCIAL_DISCORD: process.env.SOCIAL_DISCORD || '',
