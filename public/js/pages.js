@@ -148,6 +148,33 @@
     </div>
   `;
 
+  async function saveRecipientContact(form){
+    if(!form.reportValidity())return null;
+
+    const email=form.querySelector('[name="email"]')?.value||'';
+    const countryCode=form.querySelector('[name="countryCode"]')?.value||'ID';
+    const phone=form.querySelector('[name="phone"]')?.value||'';
+    const submit=form.querySelector('button[type="submit"]');
+
+    if(submit){
+      submit.disabled=true;
+      submit.setAttribute('aria-busy','true');
+    }
+
+    try{
+      return await api.request('/api/cart/contact',{
+        method:'PUT',
+        body:{email,countryCode,phone}
+      });
+    }finally{
+      if(submit){
+        submit.disabled=false;
+        submit.removeAttribute('aria-busy');
+      }
+    }
+  }
+
+
   async function hydrateCartBadge(){
     const badges=[...document.querySelectorAll('[data-cart-badge]')];
 
@@ -1791,7 +1818,7 @@
     const rs=e.target.closest('[data-user-reset]');if(rs){try{await ownerAction('/api/owner/users/'+rs.dataset.userReset+'/reset-sessions');toast.success('Session user direset.')}catch(err){toast.error(err.message)}}
     const du=e.target.closest('[data-user-delete]');if(du&&await window.JYYRModal.confirm('Anonymize account ini? Histori order/payment dipertahankan.')){try{await ownerAction('/api/owner/users/'+du.dataset.userDelete,{},'DELETE','User dianonymisasi.');location.reload()}catch(err){toast.error(err.message)}}
     const cr=e.target.closest('[data-user-role]');if(cr){const role=document.getElementById('user-role-select')?.value;if(role&&await window.JYYRModal.confirm('Ubah role user?')){try{await ownerAction('/api/owner/users/'+cr.dataset.userRole+'/change-role',{role});location.reload()}catch(err){toast.error(err.message)}}}
-    const oi=e.target.closest('[data-owner-order-inspect]');if(oi){let d;try{d=JSON.parse(oi.dataset.ownerOrderInspect)}catch{return}open(`<div class="stack-form"><h2>Order ${esc(d.order_number||d.id)}</h2><div class="summary-row"><span>User</span><b>${esc(d.username||'—')}</b></div><div class="summary-row"><span>Total</span><b>${money(d.total)}</b></div><div class="summary-row"><span>Status</span><b>${esc(d.status)}</b></div><div class="summary-row"><span>Payment</span><b>${esc(d.payment_method||'—')}</b></div><p class="muted">Payment gateway tetap harus dikonfirmasi oleh webhook resmi. Owner hanya dapat menjalankan transisi fulfillment yang valid.</p><button class="button button-secondary button-block" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Tutup</button></div>`)}
+    const oi=e.target.closest('[data-owner-order-inspect]');if(oi){let d;try{d=JSON.parse(oi.dataset.ownerOrderInspect)}catch{return}open(`<div class="stack-form"><h2>Order ${esc(d.order_number||d.id)}</h2><div class="summary-row"><span>User</span><b>${esc(d.username||'—')}</b></div><div class="summary-row"><span>Email Penerima</span><b>${esc(d.recipient_email||'—')}</b></div><div class="summary-row"><span>WhatsApp</span><b>${esc(((d.recipient_dial_code||'')+(d.recipient_phone||''))||'—')}</b></div><div class="summary-row"><span>Total</span><b>${money(d.total)}</b></div><div class="summary-row"><span>Status</span><b>${esc(d.status)}</b></div><div class="summary-row"><span>Payment</span><b>${esc(d.payment_method||'—')}</b></div><p class="muted">Payment gateway tetap harus dikonfirmasi oleh webhook resmi. Owner hanya dapat menjalankan transisi fulfillment yang valid.</p><button class="button button-secondary button-block" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Tutup</button></div>`)}
     const os=e.target.closest('[data-owner-order-status]');if(os){if(!(await window.JYYRModal.confirm(`Ubah status order ke ${os.dataset.status}?`)))return;try{await ownerAction('/api/owner/orders/'+os.dataset.ownerOrderStatus+'/status',{status:os.dataset.status},'POST','Status order diperbarui.');location.reload()}catch(err){toast.error(err.message)}}
     const rb=e.target.closest('[data-owner-refund-order]');if(rb){open(`<form data-refund-form class="stack-form"><h2>Refund Order</h2><input type="hidden" name="order_id" value="${esc(rb.dataset.ownerRefundOrder)}"><label class="field"><span>Alasan</span><textarea name="reason" minlength="5" required></textarea></label>${formButtons('Process Refund')}</form>`)}
     const om=e.target.closest('[data-owner-message]');if(om){open(`<form data-owner-message-form class="stack-form"><h2>Balas Pesan</h2><input type="hidden" name="user_id" value="${esc(om.dataset.ownerMessage)}"><label class="field"><span>Pesan</span><textarea name="body" minlength="1" maxlength="10000" required></textarea></label>${formButtons('Kirim Pesan')}</form>`)}
@@ -2350,4 +2377,67 @@
   }
 
   document.querySelector('.filter-bar[action="/search"]')?.addEventListener('submit',e=>{e.preventDefault();history.pushState({},'', '/search?q='+encodeURIComponent(document.getElementById('search-query').value.trim()));search()}); if(location.pathname==='/search')search();
+  document.addEventListener('click',async e=>{
+    const checkoutLink=e.target.closest('[data-cart-checkout]');
+    if(!checkoutLink)return;
+
+    e.preventDefault();
+
+    const form=document.querySelector('[data-recipient-contact-form]');
+
+    if(!form){
+      location.href=checkoutLink.href;
+      return;
+    }
+
+    if(!form.reportValidity())return;
+
+    try{
+      await saveRecipientContact(form);
+      toast.success('Kontak penerima berhasil disimpan.');
+      location.href=checkoutLink.href;
+    }catch(err){
+      toast.error(err.message);
+    }
+  });
+
+  document.addEventListener('change',e=>{
+    const country=e.target.closest('[data-recipient-country]');
+    if(!country)return;
+
+    const option=country.selectedOptions?.[0];
+    const dial=document.querySelector(
+      '[data-recipient-dial-code] strong'
+    );
+
+    if(dial){
+      dial.textContent=option?.dataset?.dialCode||'+62';
+    }
+  });
+
+  document.addEventListener('input',e=>{
+    const phone=e.target.closest(
+      '[data-recipient-contact-form] input[name="phone"]'
+    );
+
+    if(phone){
+      phone.value=phone.value.replace(/\D/g,'').slice(0,14);
+    }
+  });
+
+  document.addEventListener('submit',async e=>{
+    const form=e.target.closest('[data-recipient-contact-form]');
+    if(!form)return;
+
+    e.preventDefault();
+
+    try{
+      await saveRecipientContact(form);
+      toast.success('Kontak penerima berhasil disimpan.');
+    }catch(err){
+      toast.error(err.message);
+    }
+  });
+
+
 })();

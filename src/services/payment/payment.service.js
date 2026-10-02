@@ -6,6 +6,7 @@ const notifications=require('../notification/notification.service');
 const { badRequest, notFound, forbidden }=require('../../utils/error');
 const {loadEnv}=require('../../config/env');
 const profiles=require('../../repositories/profiles.repository');
+const { sendOrderPaidEmail }=require('../email/order-notification.service');
 
 const PAYMENT_CREATABLE_ORDER_STATUSES=new Set(['PENDING']);
 
@@ -30,7 +31,7 @@ async function createForOrder(userId,order,returnUrl){
     'Customer'
   );
 
-  const customerEmail=profile?.email||null;
+  const customerEmail=order?.recipient_email||profile?.email||null;
   const idempotencyKey=`order:${order.id}:payment`;
 
   /*
@@ -268,7 +269,7 @@ async function processWebhook(rawBody,signature,payload){
   if(!ok) throw Object.assign(new Error('Invalid webhook signature'),{status:401,code:'WEBHOOK_SIGNATURE_INVALID',expose:true});
   const parsed=provider().parseWebhook(payload,rawBody);
   if(!parsed.eventId||!parsed.reference)throw badRequest('INVALID_WEBHOOK','Webhook payload is incomplete.');
-  return withTransaction(async(client)=>{
+  const result=await withTransaction(async(client)=>{
     const providerName=loadEnv().PAYMENT_PROVIDER||'generic-json';
     let payment=null;
 
@@ -398,7 +399,34 @@ async function processWebhook(rawBody,signature,payload){
       for(const i of items)await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.product_id,i.quantity]);
     }
     await client.query('insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)', ['PAYMENT_WEBHOOK','payment',payment.id,{reference:parsed.reference,status:next,orderId:order.id}]);
-    return {duplicate:false,paymentStatus:next,orderId:order.id};
+    return {
+      duplicate:false,
+      paymentStatus:next,
+      orderId:order.id,
+      orderPaid:next==='PAID'&&order.status!=='PAID',
+      recipientEmail:order.recipient_email||null,
+      orderNumber:order.order_number,
+      orderTotal:Number(order.total||0),
+      recipientDialCode:order.recipient_dial_code||null,
+      recipientPhone:order.recipient_phone||null
+    };
   });
+
+  if(result?.orderPaid&&result.recipientEmail){
+    await sendOrderPaidEmail({
+      order_number:result.orderNumber,
+      total:result.orderTotal,
+      recipient_email:result.recipientEmail,
+      recipient_dial_code:result.recipientDialCode,
+      recipient_phone:result.recipientPhone
+    }).catch(error=>{
+      console.warn(
+        '[ORDER EMAIL] gateway order-paid notification failed:',
+        error?.message||String(error)
+      );
+    });
+  }
+
+  return result;
 }
 module.exports={createForOrder,getStatus,processWebhook};

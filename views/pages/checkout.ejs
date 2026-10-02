@@ -1,3 +1,10 @@
+<% const recipient=preview.recipientContact||null; %>
+<% const recipientComplete=Boolean(
+  recipient?.email&&
+  recipient?.countryCode&&
+  recipient?.dialCode&&
+  recipient?.phone
+); %>
 <section class="page-shell">
   <div class="page-header">
     <div>
@@ -37,7 +44,38 @@
     </div>
 
     <aside class="summary-card">
+      <div class="eyebrow">Kontak Penerima</div>
+
+      <% if(recipientComplete){ %>
+        <div class="recipient-checkout-summary">
+          <div class="summary-row">
+            <span>Email</span>
+            <strong><%= recipient.email %></strong>
+          </div>
+          <div class="summary-row">
+            <span>WhatsApp</span>
+            <strong><%= recipient.dialCode %><%= recipient.phone %></strong>
+          </div>
+          <a class="button button-secondary button-block" href="/cart">
+            Ubah kontak
+          </a>
+        </div>
+      <% } else { %>
+        <div class="recipient-checkout-summary recipient-checkout-summary--warning">
+          <strong>Kontak penerima belum lengkap.</strong>
+          <span>
+            Lengkapi email dan WhatsApp di Keranjang sebelum membayar.
+          </span>
+          <a class="button button-secondary button-block" href="/cart">
+            Lengkapi kontak di Keranjang
+          </a>
+        </div>
+      <% } %>
+
+      <hr>
+
       <div class="eyebrow">Pembayaran</div>
+
 
       <div class="summary-row">
         <span>Subtotal</span>
@@ -99,7 +137,7 @@
       <button
         class="button button-primary button-block"
         data-checkout-confirm
-        <%= preview.items.length ? '' : 'disabled' %>
+        <%= preview.items.length && recipientComplete ? '' : 'disabled' %>
       >
         <%- icon('check') %>
         <span

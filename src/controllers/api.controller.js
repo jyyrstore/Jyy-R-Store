@@ -65,10 +65,42 @@ const productController={
 };
 const cartController={
  get:async(req,res)=>ok(res,await cart.get(req.user.id)),
- add:async(req,res)=>ok(res,await cart.add(req.user.id,req.body.productId,Number(req.body.quantity||1)),201),
- update:async(req,res)=>ok(res,await cart.set(req.user.id,req.params.id,Number(req.body.quantity))),
- remove:async(req,res)=>{await cart.remove(req.user.id,req.params.id);return ok(res,{})},
- clear:async(req,res)=>{await cart.clear(req.user.id);return ok(res,{})}
+ add:async(req,res)=>ok(
+   res,
+   await cart.add(
+     req.user.id,
+     req.body.productId,
+     Number(req.body.quantity||1)
+   ),
+   201
+ ),
+ update:async(req,res)=>ok(
+   res,
+   await cart.set(
+     req.user.id,
+     req.params.id,
+     Number(req.body.quantity)
+   )
+ ),
+ remove:async(req,res)=>{
+   await cart.remove(
+     req.user.id,
+     req.params.id
+   );
+   return ok(res,{});
+ },
+ clear:async(req,res)=>{
+   await cart.clear(req.user.id);
+   return ok(res,{});
+ },
+ setContact:async(req,res)=>
+   ok(
+     res,
+     await cart.setContact(
+       req.user.id,
+       req.body
+     )
+   )
 };
 const orderController={
  preview:async(req,res)=>ok(res,await orders.preview(req.user.id)),

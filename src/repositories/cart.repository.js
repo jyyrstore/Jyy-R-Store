@@ -15,12 +15,32 @@ async function get(userId){
     "delete from cart_items ci using carts c, products p where ci.cart_id=c.id and ci.product_id=p.id and c.user_id=$1 and p.status<>'PUBLISHED'",
     [userId]
   );
-  return (
+
+  const row=(
     await query(
-      'select c.id,coalesce(json_agg(json_build_object(\'id\',ci.id,\'quantity\',ci.quantity,\'product_id\',p.id,\'name\',p.name,\'slug\',p.slug,\'price\',p.price,\'stock\',p.stock,\'thumbnail_path\',p.thumbnail_path)) filter(where ci.id is not null),\'[]\') items from carts c left join cart_items ci on ci.cart_id=c.id left join products p on p.id=ci.product_id where c.user_id=$1 group by c.id',
+      'select c.id,c.recipient_email,c.recipient_country_code,c.recipient_dial_code,c.recipient_phone,coalesce(json_agg(json_build_object(\'id\',ci.id,\'quantity\',ci.quantity,\'product_id\',p.id,\'name\',p.name,\'slug\',p.slug,\'price\',p.price,\'stock\',p.stock,\'thumbnail_path\',p.thumbnail_path)) filter(where ci.id is not null),\'[]\') items from carts c left join cart_items ci on ci.cart_id=c.id left join products p on p.id=ci.product_id where c.user_id=$1 group by c.id',
       [userId]
     )
-  ).rows[0]||{items:[]};
+  ).rows[0];
+
+  return row||{items:[]};
+}
+
+async function setContact(userId,contact){
+  const c=await ensure(userId);
+
+  return (
+    await query(
+      'update carts set recipient_email=$2,recipient_country_code=$3,recipient_dial_code=$4,recipient_phone=$5,updated_at=now() where id=$1 returning *',
+      [
+        c.id,
+        contact.email,
+        contact.countryCode,
+        contact.dialCode,
+        contact.phone
+      ]
+    )
+  ).rows[0];
 }
 
 async function upsertItem(userId,productId,quantity){
@@ -63,12 +83,17 @@ async function clear(userId,client=null){
   const sql=
     'delete from cart_items ci using carts c where ci.cart_id=c.id and c.user_id=$1';
 
+  const clearContact=
+    'update carts set recipient_email=null,recipient_country_code=null,recipient_dial_code=null,recipient_phone=null,updated_at=now() where user_id=$1';
+
   if(client){
     await client.query(sql,[userId]);
+    await client.query(clearContact,[userId]);
     return;
   }
 
   await query(sql,[userId]);
+  await query(clearContact,[userId]);
 }
 
-module.exports={ensure,get,upsertItem,setItem,removeItem,clear};
+module.exports={ensure,get,setContact,upsertItem,setItem,removeItem,clear};

@@ -84,7 +84,89 @@
       <% } %>
     </div>
 
-    <aside class="summary-card">
+
+      <% if(cart.items.length){ %>
+        <section class="recipient-contact-card">
+          <div class="recipient-contact-header">
+            <div>
+              <div class="eyebrow">Kontak Penerima</div>
+              <h2>Kontak Penerima</h2>
+              <p class="muted small">
+                Kontak ini digunakan untuk informasi pesanan dan komunikasi admin.
+              </p>
+            </div>
+          </div>
+
+          <form data-recipient-contact-form class="stack-form">
+            <label class="field">
+              <span>Email Penerima</span>
+              <input
+                type="email"
+                name="email"
+                value="<%= cart.recipientContact?.email||'' %>"
+                placeholder="Email@gmail.com"
+                maxlength="254"
+                autocomplete="email"
+                required
+              >
+              <small>
+                Diperlukan untuk mengirim informasi pesanan melalui email.
+                Pastikan email Anda aktif, dapat menerima pesan, dan storage email
+                tidak penuh.
+              </small>
+            </label>
+
+            <div class="recipient-phone-row">
+              <label class="field recipient-country-field">
+                <span>Nomor WhatsApp</span>
+                <select name="countryCode" data-recipient-country required>
+                  <% (recipientCountries||[]).forEach(country=>{ %>
+                    <option
+                      value="<%= country.code %>"
+                      data-dial-code="<%= country.dialCode %>"
+                      <%= (cart.recipientContact?.countryCode||'ID')===country.code ? 'selected' : '' %>
+                    ><%= country.name %></option>
+                  <% }) %>
+                </select>
+              </label>
+
+              <div class="recipient-dial-code" data-recipient-dial-code>
+                <span>Kode</span>
+                <strong><%= cart.recipientContact?.dialCode||'+62' %></strong>
+              </div>
+
+              <label class="field recipient-phone-field">
+                <span>&nbsp;</span>
+                <input
+                  type="tel"
+                  name="phone"
+                  value="<%= cart.recipientContact?.phone||'' %>"
+                  placeholder="83890777348"
+                  inputmode="numeric"
+                  autocomplete="tel-national"
+                  maxlength="14"
+                  pattern="[1-9][0-9]{5,13}"
+                  required
+                >
+              </label>
+            </div>
+
+            <small>
+              Pilih negara di kiri, lalu isi nomor tanpa angka 0 di depan
+              agar admin bisa menghubungi Anda via WhatsApp saat ada kendala pesanan.
+            </small>
+
+            <div class="recipient-contact-actions">
+              <button class="button button-primary" type="submit">
+                <%- icon('device-floppy') %>
+                Simpan kontak
+              </button>
+            </div>
+          </form>
+        </section>
+      <% } %>
+
+<aside class="summary-card">
       <div class="eyebrow">Ringkasan pesanan</div>
 
       <div class="summary-row">
@@ -93,7 +175,7 @@
       </div>
 
       <% if(cart.items.length){ %>
-        <a class="button button-primary button-block" href="/checkout">
+        <a class="button button-primary button-block" href="/checkout" data-cart-checkout>
           Lanjut ke pembayaran
         </a>
       <% } else { %>

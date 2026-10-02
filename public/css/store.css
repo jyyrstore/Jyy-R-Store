@@ -822,3 +822,134 @@
   overflow:hidden;
   text-overflow:ellipsis;
 }
+
+
+/* RECIPIENT CONTACT */
+
+.recipient-contact-card{
+  margin-top:16px;
+  padding:16px;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+}
+
+.recipient-contact-header h2{
+  margin:4px 0 5px;
+  font-size:17px;
+}
+
+.recipient-contact-header p{
+  margin:0;
+  line-height:1.55;
+}
+
+.recipient-contact-card .stack-form{
+  margin-top:14px;
+}
+
+.recipient-contact-card .field small,
+.recipient-contact-card>form>small{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  line-height:1.55;
+}
+
+.recipient-phone-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 76px minmax(0,1.1fr);
+  gap:10px;
+  align-items:end;
+}
+
+.recipient-country-field,
+.recipient-phone-field{
+  min-width:0;
+}
+
+.recipient-dial-code{
+  min-width:0;
+  height:44px;
+  padding:6px 10px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  box-sizing:border-box;
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--deep);
+}
+
+.recipient-dial-code span{
+  color:var(--muted);
+  font-size:9px;
+  line-height:1.1;
+}
+
+.recipient-dial-code strong{
+  margin-top:2px;
+  font-size:13px;
+}
+
+.recipient-contact-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:12px;
+}
+
+.recipient-checkout-summary,
+.recipient-order-summary{
+  display:grid;
+  gap:8px;
+  margin:10px 0 4px;
+}
+
+.recipient-checkout-summary--warning{
+  padding:12px;
+  border:1px solid rgba(228,170,82,.28);
+  border-radius:var(--radius-md);
+  background:rgba(228,170,82,.06);
+}
+
+.recipient-checkout-summary--warning strong{
+  color:var(--warning);
+}
+
+.recipient-checkout-summary--warning span{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+
+.recipient-order-summary{
+  padding:12px;
+  margin:0 0 12px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--deep);
+}
+
+@media(max-width:600px){
+  .recipient-contact-card{
+    padding:14px;
+  }
+
+  .recipient-phone-row{
+    grid-template-columns:minmax(0,1fr) 66px minmax(0,1.15fr);
+    gap:8px;
+  }
+
+  .recipient-dial-code{
+    padding:6px 8px;
+  }
+
+  .recipient-contact-actions{
+    justify-content:stretch;
+  }
+
+  .recipient-contact-actions .button{
+    width:100%;
+  }
+}

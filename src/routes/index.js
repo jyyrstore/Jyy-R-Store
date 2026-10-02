@@ -165,6 +165,21 @@ apiRouter.get('/products/:slug',asyncHandler(api.productController.detail));
 apiRouter.get('/categories',asyncHandler(api.productController.categories));
 apiRouter.post('/cart',requireAuth,validate(z.object({productId:z.string().uuid(),quantity:z.coerce.number().int().min(1).max(100)})),asyncHandler(api.cartController.add));
 apiRouter.get('/cart',requireAuth,asyncHandler(api.cartController.get));
+const recipientContactSchema=z.object({
+  email:z.string().trim().email().max(254).transform(v=>v.toLowerCase()),
+  countryCode:z.string().trim().regex(/^[A-Za-z]{2}$/).transform(v=>v.toUpperCase()),
+  phone:z.string().trim().transform(v=>v.replace(/\D/g,'')).refine(
+    v=>/^[1-9]\d{5,13}$/.test(v),
+    'Nomor WhatsApp tidak valid.'
+  )
+});
+
+apiRouter.put(
+  '/cart/contact',
+  requireAuth,
+  validate(recipientContactSchema),
+  asyncHandler(api.cartController.setContact)
+);
 apiRouter.put('/cart/:id',requireAuth,validate(z.object({quantity:z.coerce.number().int().min(1).max(100)})),asyncHandler(api.cartController.update));
 apiRouter.delete('/cart/:id',requireAuth,asyncHandler(api.cartController.remove));
 apiRouter.delete('/cart',requireAuth,asyncHandler(api.cartController.clear));
