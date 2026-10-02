@@ -1,39 +1,92 @@
 <footer class="site-footer" aria-label="Footer">
-  <div class="site-footer-brand">
-    <strong>Jyy'R Store</strong>
-    <p>Toko digital untuk produk, layanan, pembayaran, dan akses digital yang aman.</p>
+  <section class="site-footer-social" aria-labelledby="footer-social-title">
+    <h2 id="footer-social-title">Social Media</h2>
+
+    <div class="site-footer-social-links">
+      <a
+        class="site-footer-social-link site-footer-social-link-tiktok"
+        href="https://www.tiktok.com/@jyyr26?_r=1&_t=ZS-9ADfN48bKWC"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="TikTok"
+        title="TikTok"
+      >
+        <%- icon('tiktok', 'site-footer-social-icon', 'TikTok') %>
+      </a>
+
+      <a
+        class="site-footer-social-link"
+        href="https://whatsapp.com/channel/0029VbCH7C0E50Uid8KYwG1f"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="WhatsApp"
+        title="WhatsApp"
+      >
+        <%- icon('whatsapp', 'site-footer-social-icon', 'WhatsApp') %>
+      </a>
+
+      <a
+        class="site-footer-social-link"
+        href="https://t.me/JyyR_Mentahan"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Telegram"
+        title="Telegram"
+      >
+        <%- icon('telegram', 'site-footer-social-icon', 'Telegram') %>
+      </a>
+
+      <a
+        class="site-footer-social-link"
+        href="https://www.instagram.com/jyy_rsh?stkn=aWxsd3F4MDgwNjB4"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Instagram"
+        title="Instagram"
+      >
+        <%- icon('instagram', 'site-footer-social-icon', 'Instagram') %>
+      </a>
+    </div>
+
+    <p class="site-footer-social-text">
+      <strong>Stay connected with Jyy'R Store</strong>
+      <span>update, info, dan promo terbaru ada di sini.</span>
+    </p>
+  </section>
+
+  <div class="site-footer-links">
+    <nav class="footer-group site-footer-products" aria-labelledby="footer-products">
+      <h2 id="footer-products">Produk</h2>
+      <ul>
+        <li><a href="/store">Semua produk</a></li>
+        <li><a href="/search">Cari produk</a></li>
+        <li><a href="/store">Daftar Harga</a></li>
+      </ul>
+    </nav>
+
+    <nav class="footer-group site-footer-help" aria-labelledby="footer-help">
+      <h2 id="footer-help">Bantuan</h2>
+      <ul>
+        <li><a href="/tickets">Hubungi Kami</a></li>
+        <li><a href="/faq">FAQ</a></li>
+        <li><a href="/orders">Cek Transaksi</a></li>
+      </ul>
+    </nav>
+
+    <nav class="footer-group site-footer-legal" aria-labelledby="footer-legal">
+      <h2 id="footer-legal">Legal</h2>
+      <ul>
+        <li><a href="/services">Layanan</a></li>
+        <li><a href="/terms">Ketentuan</a></li>
+        <li><a href="/terms">Syarat &amp; Ketentuan</a></li>
+        <li><a href="/privacy">Kebijakan Privasi</a></li>
+        <li><a href="/dmca">DMCA / Hak Cipta</a></li>
+      </ul>
+    </nav>
   </div>
 
-  <nav class="footer-group" aria-labelledby="footer-products">
-    <h2 id="footer-products">Produk</h2>
-    <ul>
-      <li><a href="/store">Semua produk</a></li>
-      <li><a href="/search">Cari produk</a></li>
-      <li><a href="/store">Daftar Harga</a></li>
-    </ul>
-  </nav>
-
-  <nav class="footer-group" aria-labelledby="footer-help">
-    <h2 id="footer-help">Bantuan</h2>
-    <ul>
-      <li><a href="/tickets">Hubungi Kami</a></li>
-      <li><a href="/faq">FAQ</a></li>
-      <li><a href="/orders">Cek Transaksi</a></li>
-    </ul>
-  </nav>
-
-  <nav class="footer-group site-footer-legal" aria-labelledby="footer-legal">
-    <h2 id="footer-legal">Legal</h2>
-    <ul>
-      <li><a href="/services">Layanan</a></li>
-      <li><a href="/terms">Ketentuan</a></li>
-      <li><a href="/terms">Syarat &amp; Ketentuan</a></li>
-      <li><a href="/privacy">Kebijakan Privasi</a></li>
-      <li><a href="/dmca">DMCA / Hak Cipta</a></li>
-    </ul>
-  </nav>
-
   <div class="site-footer-bottom">
-    © <%= new Date().getFullYear() %> Jyy'R Store
+    © <%= new Date().getFullYear() %> Jyy'R Store • All rights reserved.<br>
+    All trademarks belong to their respective owners.
   </div>
 </footer>
