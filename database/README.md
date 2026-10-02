@@ -1,4 +1,4 @@
-# Jyy'R Store database
+# Jyyr Store database
 
 Migrations are ordered SQL files under `database/migrations/`. RLS policies live under `database/policies/`; functions and triggers are separated so privileged application logic remains in the server transaction layer.
 

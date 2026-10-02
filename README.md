@@ -1,6 +1,6 @@
-# Jyy'R Store
+# Jyyr Store
 
-Jyy'R Store is a full-stack digital store/service platform built as a greenfield Express application with EJS, HTML/CSS/Vanilla JavaScript, Supabase Auth/Storage, and PostgreSQL transactions.
+Jyyr Store is a full-stack digital store/service platform built as a greenfield Express application with EJS, HTML/CSS/Vanilla JavaScript, Supabase Auth/Storage, and PostgreSQL transactions.
 
 ## Architecture
 

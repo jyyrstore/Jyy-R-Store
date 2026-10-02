@@ -7,7 +7,7 @@
   <section class="panel">
     <article class="message <%= message.sender_id===currentUser.id?'mine':'theirs' %>">
       <div class="message-meta">
-        <strong><%= message.sender_id===currentUser.id?'Anda':(message.sender_username||"Jyy'R Store") %></strong>
+        <strong><%= message.sender_id===currentUser.id?'Anda':(message.sender_username||"Jyyr Store") %></strong>
         <span><%= formatDate(message.created_at) %></span>
       </div>
       <p><%= message.body %></p>

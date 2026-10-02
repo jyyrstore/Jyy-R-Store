@@ -1,4 +1,4 @@
-# Jyy'R Store — Requirement Audit
+# Jyyr Store — Requirement Audit
 
 This audit maps the implementation against `Website Store.md` treated as the master specification.
 

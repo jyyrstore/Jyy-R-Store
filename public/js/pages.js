@@ -2312,7 +2312,7 @@
               <div>
                 <div class="eyebrow">${esc(s.category||'Layanan')}</div>
                 <h3>${esc(s.name)}</h3>
-                <p>${esc(s.description||'Layanan Jyy’R Store.')}</p>
+                <p>${esc(s.description||'Layanan Jyyr Store.')}</p>
               </div>
               <div class="service-footer">
                 <strong>${money(s.price)}</strong>

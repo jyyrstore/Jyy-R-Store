@@ -33,7 +33,7 @@ function ownerPager(req){
 
 function base(req, extra={}) {
   return {
-    title:"Jyy'R Store",
+    title:"Jyyr Store",
     req,
     csrfToken:req.csrfToken?.() || null,
     paginationUrl:(param,page,query={})=>

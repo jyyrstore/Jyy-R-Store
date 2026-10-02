@@ -2,7 +2,7 @@
   "name": "jyyr-store",
   "version": "1.0.0",
   "private": true,
-  "description": "Jyy'R Store full-stack digital store platform",
+  "description": "Jyyr Store full-stack digital store platform",
   "main": "server.js",
   "type": "commonjs",
   "engines": {

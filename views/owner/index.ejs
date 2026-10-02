@@ -439,7 +439,7 @@
 }) %>
 </div>
       <% } else if(ownerSection==='maintenance'){ %>
-        <form class="panel stack-form" data-owner-maintenance><div class="panel subdued"><strong>Preview</strong><p class="muted"><%= maintenance?.title||"Maintenance Jyy'R Store" %></p><small class="muted"><%= maintenance?.message||'Saat aktif, user akan melihat halaman maintenance. Webhook dan backend kritis tetap bekerja.' %></small></div><label class="switch-row"><span>Maintenance ON</span><input type="checkbox" name="enabled" <%= maintenance?.enabled?'checked':'' %>></label><label class="field"><span>Title</span><input name="title" value="<%= maintenance?.title||'' %>" required></label><label class="field"><span>Message</span><textarea name="message"><%= maintenance?.message||'' %></textarea></label><label class="field">
+        <form class="panel stack-form" data-owner-maintenance><div class="panel subdued"><strong>Preview</strong><p class="muted"><%= maintenance?.title||"Maintenance Jyyr Store" %></p><small class="muted"><%= maintenance?.message||'Saat aktif, user akan melihat halaman maintenance. Webhook dan backend kritis tetap bekerja.' %></small></div><label class="switch-row"><span>Maintenance ON</span><input type="checkbox" name="enabled" <%= maintenance?.enabled?'checked':'' %>></label><label class="field"><span>Title</span><input name="title" value="<%= maintenance?.title||'' %>" required></label><label class="field"><span>Message</span><textarea name="message"><%= maintenance?.message||'' %></textarea></label><label class="field">
   <span>Scheduled Start</span>
   <div class="jyyr-date-field" data-jyyr-date-field>
     <input

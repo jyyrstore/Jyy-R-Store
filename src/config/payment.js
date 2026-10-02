@@ -150,7 +150,7 @@ class XenditProvider{
       customer:xenditCustomer,
       success_return_url:returnUrl,
       cancel_return_url:this.normalizeHttpsUrl(this.env.XENDIT_CANCEL_RETURN_URL,'XENDIT_CANCEL_RETURN_URL')||returnUrl,
-      description:`Jyy'R Store payment ${orderId}`,
+      description:`Jyyr Store payment ${orderId}`,
       metadata:{
         order_id:String(orderId)
       }

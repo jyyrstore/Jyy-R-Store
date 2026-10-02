@@ -18,7 +18,7 @@ function loadEnv() {
       process.env.APP_URL ||
       'http://localhost:3000'
     ).split(',').map(value => value.trim()).filter(Boolean),
-    APP_NAME: process.env.APP_NAME || "Jyy'R Store",
+    APP_NAME: process.env.APP_NAME || "Jyyr Store",
     SUPABASE_URL: process.env.SUPABASE_URL || '',
     SUPABASE_PUBLISHABLE_KEY:
       process.env.SUPABASE_PUBLISHABLE_KEY ||
@@ -56,7 +56,7 @@ function loadEnv() {
     XENDIT_CANCEL_RETURN_URL: process.env.XENDIT_CANCEL_RETURN_URL || '',
     EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || 'smtp',
     EMAIL_FROM: process.env.EMAIL_FROM || '',
-    EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "Jyy'R Store",
+    EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "Jyyr Store",
     EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO || '',
     SMTP_HOST: process.env.SMTP_HOST || '',
     SMTP_PORT: int(process.env.SMTP_PORT, 587),

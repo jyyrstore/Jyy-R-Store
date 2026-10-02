@@ -1,4 +1,4 @@
-# Jyy'R Store — Implemented Structure Map
+# Jyyr Store — Implemented Structure Map
 
 This document describes the greenfield implementation produced from `Website Store.md`.
 
