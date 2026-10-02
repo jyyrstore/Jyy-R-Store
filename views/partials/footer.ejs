@@ -3,49 +3,18 @@
     <h2 id="footer-social-title">Social Media</h2>
 
     <div class="site-footer-social-links">
-      <a
-        class="site-footer-social-link site-footer-social-link-tiktok"
-        href="https://www.tiktok.com/@jyyr26?_r=1&_t=ZS-9ADfN48bKWC"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="TikTok"
-        title="TikTok"
-      >
-        <%- icon('tiktok', 'site-footer-social-icon', 'TikTok') %>
-      </a>
-
-      <a
-        class="site-footer-social-link"
-        href="https://whatsapp.com/channel/0029VbCH7C0E50Uid8KYwG1f"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="WhatsApp"
-        title="WhatsApp"
-      >
-        <%- icon('whatsapp', 'site-footer-social-icon', 'WhatsApp') %>
-      </a>
-
-      <a
-        class="site-footer-social-link"
-        href="https://t.me/JyyR_Mentahan"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Telegram"
-        title="Telegram"
-      >
-        <%- icon('telegram', 'site-footer-social-icon', 'Telegram') %>
-      </a>
-
-      <a
-        class="site-footer-social-link"
-        href="https://www.instagram.com/jyy_rsh?stkn=aWxsd3F4MDgwNjB4"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Instagram"
-        title="Instagram"
-      >
-        <%- icon('instagram', 'site-footer-social-icon', 'Instagram') %>
-      </a>
+      <% for (const [,label,url,iconName] of (socialLinks || [])) { %>
+        <a
+          class="site-footer-social-link"
+          href="<%= url %>"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="<%= label %>"
+          title="<%= label %>"
+        >
+          <%- icon(iconName, 'site-footer-social-icon', label) %>
+        </a>
+      <% } %>
     </div>
 
     <p class="site-footer-social-text">
@@ -78,7 +47,6 @@
       <ul>
         <li><a href="/services">Layanan</a></li>
         <li><a href="/terms">Ketentuan</a></li>
-        <li><a href="/terms">Syarat &amp; Ketentuan</a></li>
         <li><a href="/privacy">Kebijakan Privasi</a></li>
         <li><a href="/dmca">DMCA / Hak Cipta</a></li>
       </ul>

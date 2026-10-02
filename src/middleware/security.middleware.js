@@ -175,7 +175,13 @@ function sharedOrLocalRateLimit(kind){
         }
       );
 
-      return local(req,res,next);
+      return res.status(503).json({
+        success:false,
+        error:{
+          code:'RATE_LIMIT_UNAVAILABLE',
+          message:'Rate limiting service is temporarily unavailable. Please try again later.'
+        }
+      });
     }
   };
 }

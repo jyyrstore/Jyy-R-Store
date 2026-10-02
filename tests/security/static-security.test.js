@@ -48,3 +48,76 @@ test('payment returnUrl is normalized before provider use',()=>{
   const s=fs.readFileSync(path.join(root,'src/controllers/api.controller.js'),'utf8');
   assert.match(s,/safeSameOriginUrl\(req\.body\.returnUrl/);
 });
+
+
+test('footer social links use configured environment entries only',()=>{
+  const server=fs.readFileSync(
+    path.join(root,'server.js'),
+    'utf8'
+  );
+  const footer=fs.readFileSync(
+    path.join(root,'views/partials/footer.ejs'),
+    'utf8'
+  );
+  const layout=fs.readFileSync(
+    path.join(root,'public/css/layout.css'),
+    'utf8'
+  );
+  const responsive=fs.readFileSync(
+    path.join(root,'public/css/responsive.css'),
+    'utf8'
+  );
+  const icons=fs.readFileSync(
+    path.join(root,'src/utils/icons.js'),
+    'utf8'
+  );
+
+  for(const key of [
+    'SOCIAL_INSTAGRAM',
+    'SOCIAL_TIKTOK',
+    'SOCIAL_WHATSAPP',
+    'SOCIAL_TELEGRAM'
+  ]){
+    assert.match(server,new RegExp(key));
+  }
+
+  assert.match(server,/socialLinks/);
+  assert.match(footer,/socialLinks/);
+
+  assert.doesNotMatch(footer,/https:\/\/www\.tiktok\.com\/@jyyr26/);
+  assert.doesNotMatch(footer,/https:\/\/whatsapp\.com\/channel\//);
+  assert.doesNotMatch(footer,/https:\/\/t\.me\/JyyR_Mentahan/);
+  assert.doesNotMatch(footer,/https:\/\/www\.instagram\.com\/jyy_rsh/);
+
+  assert.doesNotMatch(layout,/transform:translateX\(30px\)/);
+  assert.doesNotMatch(responsive,/\.site-footer-help\s*\{[\s\S]{0,120}transform:/);
+
+  assert.match(server,/SOCIAL_WHATSAPP/);
+  assert.doesNotMatch(footer,/YouTube/);
+  assert.doesNotMatch(footer,/GitHub/);
+});
+
+test('permission mapping is centralized',()=>{
+  const permissions=fs.readFileSync(
+    path.join(root,'src/constants/permissions.js'),
+    'utf8'
+  );
+  const middleware=fs.readFileSync(
+    path.join(root,'src/middleware/permission.middleware.js'),
+    'utf8'
+  );
+
+  assert.match(permissions,/ROLE_PERMISSIONS/);
+  assert.match(middleware,/ROLE_PERMISSIONS/);
+  assert.doesNotMatch(middleware,/rolePermissions\s*=\s*\{/);
+});
+
+test('distributed rate limiting fails closed when configured service is unavailable',()=>{
+  const security=fs.readFileSync(
+    path.join(root,'src/middleware/security.middleware.js'),
+    'utf8'
+  );
+
+  assert.match(security,/RATE_LIMIT_UNAVAILABLE/);
+  assert.match(security,/return res\.status\(503\)\.json/);
+});

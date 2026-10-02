@@ -77,11 +77,8 @@ body{background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,syst
   padding:0;
   border-radius:11px;
   text-decoration:none;
-  transition:transform .18s ease;
-}
-
-.site-footer-social-link{
   filter:drop-shadow(0 0 4px rgba(255,255,255,.18));
+  transition:transform .18s ease;
 }
 
 .site-footer-social-link:hover{
@@ -104,10 +101,12 @@ body{background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,syst
 
 .footer-group{
   min-width:0;
-  transform:translateX(30px);
+  padding-inline-start:clamp(10px,2.2vw,30px);
 }
 
-
+.site-footer-help{
+  padding-inline-start:clamp(10px,4vw,55px);
+}
 
 .site-footer-legal{
   margin-top:6px;

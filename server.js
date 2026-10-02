@@ -138,13 +138,30 @@ async function createApp() {
   };
   app.locals.isConfigured = isConfigured();
   app.locals.publicAssetBucket = env.PUBLIC_ASSET_BUCKET;
+  function normalizeSocialUrl(value){
+    const raw=String(value||'').trim();
+
+    if(!raw)return '';
+
+    try{
+      const url=new URL(raw);
+
+      if(!['http:','https:'].includes(url.protocol)){
+        return '';
+      }
+
+      return url.toString();
+    }catch{
+      return '';
+    }
+  }
+
   app.locals.socialLinks = [
-    ['SOCIAL_INSTAGRAM','Instagram',env.SOCIAL_INSTAGRAM],
-    ['SOCIAL_TIKTOK','TikTok',env.SOCIAL_TIKTOK],
-    ['SOCIAL_YOUTUBE','YouTube',env.SOCIAL_YOUTUBE],
-    ['SOCIAL_TELEGRAM','Telegram',env.SOCIAL_TELEGRAM],
-    ['SOCIAL_GITHUB','GitHub',env.SOCIAL_GITHUB]
-  ];
+    ['SOCIAL_INSTAGRAM','Instagram',normalizeSocialUrl(env.SOCIAL_INSTAGRAM),'instagram'],
+    ['SOCIAL_TIKTOK','TikTok',normalizeSocialUrl(env.SOCIAL_TIKTOK),'tiktok'],
+    ['SOCIAL_WHATSAPP','WhatsApp',normalizeSocialUrl(env.SOCIAL_WHATSAPP),'whatsapp'],
+    ['SOCIAL_TELEGRAM','Telegram',normalizeSocialUrl(env.SOCIAL_TELEGRAM),'telegram']
+  ].filter(([, , url])=>Boolean(url));
 
   app.use(requestId);
   app.use(loggingMiddleware);
