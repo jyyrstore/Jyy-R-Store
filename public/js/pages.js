@@ -2401,18 +2401,180 @@
     }
   });
 
-  document.addEventListener('change',e=>{
-    const country=e.target.closest('[data-recipient-country]');
-    if(!country)return;
+  let activeRecipientCountryField=null;
 
-    const option=country.selectedOptions?.[0];
+  document.addEventListener('click',e=>{
+    const trigger=e.target.closest(
+      '[data-recipient-country-trigger]'
+    );
+
+    if(trigger){
+      e.preventDefault();
+
+      const field=trigger.closest(
+        '[data-recipient-country-field], .recipient-country-field'
+      );
+
+      const template=field?.querySelector(
+        'template[data-recipient-country-options]'
+      );
+
+      if(!field||!template||!window.JYYRModal?.open)return;
+
+      activeRecipientCountryField=field;
+
+      window.JYYRModal.open(`
+        <div class="recipient-country-modal">
+          <div class="eyebrow">Kontak Penerima</div>
+          <h2>Pilih negara</h2>
+          <p class="muted small">
+            Pilih negara untuk menentukan kode WhatsApp.
+          </p>
+
+          <label class="recipient-country-search">
+            <input
+              type="search"
+              data-recipient-country-search
+              placeholder="Cari Negara"
+              autocomplete="off"
+              spellcheck="false"
+            >
+          </label>
+
+          <div
+            class="recipient-country-options"
+            role="listbox"
+            aria-label="Daftar negara"
+          >
+            ${template.innerHTML}
+          </div>
+
+          <p
+            class="recipient-country-empty muted small"
+            data-recipient-country-empty
+            hidden
+          >
+            Negara tidak ditemukan.
+          </p>
+        </div>
+      `);
+
+      const search=document.querySelector(
+        '#modal-root [data-recipient-country-search]'
+      );
+
+      const options=[
+        ...document.querySelectorAll(
+          '#modal-root [data-recipient-country-option]'
+        )
+      ];
+
+      const empty=document.querySelector(
+        '#modal-root [data-recipient-country-empty]'
+      );
+
+      const filterCountries=()=>{
+        const query=String(search?.value||'')
+          .trim()
+          .toLowerCase();
+
+        let visible=0;
+
+        options.forEach(item=>{
+          const name=String(
+            item.dataset.countryName||''
+          ).toLowerCase();
+
+          const code=String(
+            item.dataset.countryCode||''
+          ).toLowerCase();
+
+          const dial=String(
+            item.dataset.dialCode||''
+          ).toLowerCase();
+
+          const matched=
+            !query ||
+            name.includes(query) ||
+            code.includes(query) ||
+            dial.includes(query);
+
+          item.hidden=!matched;
+
+          if(matched)visible++;
+        });
+
+        if(empty){
+          empty.hidden=visible!==0;
+        }
+      };
+
+      search?.addEventListener(
+        'input',
+        filterCountries
+      );
+
+      return;
+    }
+
+    const option=e.target.closest(
+      '[data-recipient-country-option]'
+    );
+
+    if(!option||!activeRecipientCountryField)return;
+
+    e.preventDefault();
+
+    const field=activeRecipientCountryField;
+    const country=field.querySelector(
+      '[data-recipient-country]'
+    );
+    const label=field.querySelector(
+      '[data-recipient-country-label]'
+    );
     const dial=document.querySelector(
       '[data-recipient-dial-code] strong'
     );
 
-    if(dial){
-      dial.textContent=option?.dataset?.dialCode||'+62';
+    const code=option.dataset.countryCode||'ID';
+    const dialCode=option.dataset.dialCode||'+62';
+    const name=option.dataset.countryName||'Indonesia';
+    const flag=option.dataset.countryFlag||'';
+
+    if(country){
+      country.value=code;
+      country.dispatchEvent(
+        new Event('input',{bubbles:true})
+      );
+      country.dispatchEvent(
+        new Event('change',{bubbles:true})
+      );
     }
+
+    if(label){
+      label.textContent=
+        `${name}${flag ? ` ${flag}` : ''}`;
+    }
+
+    if(dial){
+      dial.textContent=dialCode;
+    }
+
+    field
+      .querySelectorAll('[data-recipient-country-option]')
+      .forEach(item=>{
+        const selected=
+          item.dataset.countryCode===code;
+
+        item.classList.toggle('is-active',selected);
+        item.setAttribute(
+          'aria-selected',
+          selected?'true':'false'
+        );
+      });
+
+    window.JYYRModal.close();
+    activeRecipientCountryField=null;
   });
 
   document.addEventListener('input',e=>{
@@ -2436,6 +2598,61 @@
       toast.success('Kontak penerima berhasil disimpan.');
     }catch(err){
       toast.error(err.message);
+    }
+  });
+
+
+
+  /* JYYR RECIPIENT COUNTRY SEARCH FIX */
+  document.addEventListener('input',e=>{
+    const search=e.target.closest(
+      '[data-recipient-country-search]'
+    );
+
+    if(!search)return;
+
+    const query=String(search.value||'')
+      .trim()
+      .toLowerCase();
+
+    const options=[
+      ...document.querySelectorAll(
+        '#modal-root [data-recipient-country-option]'
+      )
+    ];
+
+    const empty=document.querySelector(
+      '#modal-root [data-recipient-country-empty]'
+    );
+
+    let visible=0;
+
+    options.forEach(option=>{
+      const name=String(
+        option.dataset.countryName||''
+      ).toLowerCase();
+
+      const code=String(
+        option.dataset.countryCode||''
+      ).toLowerCase();
+
+      const dial=String(
+        option.dataset.dialCode||''
+      ).toLowerCase();
+
+      const matched=
+        !query ||
+        name.includes(query) ||
+        code.includes(query) ||
+        dial.includes(query);
+
+      option.hidden=!matched;
+
+      if(matched)visible++;
+    });
+
+    if(empty){
+      empty.hidden=visible!==0;
     }
   });
 

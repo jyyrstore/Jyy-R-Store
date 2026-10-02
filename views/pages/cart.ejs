@@ -116,32 +116,73 @@
               </small>
             </label>
 
-            <div class="recipient-phone-row">
-              <label class="field recipient-country-field">
-                <span>Nomor WhatsApp</span>
-                <select name="countryCode" data-recipient-country required>
-                  <% (recipientCountries||[]).forEach(country=>{ %>
-                    <option
-                      value="<%= country.code %>"
-                      data-dial-code="<%= country.dialCode %>"
-                      <%= (cart.recipientContact?.countryCode||'ID')===country.code ? 'selected' : '' %>
-                    ><%= country.name %></option>
-                  <% }) %>
-                </select>
-              </label>
+            <% const countryFlag=(code)=>String(code||'').toUpperCase().split('').map(char=>String.fromCodePoint(127397+char.charCodeAt(0))).join(''); %>
 
-              <div class="recipient-dial-code" data-recipient-dial-code>
-                <span>Kode</span>
-                <strong><%= cart.recipientContact?.dialCode||'+62' %></strong>
+            <%
+              const selectedRecipientCountry =
+                (recipientCountries||[]).find(
+                  country=>country.code===(cart.recipientContact?.countryCode||'ID')
+                ) ||
+                (recipientCountries||[])[0] ||
+                {code:'ID',name:'Indonesia',dialCode:'+62'};
+            %>
+
+            <label class="field recipient-country-field">
+              <span>Nomor WhatsApp</span>
+
+              <input
+                type="hidden"
+                name="countryCode"
+                data-recipient-country
+                value="<%= selectedRecipientCountry.code %>"
+              >
+
+              <button
+                type="button"
+                class="recipient-country-trigger"
+                data-recipient-country-trigger
+                aria-haspopup="dialog"
+              >
+                <span data-recipient-country-label>
+                  <%= selectedRecipientCountry.name %> <%= countryFlag(selectedRecipientCountry.code) %>
+                </span>
+                <span class="recipient-country-trigger-arrow" aria-hidden="true">⌄</span>
+              </button>
+
+              <template data-recipient-country-options>
+                <% (recipientCountries||[]).forEach(country=>{ %>
+                  <button
+                    type="button"
+                    class="recipient-country-option<%= country.code===selectedRecipientCountry.code ? ' is-active' : '' %>"
+                    data-recipient-country-option
+                    data-country-code="<%= country.code %>"
+                    data-dial-code="<%= country.dialCode %>"
+                    data-country-name="<%= country.name %>"
+                    data-country-flag="<%= countryFlag(country.code) %>"
+                    aria-selected="<%= country.code===selectedRecipientCountry.code ? 'true' : 'false' %>"
+                  >
+                    <span>
+                      <%= country.name %> <%= countryFlag(country.code) %>
+                    </span>
+                    <strong><%= country.dialCode %></strong>
+                  </button>
+                <% }) %>
+              </template>
+            </label>
+
+            <div class="recipient-phone-row">
+              <div class="recipient-dial-field">
+                <div class="recipient-dial-code" data-recipient-dial-code>
+                  <strong><%= cart.recipientContact?.dialCode||'+62' %></strong>
+                </div>
               </div>
 
               <label class="field recipient-phone-field">
-                <span>&nbsp;</span>
                 <input
                   type="tel"
                   name="phone"
                   value="<%= cart.recipientContact?.phone||'' %>"
-                  placeholder="83890777348"
+                  placeholder="Nomor WhatsApp"
                   inputmode="numeric"
                   autocomplete="tel-national"
                   maxlength="14"
@@ -152,7 +193,7 @@
             </div>
 
             <small>
-              Pilih negara di kiri, lalu isi nomor tanpa angka 0 di depan
+              Pilih negara, lalu isi nomor tanpa angka 0 di depan
               agar admin bisa menghubungi Anda via WhatsApp saat ada kendala pesanan.
             </small>
 
