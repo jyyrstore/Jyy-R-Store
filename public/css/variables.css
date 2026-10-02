@@ -1,4 +1,13 @@
+@font-face{
+  font-family:'JyyrBrand';
+  src:url('/fonts/font-brand-jyyr.ttf') format('truetype');
+  font-style:normal;
+  font-weight:100 900;
+  font-display:swap;
+}
+
 :root{
+  --font-brand:'JyyrBrand',Inter,ui-sans-serif,system-ui,sans-serif;
   --bg:#191827;
   --surface:#2B313F;
   --surface-raised:#343A4A;
