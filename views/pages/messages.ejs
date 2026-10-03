@@ -1,6 +1,210 @@
-<section class="page-shell"><div class="page-header"><div><div class="eyebrow">Bantuan</div><h1>Pesan</h1><p>Hubungi tim Jyyr Store dan lihat respons pada satu ruang percakapan.</p></div></div><section class="panel stack-form"><h2>Kirim pesan</h2><p class="muted">Pesanmu akan masuk ke tim Jyyr Store dan tersimpan sebagai percakapan.</p><form data-message-form><label class="field"><span>Pesan</span><textarea name="body" rows="5" maxlength="10000" required placeholder="Tulis pesan Anda..."></textarea></label><button class="button button-primary">Kirim Pesan</button></form></section><div class="section"><div class="section-header"><div><h2>Percakapan</h2></div></div><div class="stack-list"><% if(!messages.length){ %><div class="empty-state"><%- icon('message') %><h3>Belum ada pesan</h3><p>Pesan dan respons support akan tampil di sini.</p></div><% } else { %><% messages.forEach(m=>{ %><a class="list-card" href="/messages/<%= m.id %>"><div><strong><%= m.sender_id===currentUser.id?'Anda':(m.sender_username||"Jyyr Store") %></strong><span><%= m.body.slice(0,160) %><%= m.body.length > 160 ? "…" : "" %></span></div><time><%= formatDate(m.created_at) %></time></a><% }) %><% } %></div>
-<%- include('../partials/pagination',{
-  pagination:messagesPagination,
-  param:'page'
-}) %>
-</div></section>
+<section class="page-shell messages-page">
+  <div class="messages-shell">
+
+    <header class="messages-header">
+      <div class="messages-header-title">
+        <div class="eyebrow">Bantuan</div>
+        <h1>Pesan</h1>
+        <p>Kelola percakapan dengan tim Jyyr Store dalam satu ruang.</p>
+      </div>
+    </header>
+
+    <section class="messages-panel" aria-label="Daftar percakapan">
+
+      <div class="messages-panel-top">
+        <div class="messages-panel-heading">
+          <div>
+            <h2>Percakapan</h2>
+            <span>
+              <%= messages.length %>
+              <%= messages.length===1 ? 'pesan' : 'pesan' %>
+            </span>
+          </div>
+        </div>
+
+        <label class="messages-search" aria-label="Cari percakapan">
+          <%- icon('search', 'messages-search-icon') %>
+          <input
+            type="search"
+            data-message-search
+            placeholder="Cari percakapan..."
+            autocomplete="off"
+          >
+        </label>
+      </div>
+
+      <div class="messages-filter-row">
+        <button class="messages-filter active" type="button">
+          Semua
+        </button>
+        <span class="messages-filter-info">
+          <%- icon('message') %>
+          Ruang pesan Jyyr Store
+        </span>
+      </div>
+
+      <div class="message-chat-list">
+
+        <% if(!messages.length){ %>
+
+          <div class="messages-empty">
+            <div class="messages-empty-icon">
+              <%- icon('message') %>
+            </div>
+
+            <h3>Belum ada percakapan</h3>
+            <p>
+              Kirim pesan ke tim Jyyr Store untuk memulai percakapan.
+            </p>
+          </div>
+
+        <% } else { %>
+
+          <% messages.forEach(m=>{ %>
+
+            <%
+              const mine = m.sender_id===currentUser.id;
+
+              const senderName =
+                mine
+                  ? 'Anda'
+                  : (m.sender_display_name || m.sender_username || 'Jyyr Store');
+
+              const preview =
+                String(m.body || '')
+                  .replace(/\s+/g,' ')
+                  .trim();
+
+              const senderInitial =
+                String(senderName)
+                  .trim()
+                  .slice(0,1)
+                  .toUpperCase() || 'J';
+            %>
+
+            <a
+              class="message-chat-row <%= mine ? 'is-mine' : 'is-support' %>"
+              href="/messages/<%= m.id %>"
+              data-message-row
+              data-message-search-text="<%= senderName + ' ' + preview %>"
+            >
+
+              <span class="message-chat-avatar <%= mine ? 'is-user' : 'is-support' %>">
+                <% if(mine){ %>
+                  <%= senderInitial %>
+                <% } else { %>
+                  <%- icon('user-headset-outline') %>
+                <% } %>
+              </span>
+
+              <span class="message-chat-main">
+
+                <span class="message-chat-topline">
+
+                  <span class="message-chat-name">
+                    <strong><%= senderName %></strong>
+
+                    <% if(!mine){ %>
+                      <span class="message-chat-role">
+                        Support
+                      </span>
+                    <% } %>
+                  </span>
+
+                  <time>
+                    <%= formatDate(m.created_at) %>
+                  </time>
+
+                </span>
+
+                <span class="message-chat-bottomline">
+
+                  <span class="message-chat-preview">
+                    <% if(mine){ %>
+                      <span class="message-chat-you">Anda:</span>
+                    <% } %>
+
+                    <%= preview || 'Pesan kosong' %>
+                  </span>
+
+                  <% if(mine){ %>
+                    <span
+                      class="message-chat-status"
+                      title="Pesan terkirim"
+                      aria-label="Pesan terkirim"
+                    >
+                      <%- icon('check') %>
+                    </span>
+                  <% } else { %>
+                    <span
+                      class="message-chat-open"
+                      aria-hidden="true"
+                    >
+                      <%- icon('chevron-right') %>
+                    </span>
+                  <% } %>
+
+                </span>
+
+              </span>
+            </a>
+
+          <% }) %>
+
+          <div
+            class="messages-search-empty"
+            data-message-search-empty
+            hidden
+          >
+            <%- icon('search-off') %>
+            <strong>Percakapan tidak ditemukan</strong>
+            <span>Coba kata kunci lain.</span>
+          </div>
+
+        <% } %>
+
+      </div>
+    </section>
+
+    <section class="messages-composer">
+
+      <div class="messages-composer-head">
+        <div>
+          <div class="eyebrow">Pesan baru</div>
+          <h2>Hubungi Jyyr Store</h2>
+          <p>Kirim pertanyaan atau minta bantuan langsung.</p>
+        </div>
+      </div>
+
+      <form class="messages-compose-form" data-message-form>
+
+        <label class="messages-compose-field" aria-label="Pesan">
+          <textarea
+            name="body"
+            rows="1"
+            maxlength="10000"
+            required
+            aria-label="Pesan"
+            placeholder="Ketik pesan..."
+          ></textarea>
+        </label>
+
+        <button
+          class="button button-primary messages-send-button"
+          type="submit"
+        >
+          <%- icon('send') %>
+          <span>Kirim</span>
+        </button>
+
+      </form>
+
+    </section>
+
+    <%- include('../partials/pagination',{
+      pagination:messagesPagination,
+      param:'page'
+    }) %>
+
+  </div>
+</section>

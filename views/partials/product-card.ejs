@@ -1,17 +1,22 @@
+<% const stock = Number(product.stock) || 0; %>
 <article class="product-card" data-product-card data-product-id="<%= product.id %>">
   <a href="/product/<%= product.slug %>" class="product-thumb-wrap">
     <% if (product.thumbnail_url || product.thumbnail_path) { %><img loading="lazy" class="product-thumb" src="<%= product.thumbnail_url || assetUrl(publicAssetBucket, product.thumbnail_path) %>" alt="<%= product.name %>" data-image-fallback><div class="image-fallback" hidden><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } else { %><div class="image-fallback"><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } %>
     <span class="product-category-badge"><%= product.category_name || 'Produk' %></span>
+    <span
+      class="product-stock product-stock--<%= stock >= 500 ? 'green' : stock >= 250 ? 'blue' : stock > 0 ? 'orange' : 'sold-out' %> product-stock--cover"
+      aria-label="<%= stock > 0 ? stock + ' produk tersedia' : 'Produk habis' %>"
+      title="<%= stock > 0 ? stock + ' produk tersedia' : 'Produk habis' %>"
+    >
+      <span class="product-stock-dot" aria-hidden="true">•</span>
+      <%= stock > 0 ? stock : 'Habis' %>
+    </span>
+
+    <span class="product-title product-title--cover">
+      <%= product.name %>
+    </span>
   </a>
   <div class="product-body">
-    <% const stock = Number(product.stock) || 0; %>
-    <div class="product-meta">
-      <a class="product-title" href="/product/<%= product.slug %>"><%= product.name %></a>
-      <span class="product-stock product-stock--<%= stock >= 500 ? 'green' : stock >= 250 ? 'blue' : stock > 0 ? 'orange' : 'sold-out' %>">
-        <span class="product-stock-dot" aria-hidden="true">•</span>
-        <%= stock > 0 ? stock : 'Habis' %>
-      </span>
-    </div>
 
     <div class="product-price"><%= formatIDR(product.price) %></div>
 

@@ -2658,3 +2658,32 @@
 
 
 })();
+
+
+/* JYYR MESSAGES SEARCH */
+document.addEventListener('input',(event)=>{
+  const input=event.target.closest('[data-message-search]');
+  if(!input)return;
+
+  const query=String(input.value||'').trim().toLowerCase();
+  const rows=[...document.querySelectorAll('[data-message-row]')];
+  const empty=document.querySelector('[data-message-search-empty]');
+
+  let visible=0;
+
+  rows.forEach(row=>{
+    const text=String(
+      row.dataset.messageSearchText || ''
+    ).toLowerCase();
+
+    const match=!query || text.includes(query);
+
+    row.hidden=!match;
+
+    if(match)visible++;
+  });
+
+  if(empty){
+    empty.hidden=visible>0;
+  }
+});
