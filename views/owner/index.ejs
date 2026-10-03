@@ -215,15 +215,6 @@
 </div>
       <% } else if(ownerSection==='roles'){ %>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Code</th><th>Name</th><th>Permissions</th></tr></thead><tbody><% (items||[]).forEach(row=>{ %><tr><td><%= row.code %></td><td><%= row.name %></td><td><%= JSON.stringify(row.permissions||{}) %></td></tr><% }) %></tbody></table></div></div>
-      <% } else if(ownerSection==='messages'){ %>
-        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>User</th><th>Sender</th><th>Message</th><th>Created</th><th>Action</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="5"><div class="empty-state compact"><%- icon('message') %><h3>Belum ada pesan</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><%= row.user_username %></td><td><%= row.sender_username %></td><td><%= row.body %></td><td><%= formatDate(row.created_at) %></td><td><button class="button button-secondary button-small" data-owner-message="<%= row.user_id %>">Balas</button></td></tr><% }) %></tbody></table></div>
-<%- include('../partials/pagination',{
-  pagination:ownerPagination,
-  param:'page',
-  query:req.query,
-  label:'Pagination pesan'
-}) %>
-</div>
       <% } else if(ownerSection==='categories'){ %>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Name</th><th>Slug</th><th>Active</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="4"><div class="empty-state compact"><%- icon('layers') %><h3>Belum ada kategori</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td><%= row.name %></td><td><%= row.slug %></td><td><%= row.is_active?'Aktif':'Nonaktif' %></td><td><button class="button button-secondary button-small" data-owner-edit-category='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button></td></tr><% }) %></tbody></table></div></div>
       <% } else if(ownerSection==='users'){ %>

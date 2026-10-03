@@ -1821,7 +1821,6 @@
     const oi=e.target.closest('[data-owner-order-inspect]');if(oi){let d;try{d=JSON.parse(oi.dataset.ownerOrderInspect)}catch{return}open(`<div class="stack-form"><h2>Order ${esc(d.order_number||d.id)}</h2><div class="summary-row"><span>User</span><b>${esc(d.username||'—')}</b></div><div class="summary-row"><span>Email Penerima</span><b>${esc(d.recipient_email||'—')}</b></div><div class="summary-row"><span>WhatsApp</span><b>${esc(((d.recipient_dial_code||'')+(d.recipient_phone||''))||'—')}</b></div><div class="summary-row"><span>Total</span><b>${money(d.total)}</b></div><div class="summary-row"><span>Status</span><b>${esc(d.status)}</b></div><div class="summary-row"><span>Payment</span><b>${esc(d.payment_method||'—')}</b></div><p class="muted">Payment gateway tetap harus dikonfirmasi oleh webhook resmi. Owner hanya dapat menjalankan transisi fulfillment yang valid.</p><button class="button button-secondary button-block" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Tutup</button></div>`)}
     const os=e.target.closest('[data-owner-order-status]');if(os){if(!(await window.JYYRModal.confirm(`Ubah status order ke ${os.dataset.status}?`)))return;try{await ownerAction('/api/owner/orders/'+os.dataset.ownerOrderStatus+'/status',{status:os.dataset.status},'POST','Status order diperbarui.');location.reload()}catch(err){toast.error(err.message)}}
     const rb=e.target.closest('[data-owner-refund-order]');if(rb){open(`<form data-refund-form class="stack-form"><h2>Refund Order</h2><input type="hidden" name="order_id" value="${esc(rb.dataset.ownerRefundOrder)}"><label class="field"><span>Alasan</span><textarea name="reason" minlength="5" required></textarea></label>${formButtons('Process Refund')}</form>`)}
-    const om=e.target.closest('[data-owner-message]');if(om){open(`<form data-owner-message-form class="stack-form"><h2>Balas Pesan</h2><input type="hidden" name="user_id" value="${esc(om.dataset.ownerMessage)}"><label class="field"><span>Pesan</span><textarea name="body" minlength="1" maxlength="10000" required></textarea></label>${formButtons('Kirim Pesan')}</form>`)}
   });
 
   if(location.pathname==='/owner/products' && new URLSearchParams(location.search).get('create')==='1') setTimeout(()=>document.querySelector('[data-owner-create="products"]')?.click(),0);
@@ -2248,7 +2247,34 @@
     const nt=e.target.closest('[data-owner-notification-create]');if(nt){e.preventDefault();const fd=Object.fromEntries(new FormData(nt));if(!fd.user_id)fd.user_id=null;try{await ownerAction('/api/owner/notifications',fd,'POST','Notification dibuat.');location.reload()}catch(err){toast.error(err.message)}}
     const tf=e.target.closest('[data-owner-ticket-form]');if(tf){e.preventDefault();const fd=Object.fromEntries(new FormData(tf));try{if(fd.body)await ownerAction('/api/owner/tickets/'+fd.id+'/reply',{body:fd.body},'POST','Balasan dikirim.');await ownerAction('/api/owner/tickets/'+fd.id+'/status',{status:fd.status},'POST','Status ticket diperbarui.');location.reload()}catch(err){toast.error(err.message)}}
     const rf=e.target.closest('[data-refund-form]');if(rf){e.preventDefault();const fd=Object.fromEntries(new FormData(rf));try{await ownerAction('/api/owner/refunds/'+fd.order_id,{reason:fd.reason},'POST','Refund diproses.');location.reload()}catch(err){toast.error(err.message)}}
-    const omf=e.target.closest('[data-owner-message-form]');if(omf){e.preventDefault();const fd=Object.fromEntries(new FormData(omf));try{await ownerAction('/api/owner/messages/'+fd.user_id+'/reply',{body:fd.body},'POST','Pesan dikirim.');location.reload()}catch(err){toast.error(err.message)}}
+    const omf=e.target.closest('[data-owner-message-form]');
+    if(omf){
+      e.preventDefault();
+
+      const fd=Object.fromEntries(new FormData(omf));
+
+      try{
+        const sent=await ownerAction(
+          '/api/owner/messages/'+fd.user_id+'/reply',
+          {body:fd.body},
+          'POST',
+          'Pesan dikirim.'
+        );
+
+        if(
+          omf.dataset.ownerMessageDetail==='1' &&
+          sent?.id
+        ){
+          location.href=
+            '/owner/messages/'+
+            encodeURIComponent(sent.id);
+        }else{
+          location.reload();
+        }
+      }catch(err){
+        toast.error(err.message);
+      }
+    }
   });
 
   async function search(){

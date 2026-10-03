@@ -443,7 +443,39 @@ async function messagesPage(req,res,next){
   }
 }
 
-async function messageDetail(req,res,next){try{const m=await messages.detail(req.params.id,req.user.id);if(!m){const e=new Error('Message not found.');e.status=404;e.expose=true;throw e;}res.render('app',base(req,{view:'pages/message-detail',message:m}));}catch(e){next(e)}}
+async function messageDetail(req,res,next){
+  try{
+    const repo=require('../repositories/messages.repository');
+
+    const seed=await repo.findForUser(
+      req.params.id,
+      req.user.id
+    );
+
+    if(!seed){
+      const e=new Error('Message not found.');
+      e.status=404;
+      e.expose=true;
+      throw e;
+    }
+
+    const thread=await repo.listThreadForUser(
+      req.user.id
+    );
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/message-detail',
+        message:seed,
+        messages:thread
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
+
 async function ticketsPage(req,res,next){
   try{
     const pager=pageParams({
@@ -566,6 +598,38 @@ async function delivery(req,res,next){
             pager.page,
             pager.limit
           )
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
+
+async function ownerMessageDetail(req,res,next){
+  try{
+    const repo=require('../repositories/messages.repository');
+
+    const seed=await repo.findForOwner(
+      req.params.id
+    );
+
+    if(!seed){
+      const e=new Error('Message not found.');
+      e.status=404;
+      e.expose=true;
+      throw e;
+    }
+
+    const thread=await repo.listThreadForUser(
+      seed.user_id
+    );
+
+    res.render(
+      'app',
+      base(req,{
+        view:'owner/message-detail',
+        message:seed,
+        messages:thread
       })
     );
   }catch(e){
@@ -724,12 +788,12 @@ function ownerPage(section){
         const repo=require('../repositories/messages.repository');
         const pager=ownerPager(req);
 
-        data.items=await repo.listAll({
+        data.items=await repo.listConversationsForOwner({
           limit:pager.limit,
           offset:pager.offset
         });
 
-        const total=await repo.countAll();
+        const total=await repo.countConversationsForOwner();
 
         data.ownerPagination=
           paginationMeta(
@@ -836,8 +900,19 @@ function ownerPage(section){
       else if(section==='system'){ data.system={node:process.version,environment:loadEnv().NODE_ENV,uptime:process.uptime(),configured:isConfigured()}; }
       else if(section==='faq'){ data.items=await faqRepo.listAll(); }
       else if(section==='information'){ data.items=await infoRepo.listAll(); }
+      if(section==='messages'){
+        return res.render(
+          'app',
+          base(req,{
+            view:'owner/messages',
+            messages:data.items||[],
+            messagesPagination:data.ownerPagination
+          })
+        );
+      }
+
       res.render('app',base(req,{view:'owner/index',ownerSection:section,...data}));
     }catch(e){next(e)}
   }
 }
-module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,register,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};
+module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ownerMessageDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,register,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};

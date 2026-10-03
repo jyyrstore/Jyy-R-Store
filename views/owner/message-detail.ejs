@@ -1,4 +1,4 @@
-<section class="page-shell message-detail-page">
+<section class="page-shell message-detail-page owner-message-detail-page">
 
   <div class="message-detail-shell">
 
@@ -8,20 +8,40 @@
 
         <a
           class="message-detail-back"
-          href="/messages"
+          href="/owner/messages"
           aria-label="Kembali ke pesan"
           title="Kembali"
         >
           <%- icon('arrow-back-up') %>
         </a>
 
+        <%
+          const participantName=
+            message.user_display_name||
+            message.user_username||
+            'Pengguna';
+
+          const participantInitial=
+            String(participantName)
+              .trim()
+              .slice(0,1)
+              .toUpperCase()||'P';
+        %>
+
         <div class="message-detail-avatar" aria-hidden="true">
-          <%- icon('user-headset-outline') %>
+          <strong><%= participantInitial %></strong>
         </div>
 
         <div class="message-detail-user">
-          <strong>Jyyr Store</strong>
-          <span>Support Jyyr Store</span>
+
+          <strong>
+            <%= participantName %>
+          </strong>
+
+          <span>
+            Pengguna Jyyr Store
+          </span>
+
         </div>
 
       </header>
@@ -73,12 +93,19 @@
 
         <form
           class="message-detail-form"
-          data-message-form
+          data-owner-message-form
+          data-owner-message-detail="1"
         >
+
+          <input
+            type="hidden"
+            name="user_id"
+            value="<%= message.user_id %>"
+          >
 
           <label
             class="message-detail-input"
-            aria-label="Pesan"
+            aria-label="Balas pesan"
           >
 
             <textarea
@@ -86,8 +113,8 @@
               rows="1"
               maxlength="10000"
               required
-              aria-label="Pesan"
-              placeholder="Ketik pesan..."
+              aria-label="Balas pesan"
+              placeholder="Ketik balasan..."
             ></textarea>
 
           </label>
@@ -95,8 +122,8 @@
           <button
             class="message-detail-send"
             type="submit"
-            aria-label="Kirim pesan"
-            title="Kirim pesan"
+            aria-label="Kirim balasan"
+            title="Kirim balasan"
           >
             <%- icon('send') %>
             <span>Kirim</span>
