@@ -53,9 +53,7 @@
           class="message-bubble <%= isMine ? 'is-mine' : 'is-theirs' %>"
         >
 
-          <div class="message-bubble-text">
-            <%= message.body %>
-          </div>
+          <div class="message-bubble-text"><%= String(message.body || '').trim() %></div>
 
           <div class="message-bubble-meta">
 
