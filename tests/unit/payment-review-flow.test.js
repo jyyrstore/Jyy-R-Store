@@ -49,6 +49,11 @@ test('post-payment review prompt exists',()=>{
     pages,
     /\/api\/products\/[\s\S]*\/review/
   );
+
+  assert.match(
+    pages,
+    /button\.closest\(\s*'\[data-product-review-form\],\[data-payment-review-prompt-form\]'/
+  );
 });
 
 test('payment success pages expose the order id to review prompt',()=>{

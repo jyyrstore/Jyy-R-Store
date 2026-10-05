@@ -107,7 +107,6 @@ async function productDetail(req,res,next){
     let recipientCountries=[];
 
     const [
-      reviewViewer,
       reviews,
       reviewsTotal,
       reviewSummary,
@@ -115,9 +114,6 @@ async function productDetail(req,res,next){
       bestSellerData,
       categoryList
     ]=await Promise.all([
-      req.user?.id
-        ? productReviews.viewerState(product.id,req.user.id)
-        : Promise.resolve({review:null,canReview:false}),
       productReviews.listForProduct(
         product.id,
         {
@@ -188,8 +184,6 @@ async function productDetail(req,res,next){
           reviewPager.page,
           reviewPager.limit
         ),
-        viewerReview:reviewViewer.review,
-        canReview:reviewViewer.canReview,
         relatedProducts,
         bestSellerProducts,
         categoryList
@@ -305,9 +299,20 @@ async function orderDetail(req,res,next){
 
     const items=await Promise.all(
       order.items.map(async item=>{
-        const [contents,owned]=await Promise.all([
+        const [
+          contents,
+          owned,
+          reviewViewer
+        ]=await Promise.all([
           productRepo.contents(item.product_id),
-          accessControl.canAccess(req.user.id,item.product_id)
+          accessControl.canAccess(
+            req.user.id,
+            item.product_id
+          ),
+          productReviews.viewerState(
+            item.product_id,
+            req.user.id
+          )
         ]);
 
         const mappedContents=await Promise.all(
@@ -342,7 +347,9 @@ async function orderDetail(req,res,next){
 
         return {
           ...item,
-          contents:mappedContents
+          contents:mappedContents,
+          viewerReview:reviewViewer.review,
+          canReview:reviewViewer.canReview
         };
       })
     );
@@ -363,7 +370,6 @@ async function orderDetail(req,res,next){
     next(e);
   }
 }
-
 async function history(req,res,next){
   try{
     const orderPager=pageParams({

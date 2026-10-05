@@ -134,7 +134,7 @@ test('product review API is authenticated and validated',()=>{
   );
 });
 
-test('product detail keeps all review and recommendation sections inside one page-shell',()=>{
+test('product detail keeps review summary but no longer contains the review editor',()=>{
   const source=read(
     'views/pages/product-detail.ejs'
   );
@@ -159,9 +159,86 @@ test('product detail keeps all review and recommendation sections inside one pag
     /param:'reviewPage'/
   );
 
+  assert.doesNotMatch(
+    source,
+    /data-product-review-form/
+  );
+
+  assert.doesNotMatch(
+    source,
+    /Rate Bintang/
+  );
+
+  assert.doesNotMatch(
+    source,
+    /Perbarui ulasan Anda/
+  );
+
   assert.match(
     source.trimEnd(),
     /<\/section>$/
+  );
+});
+
+test('order detail contains the per-product review editor',()=>{
+  const source=read(
+    'views/pages/order-detail.ejs'
+  );
+
+  assert.match(
+    source,
+    /order-product-review/
+  );
+
+  assert.match(
+    source,
+    /data-product-review-form/
+  );
+
+  assert.match(
+    source,
+    /data-product-id/
+  );
+
+  assert.match(
+    source,
+    /Rate Bintang/
+  );
+
+  assert.match(
+    source,
+    /Perbarui ulasan Anda/
+  );
+
+  assert.match(
+    source,
+    /data-review-rating/
+  );
+
+  assert.match(
+    source,
+    /data-review-rating-value/
+  );
+});
+
+test('order detail controller attaches review state to each purchased product',()=>{
+  const source=read(
+    'src/controllers/page.controller.js'
+  );
+
+  assert.match(
+    source,
+    /productReviews\.viewerState\(/
+  );
+
+  assert.match(
+    source,
+    /viewerReview:reviewViewer\.review/
+  );
+
+  assert.match(
+    source,
+    /canReview:reviewViewer\.canReview/
   );
 });
 

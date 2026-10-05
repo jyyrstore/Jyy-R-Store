@@ -201,7 +201,7 @@
         </div>
       </div>
 
-      <div class="product-review-summary-grid">
+      <div class="product-review-summary-grid product-review-summary-grid-single">
 
         <section
           class="product-review-chart panel"
@@ -269,99 +269,6 @@
           </div>
         </section>
 
-
-        <section
-          class="product-review-write panel"
-          aria-labelledby="product-review-write-title"
-        >
-          <div class="eyebrow">Rate Bintang</div>
-
-          <h3 id="product-review-write-title">
-            <%= viewerReview
-              ? 'Perbarui ulasan Anda'
-              : 'Bagikan pengalaman pembelian'
-            %>
-          </h3>
-
-          <% if(currentUser && canReview){ %>
-
-            <form
-              data-product-review-form
-              data-product-id="<%= product.id %>"
-            >
-
-              <input
-                type="hidden"
-                name="rating"
-                value="<%= viewerReview?.rating || '' %>"
-                data-review-rating-value
-              >
-
-              <div
-                class="product-review-rating-picker"
-                role="radiogroup"
-                aria-label="Rating pembelian 1 sampai 5"
-              >
-                <% [1,2,3,4,5].forEach(star=>{ %>
-
-                  <button
-                    type="button"
-                    class="product-review-star-button<%= Number(viewerReview?.rating||0) >= star ? ' is-selected' : '' %>"
-                    data-review-rating="<%= star %>"
-                    aria-label="Beri rating <%= star %> dari 5"
-                    aria-pressed="<%= Number(viewerReview?.rating||0) === star ? 'true' : 'false' %>"
-                  >★</button>
-
-                <% }) %>
-              </div>
-
-              <textarea
-                name="comment"
-                rows="4"
-                maxlength="2000"
-                placeholder="Tulis pengalaman Anda setelah membeli produk ini..."
-                aria-label="Komentar ulasan"
-                required
-              ><%= viewerReview?.comment || '' %></textarea>
-
-              <button
-                class="button button-primary button-block"
-                type="submit"
-              >
-                <%- icon('device-floppy') %>
-                <%= viewerReview
-                  ? 'Simpan perubahan'
-                  : 'Kirim ulasan'
-                %>
-              </button>
-
-            </form>
-
-          <% } else if(currentUser){ %>
-
-            <div class="product-review-login-note">
-              <p>
-                Ulasan tersedia setelah pembelian produk ini terkonfirmasi.
-              </p>
-            </div>
-
-          <% } else { %>
-
-            <div class="product-review-login-note">
-              <p>
-                Masuk untuk memberikan rating dan ulasan setelah membeli produk ini.
-              </p>
-
-              <a
-                class="button button-secondary button-block"
-                href="/auth/login?next=<%= encodeURIComponent(req.originalUrl) %>"
-              >
-                Masuk untuk mengulas
-              </a>
-            </div>
-
-          <% } %>
-        </section>
       </div>
 
 
@@ -581,3 +488,4 @@
       <% } %>
 
     </section>
+</section>

@@ -2702,7 +2702,7 @@
       if(!button)return;
 
       const form=button.closest(
-        '[data-product-review-form]'
+        '[data-product-review-form],[data-payment-review-prompt-form]'
       );
 
       if(!form)return;

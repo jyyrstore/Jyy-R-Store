@@ -1179,6 +1179,10 @@
   grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);
   gap:14px;
 }
+.product-review-summary-grid-single{
+  grid-template-columns:minmax(0,1fr);
+}
+
 
 .product-review-chart,
 .product-review-write{
