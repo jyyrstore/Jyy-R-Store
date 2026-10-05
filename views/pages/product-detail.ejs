@@ -30,9 +30,149 @@
         <strong><%= Number(product.stock) || 0 %></strong>
         <span><%= Number(product.stock) > 0 ? 'Tersedia' : 'Habis' %></span>
       </div>
-      <div class="detail-category-card"><%= product.category_name || 'Produk' %></div><h1><%= product.name %></h1>
-      <div class="detail-price"><%= formatIDR(product.price) %></div>
-<div class="detail-actions" aria-label="Aksi produk">
+      <div class="detail-category-card"><%= product.category_name || 'Produk' %></div>
+
+      <div class="detail-title-row">
+        <h1><%= product.name %></h1>
+        <div class="detail-price"><%= formatIDR(product.price) %></div>
+      </div>
+
+      <% if(currentUser){ %>
+        <section class="recipient-contact-card product-detail-recipient-contact">
+          <div class="recipient-contact-header">
+            <div>
+              <div class="eyebrow">Kontak Penerima</div>
+              <h2>Kontak Penerima</h2>
+              <p class="muted small">
+                Digunakan untuk informasi pesanan dan komunikasi admin.
+              </p>
+            </div>
+          </div>
+
+          <form data-recipient-contact-form class="stack-form">
+            <label class="field">
+              <span>Email Penerima</span>
+              <input
+                type="email"
+                name="email"
+                value="<%= recipientContact?.email||'' %>"
+                placeholder="Email@gmail.com"
+                maxlength="254"
+                autocomplete="email"
+                required
+              >
+            </label>
+
+            <% const countryFlag=(code)=>String(code||'').toUpperCase().split('').map(char=>String.fromCodePoint(127397+char.charCodeAt(0))).join(''); %>
+
+            <%
+              const selectedRecipientCountry =
+                (recipientCountries||[]).find(
+                  country=>country.code===(recipientContact?.countryCode||'ID')
+                ) ||
+                (recipientCountries||[])[0] ||
+                {code:'ID',name:'Indonesia',dialCode:'+62'};
+            %>
+
+            <label class="field recipient-country-field">
+              <span>Nomor WhatsApp</span>
+
+              <input
+                type="hidden"
+                name="countryCode"
+                data-recipient-country
+                value="<%= selectedRecipientCountry.code %>"
+              >
+
+              <button
+                type="button"
+                class="recipient-country-trigger"
+                data-recipient-country-trigger
+                aria-haspopup="dialog"
+              >
+                <span data-recipient-country-label>
+                  <%= selectedRecipientCountry.name %> <%= countryFlag(selectedRecipientCountry.code) %>
+                </span>
+                <span class="recipient-country-trigger-arrow" aria-hidden="true">⌄</span>
+              </button>
+
+              <template data-recipient-country-options>
+                <% (recipientCountries||[]).forEach(country=>{ %>
+                  <button
+                    type="button"
+                    class="recipient-country-option<%= country.code===selectedRecipientCountry.code ? ' is-active' : '' %>"
+                    data-recipient-country-option
+                    data-country-code="<%= country.code %>"
+                    data-dial-code="<%= country.dialCode %>"
+                    data-country-name="<%= country.name %>"
+                    data-country-flag="<%= countryFlag(country.code) %>"
+                    aria-selected="<%= country.code===selectedRecipientCountry.code ? 'true' : 'false' %>"
+                  >
+                    <span>
+                      <%= country.name %> <%= countryFlag(country.code) %>
+                    </span>
+                    <strong><%= country.dialCode %></strong>
+                  </button>
+                <% }) %>
+              </template>
+            </label>
+
+            <div class="recipient-phone-row">
+              <div class="recipient-dial-field">
+                <div class="recipient-dial-code" data-recipient-dial-code>
+                  <strong><%= recipientContact?.dialCode||selectedRecipientCountry.dialCode||'+62' %></strong>
+                </div>
+              </div>
+
+              <label class="field recipient-phone-field">
+                <input
+                  type="tel"
+                  name="phone"
+                  value="<%= recipientContact?.phone||'' %>"
+                  placeholder="Nomor WhatsApp"
+                  inputmode="numeric"
+                  autocomplete="tel-national"
+                  maxlength="14"
+                  pattern="[1-9][0-9]{5,13}"
+                  required
+                >
+              </label>
+            </div>
+
+            <small>
+              Isi nomor tanpa angka 0 di depan agar admin bisa menghubungi Anda via WhatsApp.
+            </small>
+
+            <div class="recipient-contact-actions">
+              <button class="button button-primary" type="submit">
+                <%- icon('device-floppy') %>
+                Simpan kontak
+              </button>
+            </div>
+          </form>
+        </section>
+      <% } else { %>
+        <section class="recipient-contact-card product-detail-recipient-contact">
+          <div class="recipient-contact-header">
+            <div>
+              <div class="eyebrow">Kontak Penerima</div>
+              <h2>Kontak Penerima</h2>
+              <p class="muted small">
+                Masuk untuk mengatur email dan nomor WhatsApp penerima.
+              </p>
+            </div>
+          </div>
+
+          <a
+            class="button button-primary button-block"
+            href="/auth/login?next=<%= encodeURIComponent(req.originalUrl) %>"
+          >
+            Masuk untuk mengatur kontak
+          </a>
+        </section>
+      <% } %>
+
+      <div class="detail-actions" aria-label="Aksi produk">
         <% if(currentUser && product.stock>0){ %>
           <button class="button button-secondary" data-add-cart="<%= product.id %>"><%- icon('cart') %> Keranjang</button>
           <button class="button button-primary" data-buy-now="<%= product.id %>"><%- icon('check') %> Beli Sekarang</button>

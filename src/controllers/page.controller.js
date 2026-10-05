@@ -90,7 +90,43 @@ async function store(req,res,next){
   }
 }
 
-async function productDetail(req,res,next){ try { const product=await products.detailBySlug(req.params.slug,req.user?.id); if(product.thumbnail_path) product.thumbnail_url=storage.publicUrl(loadEnv().PUBLIC_ASSET_BUCKET,product.thumbnail_path); res.render('app',base(req,{view:'pages/product-detail',product})); } catch(e){next(e)} }
+async function productDetail(req,res,next){
+  try{
+    const product=await products.detailBySlug(
+      req.params.slug,
+      req.user?.id
+    );
+
+    let recipientContact=null;
+    let recipientCountries=[];
+
+    if(req.user?.id){
+      const {countryOptions}=require('../utils/recipient-contact');
+      const userCart=await cart.get(req.user.id);
+      recipientContact=userCart.recipientContact||null;
+      recipientCountries=countryOptions();
+    }
+
+    if(product.thumbnail_path){
+      product.thumbnail_url=storage.publicUrl(
+        loadEnv().PUBLIC_ASSET_BUCKET,
+        product.thumbnail_path
+      );
+    }
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/product-detail',
+        product,
+        recipientContact,
+        recipientCountries
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
 async function dashboard(req,res,next){ try { const [p,n,c,o,s] = await Promise.all([profile.get(req.user.id),notifications.list(req.user.id),cart.get(req.user.id),orderService.getUserOrders(req.user.id,{limit:5}),services.list(true)]); const mut=await wallet.mutations(req.user.id); res.render('app',base(req,{view:'pages/dashboard',profile:p,notifications:n.slice(0,6),cart:c,orders:o,mutations:mut.slice(0,6),services:s.slice(0,4)})); } catch(e){next(e)} }
 async function cartPage(req,res,next){
   try{
