@@ -2629,6 +2629,155 @@
 
 
 
+
+  /* JYYR PRODUCT REVIEWS */
+
+  function syncProductReviewRating(form){
+    const value=Number(
+      form.querySelector(
+        '[data-review-rating-value]'
+      )?.value || 0
+    );
+
+    form.querySelectorAll(
+      '[data-review-rating]'
+    ).forEach(button=>{
+      const rating=Number(
+        button.dataset.reviewRating||0
+      );
+
+      button.classList.toggle(
+        'is-selected',
+        rating<=value
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        rating===value ? 'true' : 'false'
+      );
+    });
+  }
+
+  document.addEventListener(
+    'click',
+    event=>{
+      const button=event.target.closest(
+        '[data-review-rating]'
+      );
+
+      if(!button)return;
+
+      const form=button.closest(
+        '[data-product-review-form]'
+      );
+
+      if(!form)return;
+
+      const value=form.querySelector(
+        '[data-review-rating-value]'
+      );
+
+      if(!value)return;
+
+      value.value=String(
+        Number(button.dataset.reviewRating||0)
+      );
+
+      syncProductReviewRating(form);
+    }
+  );
+
+  document.querySelectorAll(
+    '[data-product-review-form]'
+  ).forEach(syncProductReviewRating);
+
+  document.addEventListener(
+    'submit',
+    async event=>{
+      const form=event.target.closest(
+        '[data-product-review-form]'
+      );
+
+      if(!form)return;
+
+      event.preventDefault();
+
+      const rating=Number(
+        form.querySelector(
+          '[data-review-rating-value]'
+        )?.value || 0
+      );
+
+      const comment=String(
+        form.querySelector(
+          'textarea[name="comment"]'
+        )?.value || ''
+      ).trim();
+
+      const productId=String(
+        form.dataset.productId||''
+      );
+
+      const submit=form.querySelector(
+        'button[type="submit"]'
+      );
+
+      if(!rating||rating<1||rating>5){
+        toast.error(
+          'Pilih rating bintang 1 sampai 5.'
+        );
+        return;
+      }
+
+      if(!comment){
+        toast.error(
+          'Komentar ulasan wajib diisi.'
+        );
+        return;
+      }
+
+      if(!productId)return;
+
+      if(submit){
+        submit.disabled=true;
+        submit.setAttribute(
+          'aria-busy',
+          'true'
+        );
+      }
+
+      try{
+        await api.request(
+          '/api/products/' +
+          encodeURIComponent(productId) +
+          '/review',
+          {
+            method:'POST',
+            body:{
+              rating,
+              comment
+            }
+          }
+        );
+
+        toast.success(
+          'Ulasan berhasil disimpan.'
+        );
+
+        window.location.reload();
+      }catch(err){
+        toast.error(err.message);
+      }finally{
+        if(submit){
+          submit.disabled=false;
+          submit.removeAttribute(
+            'aria-busy'
+          );
+        }
+      }
+    }
+  );
+
   /* JYYR RECIPIENT COUNTRY SEARCH FIX */
   document.addEventListener('input',e=>{
     const search=e.target.closest(

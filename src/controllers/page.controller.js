@@ -6,6 +6,7 @@ const notifications = require('../services/notification/notification.service');
 const profile = require('../services/profile/profile.service');
 const orderService = require('../services/order/order.service');
 const cart = require('../services/cart/cart.service');
+const productReviews=require('../repositories/product-reviews.repository');
 const wallet = require('../services/wallet/wallet.service');
 const tickets = require('../services/support/ticket.service');
 const faqRepo = require('../repositories/faq.repository');
@@ -97,8 +98,46 @@ async function productDetail(req,res,next){
       req.user?.id
     );
 
+    const reviewPager=pageParams({
+      page:req.query.reviewPage,
+      limit:5
+    });
+
     let recipientContact=null;
     let recipientCountries=[];
+
+    const [
+      reviewViewer,
+      reviews,
+      reviewsTotal,
+      reviewSummary,
+      relatedData,
+      bestSellerData,
+      categoryList
+    ]=await Promise.all([
+      req.user?.id
+        ? productReviews.viewerState(product.id,req.user.id)
+        : Promise.resolve({review:null,canReview:false}),
+      productReviews.listForProduct(
+        product.id,
+        {
+          limit:reviewPager.limit,
+          offset:reviewPager.offset
+        }
+      ),
+      productReviews.countForProduct(product.id),
+      productReviews.summaryForProduct(product.id),
+      products.catalog({
+        category:product.category_slug||'',
+        sort:'newest',
+        limit:6
+      }),
+      products.catalog({
+        sort:'popular',
+        limit:6
+      }),
+      categories.list(true)
+    ]);
 
     if(req.user?.id){
       const {countryOptions}=require('../utils/recipient-contact');
@@ -106,6 +145,26 @@ async function productDetail(req,res,next){
       recipientContact=userCart.recipientContact||null;
       recipientCountries=countryOptions();
     }
+
+    const mapThumbnail=items=>items
+      .filter(item=>String(item.id)!==String(product.id))
+      .map(item=>({
+        ...item,
+        thumbnail_url:item.thumbnail_path
+          ? storage.publicUrl(
+              loadEnv().PUBLIC_ASSET_BUCKET,
+              item.thumbnail_path
+            )
+          : null
+      }));
+
+    const relatedProducts=mapThumbnail(
+      relatedData.items
+    ).slice(0,4);
+
+    const bestSellerProducts=mapThumbnail(
+      bestSellerData.items
+    ).slice(0,4);
 
     if(product.thumbnail_path){
       product.thumbnail_url=storage.publicUrl(
@@ -120,7 +179,20 @@ async function productDetail(req,res,next){
         view:'pages/product-detail',
         product,
         recipientContact,
-        recipientCountries
+        recipientCountries,
+        reviews,
+        reviewSummary,
+        reviewTotal:reviewsTotal,
+        reviewsPagination:paginationMeta(
+          reviewsTotal,
+          reviewPager.page,
+          reviewPager.limit
+        ),
+        viewerReview:reviewViewer.review,
+        canReview:reviewViewer.canReview,
+        relatedProducts,
+        bestSellerProducts,
+        categoryList
       })
     );
   }catch(e){

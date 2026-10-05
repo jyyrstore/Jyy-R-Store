@@ -99,6 +99,12 @@ const ownerMaintenanceSchema=z.object({
   allow_owner_access:zBool
 });
 
+const productReviewSchema=z.object({
+  rating:z.coerce.number().int().min(1).max(5),
+  comment:z.string().trim().min(1).max(2000)
+});
+
+
 const pageRouter=express.Router();
 pageRouter.get('/',asyncHandler(page.home));
 pageRouter.get('/store',asyncHandler(page.store));
@@ -163,6 +169,13 @@ apiRouter.post('/auth/reset-password',requireAuth,validate(z.object({password:z.
 apiRouter.get('/auth/callback',asyncHandler(api.authController.callback));
 apiRouter.get('/products',asyncHandler(api.productController.list));
 apiRouter.get('/products/:slug',asyncHandler(api.productController.detail));
+
+apiRouter.post('/products/:id/review',
+  requireAuth,
+  validate(productReviewSchema),
+  asyncHandler(api.productController.review)
+);
+
 apiRouter.get('/categories',asyncHandler(api.productController.categories));
 apiRouter.post('/cart',requireAuth,validate(z.object({productId:z.string().uuid(),quantity:z.coerce.number().int().min(1).max(100)})),asyncHandler(api.cartController.add));
 apiRouter.get('/cart',requireAuth,asyncHandler(api.cartController.get));

@@ -23,6 +23,7 @@ const { query }=require('../config/database');
 const info=require('../repositories/information.repository');
 const faq=require('../repositories/faq.repository');
 const categories=require('../repositories/categories.repository');
+const productReviews=require('../repositories/product-reviews.repository');
 const storage=require('../config/storage');
 const { log }=require('../config/logging');
 const { loadEnv }=require('../config/env');
@@ -60,6 +61,15 @@ const productController={
     return ok(res,p)
   },
  categories:async(req,res)=>ok(res,await categories.list(true)),
+  review:async(req,res)=>ok(
+    res,
+    await productReviews.upsertForBuyer(
+      req.params.id,
+      req.user.id,
+      req.body
+    )
+  ),
+
  create:async(req,res)=>ok(res,await product.create(req.body),201),
  update:async(req,res)=>ok(res,await product.update(req.params.id,req.body))
 };

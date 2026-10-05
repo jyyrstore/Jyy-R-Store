@@ -189,3 +189,396 @@
     <p class="detail-description"><%= product.description || 'Tidak ada deskripsi.' %></p>
   </div>
   </section>
+
+    <section
+      class="product-reviews-section"
+      aria-labelledby="product-reviews-title"
+    >
+      <div class="section-header product-reviews-header">
+        <div>
+          <div class="eyebrow">Ulasan Pembeli</div>
+          <h2 id="product-reviews-title">Ulasan Pembeli</h2>
+          <p>Rating dan pengalaman dari pembeli yang telah melakukan transaksi.</p>
+        </div>
+      </div>
+
+      <div class="product-review-summary-grid">
+
+        <section
+          class="product-review-chart panel"
+          aria-labelledby="product-review-chart-title"
+        >
+          <div class="product-review-panel-title">
+            <div>
+              <div class="eyebrow">Grafik Pembelian</div>
+              <h3 id="product-review-chart-title">Rating Pembelian</h3>
+            </div>
+
+            <span class="product-review-count">
+              <%= Number(reviewSummary.reviewCount||0) %> Ulasan
+            </span>
+          </div>
+
+          <div class="product-review-bars">
+            <% [5,4,3,2,1].forEach(star=>{
+              const count=Number(
+                reviewSummary.distribution?.[star]||0
+              );
+
+              const total=Number(
+                reviewSummary.reviewCount||0
+              );
+
+              const percent=total
+                ? Math.round((count/total)*100)
+                : 0;
+            %>
+
+              <div class="product-review-bar-row">
+
+                <span
+                  class="product-review-stars-label"
+                  aria-label="<%= star %> dari 5 bintang"
+                >
+                  <%= '★'.repeat(star) %><%= '☆'.repeat(5-star) %>
+                </span>
+
+                <span
+                  class="product-review-bar-track"
+                  aria-hidden="true"
+                >
+                  <span style="width:<%= percent %>%"></span>
+                </span>
+
+                <strong><%= percent %>%</strong>
+
+              </div>
+
+            <% }) %>
+          </div>
+
+          <div class="product-review-summary-foot">
+            <strong>
+              ★ <%= Number(reviewSummary.averageRating||0).toFixed(1) %> / 5.0
+            </strong>
+
+            <span>•</span>
+
+            <span>
+              <%= Number(product.purchase_count||0) %> Pembelian
+            </span>
+          </div>
+        </section>
+
+
+        <section
+          class="product-review-write panel"
+          aria-labelledby="product-review-write-title"
+        >
+          <div class="eyebrow">Rate Bintang</div>
+
+          <h3 id="product-review-write-title">
+            <%= viewerReview
+              ? 'Perbarui ulasan Anda'
+              : 'Bagikan pengalaman pembelian'
+            %>
+          </h3>
+
+          <% if(currentUser && canReview){ %>
+
+            <form
+              data-product-review-form
+              data-product-id="<%= product.id %>"
+            >
+
+              <input
+                type="hidden"
+                name="rating"
+                value="<%= viewerReview?.rating || '' %>"
+                data-review-rating-value
+              >
+
+              <div
+                class="product-review-rating-picker"
+                role="radiogroup"
+                aria-label="Rating pembelian 1 sampai 5"
+              >
+                <% [1,2,3,4,5].forEach(star=>{ %>
+
+                  <button
+                    type="button"
+                    class="product-review-star-button<%= Number(viewerReview?.rating||0) >= star ? ' is-selected' : '' %>"
+                    data-review-rating="<%= star %>"
+                    aria-label="Beri rating <%= star %> dari 5"
+                    aria-pressed="<%= Number(viewerReview?.rating||0) === star ? 'true' : 'false' %>"
+                  >★</button>
+
+                <% }) %>
+              </div>
+
+              <textarea
+                name="comment"
+                rows="4"
+                maxlength="2000"
+                placeholder="Tulis pengalaman Anda setelah membeli produk ini..."
+                aria-label="Komentar ulasan"
+                required
+              ><%= viewerReview?.comment || '' %></textarea>
+
+              <button
+                class="button button-primary button-block"
+                type="submit"
+              >
+                <%- icon('device-floppy') %>
+                <%= viewerReview
+                  ? 'Simpan perubahan'
+                  : 'Kirim ulasan'
+                %>
+              </button>
+
+            </form>
+
+          <% } else if(currentUser){ %>
+
+            <div class="product-review-login-note">
+              <p>
+                Ulasan tersedia setelah pembelian produk ini terkonfirmasi.
+              </p>
+            </div>
+
+          <% } else { %>
+
+            <div class="product-review-login-note">
+              <p>
+                Masuk untuk memberikan rating dan ulasan setelah membeli produk ini.
+              </p>
+
+              <a
+                class="button button-secondary button-block"
+                href="/auth/login?next=<%= encodeURIComponent(req.originalUrl) %>"
+              >
+                Masuk untuk mengulas
+              </a>
+            </div>
+
+          <% } %>
+        </section>
+      </div>
+
+
+      <div class="product-review-list-wrap">
+
+        <div class="product-review-list-head">
+          <div>
+            <div class="eyebrow">Pengalaman Pembeli</div>
+            <h3>Ulasan terbaru</h3>
+          </div>
+        </div>
+
+        <% if(reviews.length){ %>
+
+          <div class="product-review-list">
+
+            <% reviews.forEach(review=>{
+              const displayName=
+                review.display_name ||
+                review.username ||
+                'Pembeli';
+
+              const initial=
+                String(displayName).trim().slice(0,1).toUpperCase() ||
+                'P';
+            %>
+
+              <article class="product-review-card">
+
+                <div
+                  class="product-review-avatar"
+                  aria-hidden="true"
+                >
+                  <%= initial %>
+                </div>
+
+                <div class="product-review-content">
+
+                  <div class="product-review-topline">
+
+                    <div class="product-review-user">
+                      <strong><%= displayName %></strong>
+                      <span>@<%= review.username || 'user' %></span>
+                    </div>
+
+                    <time
+                      class="product-review-time"
+                      datetime="<%= review.purchase_at || review.created_at %>"
+                    >
+                      Pembelian ·
+                      <%= formatDate(
+                        review.purchase_at ||
+                        review.created_at
+                      ) %>
+                    </time>
+
+                  </div>
+
+                  <div
+                    class="product-review-rating"
+                    aria-label="Rating <%= review.rating %> dari 5"
+                  >
+                    <% for(let star=1;star<=5;star++){ %>
+
+                      <span
+                        class="<%= star<=Number(review.rating)
+                          ? 'is-filled'
+                          : 'is-empty' %>"
+                        aria-hidden="true"
+                      ><%= star<=Number(review.rating)
+                        ? '★'
+                        : '☆' %></span>
+
+                    <% } %>
+                  </div>
+
+                  <p class="product-review-comment">
+                    <%= review.comment %>
+                  </p>
+
+                </div>
+              </article>
+
+            <% }) %>
+
+          </div>
+
+          <%- include('../partials/pagination',{
+            pagination:reviewsPagination,
+            param:'reviewPage',
+            label:'Pagination ulasan pembeli'
+          }) %>
+
+        <% } else { %>
+
+          <%- include('../partials/empty',{
+            title:'Belum ada ulasan pembeli',
+            description:'Belum ada rating untuk produk ini. Jadilah pembeli pertama yang memberikan ulasan.'
+          }) %>
+
+        <% } %>
+
+      </div>
+    </section>
+
+
+    <section
+      class="section product-detail-recommendations"
+      aria-labelledby="product-other-title"
+    >
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Rekomendasi</div>
+          <h2 id="product-other-title">Produk Lainnya</h2>
+          <p>Produk lain yang bisa Anda pertimbangkan.</p>
+        </div>
+      </div>
+
+      <% if(relatedProducts.length){ %>
+
+        <div class="product-grid">
+          <% relatedProducts.forEach(product=>{ %>
+            <%- include('../partials/product-card',{product}) %>
+          <% }) %>
+        </div>
+
+      <% } else { %>
+
+        <%- include('../partials/empty',{
+          title:'Belum ada produk lainnya',
+          description:'Belum ada produk lain yang tersedia saat ini.'
+        }) %>
+
+      <% } %>
+    </section>
+
+
+    <section
+      class="section product-detail-recommendations"
+      aria-labelledby="product-best-title"
+    >
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Terlaris</div>
+          <h2 id="product-best-title">Produk Terlaris</h2>
+          <p>Produk dengan jumlah pembelian tertinggi.</p>
+        </div>
+      </div>
+
+      <% if(bestSellerProducts.length){ %>
+
+        <div class="product-grid">
+          <% bestSellerProducts.forEach(product=>{ %>
+            <%- include('../partials/product-card',{product}) %>
+          <% }) %>
+        </div>
+
+      <% } else { %>
+
+        <%- include('../partials/empty',{
+          title:'Belum ada produk terlaris',
+          description:'Data pembelian belum tersedia.'
+        }) %>
+
+      <% } %>
+    </section>
+
+
+    <section
+      class="section product-detail-recommendations"
+      aria-labelledby="product-category-title"
+    >
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">Temukan Lebih Banyak</div>
+          <h2 id="product-category-title">Jelajahi Kategori</h2>
+          <p>Pilih kategori untuk melihat lebih banyak produk.</p>
+        </div>
+      </div>
+
+      <% if(categoryList.length){ %>
+
+        <div class="category-grid product-detail-category-grid">
+
+          <% categoryList.forEach(category=>{ %>
+
+            <a
+              class="category-card"
+              href="/store?category=<%= encodeURIComponent(category.slug) %>"
+            >
+              <span class="category-card__content">
+
+                <strong class="category-card__name">
+                  <%= category.name %>
+                </strong>
+
+                <% if(category.description){ %>
+                  <span class="category-card__description">
+                    <%= category.description %>
+                  </span>
+                <% } %>
+
+              </span>
+            </a>
+
+          <% }) %>
+
+        </div>
+
+      <% } else { %>
+
+        <%- include('../partials/empty',{
+          title:'Belum ada kategori',
+          description:'Kategori produk akan muncul di sini.'
+        }) %>
+
+      <% } %>
+
+    </section>
