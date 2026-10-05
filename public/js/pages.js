@@ -1537,7 +1537,41 @@
     }
     const tab=e.target.closest('[data-tab-target]');if(tab){const name=tab.dataset.tabTarget;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));tab.classList.add('active');document.querySelector(`[data-tab="${name}"]`)?.classList.add('active')}
     const dep=e.target.closest('[data-deposit-submit]');if(dep){const v=Number(document.getElementById('deposit-custom')?.value||0);if(v<1000)return toast.error('Minimum deposit Rp1.000.');dep.disabled=true;try{const r=await api.request('/api/deposit',{method:'POST',body:{amount:v,returnUrl:location.origin+'/deposit'}});if(r.paymentUrl)location.href=r.paymentUrl;else toast.success('Deposit dibuat.')}catch(err){toast.error(err.message)}finally{dep.disabled=false}}
-    const checkout=e.target.closest('[data-checkout-confirm]');if(checkout){const method=document.querySelector('input[name="paymentMethod"]:checked')?.value||'BALANCE';checkout.disabled=true;try{const r=await api.request('/api/orders',{method:'POST',body:{paymentMethod:method,returnUrl:location.origin+'/orders'}});if(r.payment?.paymentUrl)location.href=r.payment.paymentUrl;else location.href='/orders/'+r.order.id}catch(err){toast.error(err.message)}finally{checkout.disabled=false}}
+    const checkout=e.target.closest('[data-checkout-confirm]');
+    if(checkout){
+      const method=
+        document.querySelector(
+          'input[name="paymentMethod"]:checked'
+        )?.value||'BALANCE';
+
+      checkout.disabled=true;
+
+      try{
+        const r=await api.request(
+          '/api/orders',
+          {
+            method:'POST',
+            body:{
+              paymentMethod:method,
+              returnUrl:location.origin+'/orders'
+            }
+          }
+        );
+
+        if(r.payment?.paymentUrl){
+          location.href=r.payment.paymentUrl;
+        }else{
+          location.href=
+            '/orders/'+
+            encodeURIComponent(r.order.id)+
+            '?review=1';
+        }
+      }catch(err){
+        toast.error(err.message);
+      }finally{
+        checkout.disabled=false;
+      }
+    }
 
     const download=e.target.closest('[data-download-content]');if(download){download.disabled=true;try{const r=await api.request('/api/download/'+download.dataset.downloadContent);if(r.url)window.open(r.url,'_blank','noopener');else if(r.content?.type==='TEXT')toast.success('Content teks tersedia di halaman.');else toast.error('Secure URL tidak tersedia.')}catch(err){toast.error(err.message)}finally{download.disabled=false}}
     const service=e.target.closest('[data-service-order]');if(service){open(`<form data-service-order-form class="stack-form"><h2>Pesan ${esc(service.dataset.serviceName)}</h2><p class="muted">Harga ${money(service.dataset.servicePrice)} akan dipotong dari saldo setelah konfirmasi.</p><input type="hidden" name="serviceId" value="${esc(service.dataset.serviceOrder)}"><label class="field"><span>Username (opsional)</span><input name="username"></label><label class="field"><span>URL (opsional)</span><input name="url" type="url"></label><label class="field"><span>Quantity</span><input name="quantity" type="number" min="1" value="1"></label><label class="field"><span>Target (opsional)</span><input name="target"></label><label class="field"><span>Notes</span><textarea name="notes"></textarea></label>${formButtons('Konfirmasi Service')}</form>`)}
@@ -2777,6 +2811,379 @@
       }
     }
   );
+
+
+  /* JYYR POST-PAYMENT REVIEW PROMPT */
+
+  function paymentReviewDismissKey(orderId){
+    return 'jyyr:payment-review-dismissed:'+String(orderId||'');
+  }
+
+  function paymentReviewDismissed(orderId){
+    try{
+      return sessionStorage.getItem(
+        paymentReviewDismissKey(orderId)
+      )==='1';
+    }catch{
+      return false;
+    }
+  }
+
+  function dismissPaymentReview(orderId){
+    try{
+      sessionStorage.setItem(
+        paymentReviewDismissKey(orderId),
+        '1'
+      );
+    }catch{ /* Intentionally ignore this recoverable error. */ }
+  }
+
+  function cleanPaymentReviewQuery(){
+    try{
+      const url=new URL(window.location.href);
+
+      url.searchParams.delete('review');
+      url.searchParams.delete('reviewOrder');
+
+      window.history.replaceState(
+        {},
+        document.title,
+        url.pathname+
+        (url.search?url.search:'')+
+        (url.hash||'')
+      );
+    }catch{ /* Intentionally ignore this recoverable error. */ }
+  }
+
+  async function getPaidOrderForReview(
+    orderId,
+    maxAttempts=18
+  ){
+    const successfulStatuses=new Set([
+      'PAID',
+      'PROCESSING',
+      'COMPLETED'
+    ]);
+
+    const failedStatuses=new Set([
+      'FAILED',
+      'EXPIRED',
+      'CANCELLED',
+      'REFUNDED'
+    ]);
+
+    for(let attempt=0;attempt<maxAttempts;attempt++){
+      try{
+        const order=await api.request(
+          '/api/orders/'+
+          encodeURIComponent(orderId)
+        );
+
+        const status=
+          String(order?.status||'')
+            .toUpperCase();
+
+        if(successfulStatuses.has(status)){
+          return order;
+        }
+
+        if(failedStatuses.has(status)){
+          return null;
+        }
+      }catch{ /* Intentionally ignore this recoverable error. */ }
+
+      await new Promise(resolve=>{
+        setTimeout(
+          resolve,
+          Math.min(
+            2000+(attempt*250),
+            5000
+          )
+        );
+      });
+    }
+
+    return null;
+  }
+
+  function openPaymentReviewPrompt(order){
+    if(!order?.id)return;
+
+    if(paymentReviewDismissed(order.id)){
+      cleanPaymentReviewQuery();
+      return;
+    }
+
+    const items=(
+      Array.isArray(order.items)
+        ? order.items
+        : []
+    ).filter(item=>item?.product_id);
+
+    if(!items.length){
+      cleanPaymentReviewQuery();
+      return;
+    }
+
+    const item=items[0];
+
+    open(`
+      <form
+        class="stack-form"
+        data-payment-review-prompt-form
+        data-order-id="${esc(order.id)}"
+      >
+        <div class="eyebrow accent">
+          Pembayaran berhasil ✓
+        </div>
+
+        <h2>Pembelian berhasil ✓</h2>
+
+        <p class="muted">
+          Bagaimana pengalaman kamu?
+        </p>
+
+        <div class="list-card">
+          <div>
+            <strong>${esc(item.product_name||'Produk')}</strong>
+            <span>
+              ${Number(item.quantity||1)} ×
+              ${money(item.unit_price||0)}
+            </span>
+          </div>
+        </div>
+
+        <input
+          type="hidden"
+          name="productId"
+          value="${esc(item.product_id)}"
+        >
+
+        <div
+          class="product-review-rating-picker"
+          role="radiogroup"
+          aria-label="Rating pembelian 1 sampai 5"
+        >
+          ${[1,2,3,4,5].map(star=>`
+            <button
+              type="button"
+              class="product-review-star-button"
+              data-review-rating="${star}"
+              aria-label="Beri rating ${star} dari 5"
+              aria-pressed="false"
+            >★</button>
+          `).join('')}
+        </div>
+
+        <input
+          type="hidden"
+          name="rating"
+          value=""
+          data-review-rating-value
+        >
+
+        <label class="field">
+          <span>Tulis komentar</span>
+          <textarea
+            name="comment"
+            rows="4"
+            maxlength="2000"
+            placeholder="Ceritakan pengalaman kamu setelah membeli produk ini..."
+            required
+          ></textarea>
+        </label>
+
+        <div class="inline-actions">
+          <button
+            class="button button-secondary"
+            type="button"
+            data-payment-review-skip
+            data-modal-close
+          >
+            Nanti saja
+          </button>
+
+          <button
+            class="button button-primary"
+            type="submit"
+          >
+            Beri Rating
+          </button>
+        </div>
+      </form>
+    `,()=>{
+      syncProductReviewRating(
+        document.querySelector(
+          '[data-payment-review-prompt-form]'
+        )
+      );
+    });
+  }
+
+  document.addEventListener(
+    'click',
+    event=>{
+      const skip=event.target.closest(
+        '[data-payment-review-skip]'
+      );
+
+      if(!skip)return;
+
+      const form=skip.closest(
+        '[data-payment-review-prompt-form]'
+      );
+
+      const orderId=
+        form?.dataset.orderId||'';
+
+      if(orderId){
+        dismissPaymentReview(orderId);
+      }
+
+      cleanPaymentReviewQuery();
+    }
+  );
+
+  document.addEventListener(
+    'submit',
+    async event=>{
+      const form=event.target.closest(
+        '[data-payment-review-prompt-form]'
+      );
+
+      if(!form)return;
+
+      event.preventDefault();
+
+      const orderId=
+        String(form.dataset.orderId||'');
+
+      const productId=
+        String(
+          form.querySelector(
+            'input[name="productId"]'
+          )?.value||''
+        );
+
+      const rating=Number(
+        form.querySelector(
+          '[data-review-rating-value]'
+        )?.value||0
+      );
+
+      const comment=String(
+        form.querySelector(
+          'textarea[name="comment"]'
+        )?.value||''
+      ).trim();
+
+      const submit=form.querySelector(
+        'button[type="submit"]'
+      );
+
+      if(!productId||!orderId){
+        toast.error(
+          'Data ulasan tidak lengkap.'
+        );
+        return;
+      }
+
+      if(!rating||rating<1||rating>5){
+        toast.error(
+          'Pilih rating bintang 1 sampai 5.'
+        );
+        return;
+      }
+
+      if(!comment){
+        toast.error(
+          'Komentar ulasan wajib diisi.'
+        );
+        return;
+      }
+
+      if(submit){
+        submit.disabled=true;
+        submit.setAttribute(
+          'aria-busy',
+          'true'
+        );
+      }
+
+      try{
+        await api.request(
+          '/api/products/'+
+          encodeURIComponent(productId)+
+          '/review',
+          {
+            method:'POST',
+            body:{
+              rating,
+              comment
+            }
+          }
+        );
+
+        dismissPaymentReview(orderId);
+        cleanPaymentReviewQuery();
+
+        window.JYYRModal.close();
+
+        toast.success(
+          'Rating dan komentar berhasil disimpan.'
+        );
+      }catch(err){
+        toast.error(err.message);
+      }finally{
+        if(submit){
+          submit.disabled=false;
+          submit.removeAttribute(
+            'aria-busy'
+          );
+        }
+      }
+    }
+  );
+
+  async function initPostPaymentReviewPrompt(){
+    const orderDetailRoot=
+      document.querySelector(
+        '[data-payment-review-order-detail]'
+      );
+
+    const ordersRoot=
+      document.querySelector(
+        '[data-payment-review-orders]'
+      );
+
+    const orderId=
+      orderDetailRoot?.dataset
+        .paymentReviewOrderDetail ||
+      ordersRoot?.dataset
+        .paymentReviewOrders ||
+      '';
+
+    if(!orderId)return;
+
+    if(paymentReviewDismissed(orderId)){
+      cleanPaymentReviewQuery();
+      return;
+    }
+
+    const order=
+      await getPaidOrderForReview(
+        orderId
+      );
+
+    if(!order){
+      cleanPaymentReviewQuery();
+      return;
+    }
+
+    openPaymentReviewPrompt(order);
+  }
+
+  initPostPaymentReviewPrompt();
 
   /* JYYR RECIPIENT COUNTRY SEARCH FIX */
   document.addEventListener('input',e=>{

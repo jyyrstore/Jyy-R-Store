@@ -90,14 +90,30 @@ class XenditProvider{
     return u.toString();
   }
 
-  normalizeReturnUrl(){
-    return this.normalizeHttpsUrl(this.env.XENDIT_RETURN_URL,'XENDIT_RETURN_URL',{required:true});
+  normalizeReturnUrl(value=null){
+    const supplied=String(value||'').trim();
+
+    if(supplied){
+      try{
+        const parsed=new URL(supplied);
+
+        if(parsed.protocol==='https:'){
+          return parsed.toString();
+        }
+      }catch{ /* Intentionally ignore this recoverable error. */ }
+    }
+
+    return this.normalizeHttpsUrl(
+      this.env.XENDIT_RETURN_URL,
+      'XENDIT_RETURN_URL',
+      {required:true}
+    );
   }
 
-  async createPayment({orderId,amount,customer,idempotencyKey}){
+  async createPayment({orderId,amount,customer,idempotencyKey,returnUrl}){
     if(!this.configured())throw Object.assign(new Error('Xendit Test Secret Key belum dikonfigurasi.'),{status:503,code:'XENDIT_NOT_CONFIGURED',expose:true});
 
-    const returnUrl=this.normalizeReturnUrl();
+    const callbackReturnUrl=this.normalizeReturnUrl(returnUrl);
     const base=(this.env.XENDIT_API_BASE_URL||'https://api.xendit.co').replace(/\/$/,'');
     const timeoutMs=Math.max(1000,Number(this.env.PAYMENT_REQUEST_TIMEOUT_MS||15000));
     const controller=new AbortController();
@@ -148,7 +164,7 @@ class XenditProvider{
       country:'ID',
       locale:'id',
       customer:xenditCustomer,
-      success_return_url:returnUrl,
+      success_return_url:callbackReturnUrl,
       cancel_return_url:this.normalizeHttpsUrl(this.env.XENDIT_CANCEL_RETURN_URL,'XENDIT_CANCEL_RETURN_URL')||returnUrl,
       description:`Jyyr Store payment ${orderId}`,
       metadata:{
