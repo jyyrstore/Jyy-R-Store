@@ -55,10 +55,50 @@ async function createWalletOrder(userId,idempotencyKey){
   const result=await withTransaction(async(client)=>{
     const cartRes=await client.query(
       `select
-         c.recipient_email,
-         c.recipient_country_code,
-         c.recipient_dial_code,
-         c.recipient_phone,
+         coalesce(
+           c.recipient_email,
+           (
+             select rc.recipient_email
+             from public.recipient_contacts rc
+             where rc.user_id=c.user_id
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_email,
+         coalesce(
+           c.recipient_country_code,
+           (
+             select rc.recipient_country_code
+             from public.recipient_contacts rc
+             where rc.user_id=c.user_id
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_country_code,
+         coalesce(
+           c.recipient_dial_code,
+           (
+             select rc.recipient_dial_code
+             from public.recipient_contacts rc
+             where rc.user_id=c.user_id
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_dial_code,
+         coalesce(
+           c.recipient_phone,
+           (
+             select rc.recipient_phone
+             from public.recipient_contacts rc
+             where rc.user_id=c.user_id
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_phone,
          ci.id item_id,
          ci.product_id,
          ci.quantity,
@@ -283,10 +323,50 @@ async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){
   return withTransaction(async(client)=>{
     const cartRes=await client.query(
       `select
-         c.recipient_email,
-         c.recipient_country_code,
-         c.recipient_dial_code,
-         c.recipient_phone,
+         coalesce(
+           c.recipient_email,
+           (
+             select rc.recipient_email
+             from public.recipient_contacts rc
+             where rc.user_id=c.user_id
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_email,
+         coalesce(
+           c.recipient_country_code,
+           (
+             select rc.recipient_country_code
+             from public.recipient_contacts rc
+             where rc.user_id=c.user_id
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_country_code,
+         coalesce(
+           c.recipient_dial_code,
+           (
+             select rc.recipient_dial_code
+             from public.recipient_contacts rc
+             where rc.user_id=c.user_id
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_dial_code,
+         coalesce(
+           c.recipient_phone,
+           (
+             select rc.recipient_phone
+             from public.recipient_contacts rc
+             where rc.user_id=c.user_id
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_phone,
          ci.id item_id,
          ci.product_id,
          ci.quantity,

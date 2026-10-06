@@ -1,4 +1,4 @@
-const { query } = require('../config/database');
+const { query, withTransaction } = require('../config/database');
 const { badRequest } = require('../utils/error');
 
 async function ensure(userId){
@@ -98,34 +98,54 @@ async function clear(userId,client=null){
 
 
 async function saveDefaultRecipientContact(userId,contact){
-  await query(
-    'update public.recipient_contacts set is_default=false,updated_at=now() where user_id=$1 and is_default=true',
-    [userId]
-  );
+  return withTransaction(async(client)=>{
+    const cart=(
+      await client.query(
+        'insert into carts(user_id) values($1) on conflict(user_id) do update set updated_at=now() returning *',
+        [userId]
+      )
+    ).rows[0];
 
-  const result=await query(
-    `insert into public.recipient_contacts
-      (user_id,label,recipient_email,recipient_country_code,recipient_dial_code,recipient_phone,is_default,created_at,updated_at)
-     values
-      ($1,'Utama',$2,$3,$4,$5,true,now(),now())
-     on conflict (user_id,label) do update set
-       recipient_email=excluded.recipient_email,
-       recipient_country_code=excluded.recipient_country_code,
-       recipient_dial_code=excluded.recipient_dial_code,
-       recipient_phone=excluded.recipient_phone,
-       is_default=true,
-       updated_at=now()
-     returning *`,
-    [
-      userId,
-      contact.email,
-      contact.countryCode,
-      contact.dialCode,
-      contact.phone
-    ]
-  );
+    await client.query(
+      'update public.recipient_contacts set is_default=false,updated_at=now() where user_id=$1 and is_default=true',
+      [userId]
+    );
 
-  return result.rows[0]||null;
+    const result=await client.query(
+      `insert into public.recipient_contacts
+        (user_id,label,recipient_email,recipient_country_code,recipient_dial_code,recipient_phone,is_default,created_at,updated_at)
+       values
+        ($1,'Utama',$2,$3,$4,$5,true,now(),now())
+       on conflict (user_id,label) do update set
+         recipient_email=excluded.recipient_email,
+         recipient_country_code=excluded.recipient_country_code,
+         recipient_dial_code=excluded.recipient_dial_code,
+         recipient_phone=excluded.recipient_phone,
+         is_default=true,
+         updated_at=now()
+       returning *`,
+      [
+        userId,
+        contact.email,
+        contact.countryCode,
+        contact.dialCode,
+        contact.phone
+      ]
+    );
+
+    await client.query(
+      'update carts set recipient_email=$2,recipient_country_code=$3,recipient_dial_code=$4,recipient_phone=$5,updated_at=now() where id=$1',
+      [
+        cart.id,
+        contact.email,
+        contact.countryCode,
+        contact.dialCode,
+        contact.phone
+      ]
+    );
+
+    return result.rows[0]||null;
+  });
 }
 
 module.exports={ensure,get,setContact,upsertItem,setItem,removeItem,clear,

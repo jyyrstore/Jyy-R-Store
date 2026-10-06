@@ -28,7 +28,7 @@ async function get(userId){
 async function setContact(userId,contact){
   const normalized=normalizeRecipientContact(contact);
   await cart.saveDefaultRecipientContact(userId,normalized);
-  await cart.setContact(userId,normalized);
+  return normalized;
 }
 
 async function add(userId,productId,quantity){
