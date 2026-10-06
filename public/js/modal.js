@@ -26,8 +26,10 @@
     const style=document.createElement('style');
     style.id='jyyr-accessibility-runtime';
     style.textContent=`
-      .modal-close,.icon-button{min-width:44px;min-height:44px}
-      .button,.button-block{min-height:44px}
+      .modal:not(.modal-confirm) .modal-close,
+      .modal:not(.modal-confirm) .icon-button{min-width:44px;min-height:44px}
+      .modal:not(.modal-confirm) .button,
+      .modal:not(.modal-confirm) .button-block{min-height:44px}
       :focus-visible{outline:2px solid currentColor;outline-offset:3px}
       @media (prefers-reduced-motion: reduce){
         *,*::before,*::after{
@@ -90,7 +92,7 @@
     }
   }
 
-  function open(html) {
+  function open(html, modalClass=''){
     const root=document.getElementById('modal-root');
     if(!root) return;
     ensureStyles();
@@ -98,7 +100,7 @@
     state.previousFocus=document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     root.innerHTML=`<div class="modal-backdrop" data-modal-backdrop>
-      <div class="modal" role="dialog" aria-modal="true" aria-label="Dialog">
+      <div class="modal${modalClass ? ` ${modalClass}` : ''}" role="dialog" aria-modal="true" aria-label="Dialog">
         ${html}
         <button class="icon-button modal-close" type="button" aria-label="Close" data-modal-close>
           ${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}
@@ -235,7 +237,7 @@
   function confirm(message){
     return new Promise(resolve=>{
       open(`
-        <div class="stack-form">
+        <div class="stack-form modal-confirm-form">
           <h2>Konfirmasi</h2>
           <p class="muted">${escapeHtml(message)}</p>
           <div class="inline-actions">
@@ -251,7 +253,7 @@
             >Lanjutkan</button>
           </div>
         </div>
-      `);
+      `, 'modal-confirm');
 
       state.pendingConfirm=resolve;
     });

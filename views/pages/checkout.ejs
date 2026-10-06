@@ -30,7 +30,20 @@
               <strong><%= i.name %></strong>
               <span><%= i.quantity %> × <%= formatIDR(i.price) %></span>
             </div>
-            <b><%= formatIDR(i.lineTotal) %></b>
+
+            <div class="checkout-item-actions">
+              <button
+                class="button button-secondary checkout-item-remove"
+                type="button"
+                data-checkout-remove="<%= i.id %>"
+                aria-label="Hapus <%= i.name %> dari keranjang"
+                title="Hapus item"
+              >
+                <%- icon('trash') %>
+              </button>
+
+              <b><%= formatIDR(i.lineTotal) %></b>
+            </div>
           </div>
         <% }) %>
       <% } else { %>
@@ -103,6 +116,12 @@
                   Saldo <%= formatIDR(wallet.balance) %> · kurang <%= formatIDR(Number(preview.total)-Number(wallet.balance)) %>
                 <% } %>
               </small>
+
+              <% if(!walletSufficient){ %>
+                <a class="checkout-balance-help" href="/deposit">
+                  Isi saldo Wallet
+                </a>
+              <% } %>
             </span>
           </label>
 
@@ -120,11 +139,6 @@
           </label>
         </div>
 
-        <% if(!walletSufficient){ %>
-          <a class="checkout-balance-help" href="/deposit">
-            Isi saldo Wallet
-          </a>
-        <% } %>
       </fieldset>
 
       <hr>

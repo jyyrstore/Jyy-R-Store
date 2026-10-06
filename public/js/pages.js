@@ -1537,6 +1537,36 @@
     }
     const tab=e.target.closest('[data-tab-target]');if(tab){const name=tab.dataset.tabTarget;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));tab.classList.add('active');document.querySelector(`[data-tab="${name}"]`)?.classList.add('active')}
     const dep=e.target.closest('[data-deposit-submit]');if(dep){const v=Number(document.getElementById('deposit-custom')?.value||0);if(v<1000)return toast.error('Minimum deposit Rp1.000.');dep.disabled=true;try{const r=await api.request('/api/deposit',{method:'POST',body:{amount:v,returnUrl:location.origin+'/deposit'}});if(r.paymentUrl)location.href=r.paymentUrl;else toast.success('Deposit dibuat.')}catch(err){toast.error(err.message)}finally{dep.disabled=false}}
+    const checkoutRemove=e.target.closest('[data-checkout-remove]');
+    if(checkoutRemove){
+      const id=checkoutRemove.dataset.checkoutRemove;
+
+      if(!id)return;
+
+      const confirmed=await window.JYYRModal.confirm(
+        'Hapus item ini dari keranjang?'
+      );
+
+      if(!confirmed)return;
+
+      checkoutRemove.disabled=true;
+
+      try{
+        await api.request(
+          '/api/cart/'+encodeURIComponent(id),
+          {method:'DELETE'}
+        );
+
+        toast.success('Item dihapus dari keranjang.');
+        location.reload();
+      }catch(err){
+        toast.error(err.message);
+        checkoutRemove.disabled=false;
+      }
+
+      return;
+    }
+
     const checkout=e.target.closest('[data-checkout-confirm]');
     if(checkout){
       const method=

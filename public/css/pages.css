@@ -2947,3 +2947,31 @@ button[aria-busy="true"]{
     height:38px;
   }
 }
+
+/* Checkout item action */
+.checkout-layout .stack-list .list-card{
+  padding:10px 12px;
+}
+
+.checkout-item-actions{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:3px;
+}
+
+.checkout-item-remove{
+  width:27px;
+  min-width:27px;
+  height:27px;
+  min-height:27px;
+  padding:0;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.checkout-item-remove svg{
+  width:14px;
+  height:14px;
+}
