@@ -1,3 +1,4 @@
+const { test } = require('node:test');
 const assert=require('assert');
 
 const {
@@ -90,3 +91,110 @@ assert.ok(
 );
 
 console.log('recipient-contact.test.js: PASS');
+
+test('direct buy now keeps product out of cart',()=>{
+  const assert=require('node:assert/strict');
+  const fs=require('node:fs');
+  const path=require('node:path');
+
+  const root=path.resolve(__dirname,'../..');
+
+  const pages=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  const checkout=fs.readFileSync(
+    path.join(root,'views/pages/checkout.ejs'),
+    'utf8'
+  );
+
+  const order=fs.readFileSync(
+    path.join(root,'src/services/order/order.service.js'),
+    'utf8'
+  );
+
+  const api=fs.readFileSync(
+    path.join(root,'src/controllers/api.controller.js'),
+    'utf8'
+  );
+
+  const controller=fs.readFileSync(
+    path.join(root,'src/controllers/page.controller.js'),
+    'utf8'
+  );
+
+  const buyHandler=pages.match(
+    /const buy=e\.target\.closest\('\[data-buy-now\]'\);[\s\S]*?catch\(err\)\{toast\.error\(err\.message\);buy\.disabled=false\}\}/
+  );
+
+  assert.ok(
+    buyHandler,
+    'Handler Buy Now tidak ditemukan.'
+  );
+
+  assert.match(
+    buyHandler[0],
+    /location\.href='\/checkout\?buy_now='/
+  );
+
+  assert.doesNotMatch(
+    buyHandler[0],
+    /\/api\/cart/
+  );
+
+  assert.match(
+    pages,
+    /buyNowProduct/
+  );
+
+  assert.match(
+    checkout,
+    /data-buy-now-product/
+  );
+
+  assert.match(
+    checkout,
+    /preview\.directBuyNow/
+  );
+
+  assert.match(
+    order,
+    /function normalizeBuyNowProductId/
+  );
+
+  assert.match(
+    order,
+    /function directCheckoutContext/
+  );
+
+  assert.match(
+    order,
+    /buyNowProductId=null/
+  );
+
+  assert.match(
+    order,
+    /if\(!directBuyNow\)\{\s*await carts\.clear/
+  );
+
+  assert.match(
+    api,
+    /const buyNowProductId=req\.body\.buyNowProductId\|\|null/
+  );
+
+  assert.match(
+    api,
+    /createWalletOrder/
+  );
+
+  assert.match(
+    api,
+    /createGatewayOrder/
+  );
+
+  assert.match(
+    controller,
+    /req\.query\.buy_now/
+  );
+});

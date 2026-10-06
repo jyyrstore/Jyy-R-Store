@@ -9,8 +9,211 @@ const { badRequest, notFound }=require('../../utils/error');
 const { normalizeStoredContact }=require('../../utils/recipient-contact');
 const { sendOrderPaidEmail }=require('../email/order-notification.service');
 function orderNumber(){ const d=new Date(); const part=d.toISOString().slice(0,10).replace(/-/g,''); return `JYR-${part}-${randomId().slice(-6).toUpperCase()}`; }
-async function preview(userId){
+
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function normalizeBuyNowProductId(value){
+  const id=String(value||'').trim();
+
+  if(!id)return null;
+
+  if(!UUID_RE.test(id)){
+    throw badRequest(
+      'INVALID_PRODUCT',
+      'Produk pembelian langsung tidak valid.'
+    );
+  }
+
+  return id;
+}
+
+async function directCheckoutContext(
+  client,
+  userId,
+  productId,
+  {gateway=false}={}
+){
+  const product=(
+    await client.query(
+      `select
+         id,
+         slug,
+         name,
+         price,
+         stock,
+         reserved_stock,
+         status
+       from products
+       where id=$1
+       for update`,
+      [productId]
+    )
+  ).rows[0];
+
+  if(!product||product.status!=='PUBLISHED'){
+    throw badRequest(
+      'PRODUCT_UNAVAILABLE',
+      'Produk tidak tersedia.'
+    );
+  }
+
+  const available=gateway
+    ? Number(product.stock)-Number(product.reserved_stock||0)
+    : Number(product.stock);
+
+  if(available<1){
+    throw badRequest(
+      'INSUFFICIENT_STOCK',
+      `Stock ${product.name} tidak mencukupi.`
+    );
+  }
+
+  const contactRow=(
+    await client.query(
+      `select
+         coalesce(
+           c.recipient_email,
+           (
+             select rc.recipient_email
+             from public.recipient_contacts rc
+             where rc.user_id=$1
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_email,
+         coalesce(
+           c.recipient_country_code,
+           (
+             select rc.recipient_country_code
+             from public.recipient_contacts rc
+             where rc.user_id=$1
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_country_code,
+         coalesce(
+           c.recipient_dial_code,
+           (
+             select rc.recipient_dial_code
+             from public.recipient_contacts rc
+             where rc.user_id=$1
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_dial_code,
+         coalesce(
+           c.recipient_phone,
+           (
+             select rc.recipient_phone
+             from public.recipient_contacts rc
+             where rc.user_id=$1
+               and rc.is_default=true
+             order by rc.updated_at desc
+             limit 1
+           )
+         ) as recipient_phone
+       from (
+         select $1::uuid as user_id
+       ) u
+       left join carts c on c.user_id=u.user_id`,
+      [userId]
+    )
+  ).rows[0]||{};
+
+  const contact=normalizeStoredContact(contactRow);
+
+  if(!contact){
+    throw badRequest(
+      'RECIPIENT_CONTACT_REQUIRED',
+      'Lengkapi kontak penerima sebelum checkout.'
+    );
+  }
+
+  const item={
+    id:null,
+    item_id:null,
+    product_id:product.id,
+    slug:product.slug,
+    quantity:1,
+    name:product.name,
+    price:Number(product.price),
+    stock:Number(product.stock),
+    reserved_stock:Number(product.reserved_stock||0),
+    status:product.status,
+    lineTotal:Number(product.price)
+  };
+
+  return {
+    items:[item],
+    contact
+  };
+}
+
+async function preview(
+  userId,
+  {buyNowProductId=null}={}
+){
+  const directProductId=normalizeBuyNowProductId(
+    buyNowProductId
+  );
+
   const c=await carts.get(userId);
+  const recipient=normalizeStoredContact(c);
+
+  if(directProductId){
+    const product=await products.findById(
+      directProductId
+    );
+
+    if(!product||product.status!=='PUBLISHED'){
+      throw badRequest(
+        'PRODUCT_UNAVAILABLE',
+        'Produk tidak tersedia.'
+      );
+    }
+
+    if(
+      Number(product.stock)-
+      Number(product.reserved_stock||0)<1
+    ){
+      throw badRequest(
+        'INSUFFICIENT_STOCK',
+        `Stock ${product.name} tidak mencukupi.`
+      );
+    }
+
+    const item={
+      id:null,
+      product_id:product.id,
+      slug:product.slug,
+      name:product.name,
+      quantity:1,
+      price:Number(product.price),
+      stock:Number(product.stock),
+      lineTotal:Number(product.price)
+    };
+
+    return {
+      items:[item],
+      subtotal:item.lineTotal,
+      total:item.lineTotal,
+      recipientContact:recipient
+        ? {
+            email:recipient.email,
+            countryCode:recipient.countryCode,
+            countryName:recipient.countryName,
+            dialCode:recipient.dialCode,
+            phone:recipient.phone
+          }
+        : null,
+      directBuyNow:true,
+      buyNowProductId:product.id,
+      buyNowSlug:product.slug
+    };
+  }
 
   const items=(c.items||[]).map(i=>({
     ...i,
@@ -19,10 +222,11 @@ async function preview(userId){
   }));
 
   const total=idr(
-    items.reduce((sum,item)=>sum+item.lineTotal,0)
+    items.reduce(
+      (sum,item)=>sum+item.lineTotal,
+      0
+    )
   );
-
-  const recipient=normalizeStoredContact(c);
 
   return {
     items,
@@ -36,10 +240,18 @@ async function preview(userId){
           dialCode:recipient.dialCode,
           phone:recipient.phone
         }
-      : null
+      : null,
+    directBuyNow:false,
+    buyNowProductId:null,
+    buyNowSlug:null
   };
 }
-async function createWalletOrder(userId,idempotencyKey){
+
+async function createWalletOrder(
+  userId,
+  idempotencyKey,
+  {buyNowProductId=null}={}
+){
   const existing=await query(
     'select * from orders where user_id=$1 and idempotency_key=$2',
     [userId,idempotencyKey||null]
@@ -52,85 +264,117 @@ async function createWalletOrder(userId,idempotencyKey){
     };
   }
 
+  const directProductId=normalizeBuyNowProductId(
+    buyNowProductId
+  );
+
   const result=await withTransaction(async(client)=>{
-    const cartRes=await client.query(
-      `select
-         coalesce(
-           c.recipient_email,
-           (
-             select rc.recipient_email
-             from public.recipient_contacts rc
-             where rc.user_id=c.user_id
-               and rc.is_default=true
-             order by rc.updated_at desc
-             limit 1
-           )
-         ) as recipient_email,
-         coalesce(
-           c.recipient_country_code,
-           (
-             select rc.recipient_country_code
-             from public.recipient_contacts rc
-             where rc.user_id=c.user_id
-               and rc.is_default=true
-             order by rc.updated_at desc
-             limit 1
-           )
-         ) as recipient_country_code,
-         coalesce(
-           c.recipient_dial_code,
-           (
-             select rc.recipient_dial_code
-             from public.recipient_contacts rc
-             where rc.user_id=c.user_id
-               and rc.is_default=true
-             order by rc.updated_at desc
-             limit 1
-           )
-         ) as recipient_dial_code,
-         coalesce(
-           c.recipient_phone,
-           (
-             select rc.recipient_phone
-             from public.recipient_contacts rc
-             where rc.user_id=c.user_id
-               and rc.is_default=true
-             order by rc.updated_at desc
-             limit 1
-           )
-         ) as recipient_phone,
-         ci.id item_id,
-         ci.product_id,
-         ci.quantity,
-         p.name,
-         p.price,
-         p.stock,
-         p.status,
-         p.id
-       from cart_items ci
-       join carts c on c.id=ci.cart_id
-       join products p on p.id=ci.product_id
-       where c.user_id=$1
-       for update of c,p`,
-      [userId]
-    );
+    let items;
+    let contact;
+    const directBuyNow=Boolean(directProductId);
 
-    if(!cartRes.rows.length){
-      throw badRequest('CART_EMPTY','Cart kosong.');
-    }
-
-    const contact=normalizeStoredContact(cartRes.rows[0]);
-
-    if(!contact){
-      throw badRequest(
-        'RECIPIENT_CONTACT_REQUIRED',
-        'Lengkapi kontak penerima di Keranjang sebelum checkout.'
+    if(directBuyNow){
+      const context=await directCheckoutContext(
+        client,
+        userId,
+        directProductId,
+        {gateway:false}
       );
+
+      items=context.items;
+      contact=context.contact;
+    }else{
+      const cartRes=await client.query(
+        `select
+           coalesce(
+             c.recipient_email,
+             (
+               select rc.recipient_email
+               from public.recipient_contacts rc
+               where rc.user_id=c.user_id
+                 and rc.is_default=true
+               order by rc.updated_at desc
+               limit 1
+             )
+           ) as recipient_email,
+           coalesce(
+             c.recipient_country_code,
+             (
+               select rc.recipient_country_code
+               from public.recipient_contacts rc
+               where rc.user_id=c.user_id
+                 and rc.is_default=true
+               order by rc.updated_at desc
+               limit 1
+             )
+           ) as recipient_country_code,
+           coalesce(
+             c.recipient_dial_code,
+             (
+               select rc.recipient_dial_code
+               from public.recipient_contacts rc
+               where rc.user_id=c.user_id
+                 and rc.is_default=true
+               order by rc.updated_at desc
+               limit 1
+             )
+           ) as recipient_dial_code,
+           coalesce(
+             c.recipient_phone,
+             (
+               select rc.recipient_phone
+               from public.recipient_contacts rc
+               where rc.user_id=c.user_id
+                 and rc.is_default=true
+               order by rc.updated_at desc
+               limit 1
+             )
+           ) as recipient_phone,
+           ci.id item_id,
+           ci.product_id,
+           ci.quantity,
+           p.name,
+           p.price,
+           p.stock,
+           p.status,
+           p.id
+         from cart_items ci
+         join carts c on c.id=ci.cart_id
+         join products p on p.id=ci.product_id
+         where c.user_id=$1
+         for update of c,p`,
+        [userId]
+      );
+
+      if(!cartRes.rows.length){
+        throw badRequest(
+          'CART_EMPTY',
+          'Cart kosong.'
+        );
+      }
+
+      contact=normalizeStoredContact(
+        cartRes.rows[0]
+      );
+
+      if(!contact){
+        throw badRequest(
+          'RECIPIENT_CONTACT_REQUIRED',
+          'Lengkapi kontak penerima di Keranjang sebelum checkout.'
+        );
+      }
+
+      items=cartRes.rows.map(item=>({
+        ...item,
+        quantity:Number(item.quantity),
+        price:Number(item.price),
+        lineTotal:Number(item.price)*Number(item.quantity)
+      }));
     }
 
     let total=0;
 
-    for(const item of cartRes.rows){
+    for(const item of items){
       if(item.status!=='PUBLISHED'){
         throw badRequest(
           'PRODUCT_UNAVAILABLE',
@@ -138,15 +382,20 @@ async function createWalletOrder(userId,idempotencyKey){
         );
       }
 
-      if(Number(item.quantity)>Number(item.stock)){
+      if(
+        !directBuyNow &&
+        Number(item.quantity)>Number(item.stock)
+      ){
         throw badRequest(
           'INSUFFICIENT_STOCK',
           `Stock ${item.name} tidak mencukupi.`
         );
       }
 
-      total+=Number(item.price)*Number(item.quantity);
+      total+=Number(item.lineTotal);
     }
+
+    total=idr(total);
 
     const wallet=(
       await client.query(
@@ -211,27 +460,41 @@ async function createWalletOrder(userId,idempotencyKey){
       )
     ).rows[0];
 
-    for(const item of cartRes.rows){
+    for(const item of items){
       await client.query(
-        'insert into order_items(order_id,product_id,product_name,unit_price,quantity,line_total) values($1,$2,$3,$4,$5,$6)',
+        `insert into order_items(
+          order_id,
+          product_id,
+          product_name,
+          unit_price,
+          quantity,
+          line_total
+        )
+        values($1,$2,$3,$4,$5,$6)`,
         [
           order.id,
           item.product_id,
           item.name,
           item.price,
           item.quantity,
-          Number(item.price)*Number(item.quantity)
+          Number(item.lineTotal)
         ]
       );
 
       await client.query(
         'update products set stock=stock-$2,purchase_count=purchase_count+$2 where id=$1',
-        [item.product_id,item.quantity]
+        [
+          item.product_id,
+          item.quantity
+        ]
       );
 
       await client.query(
         "insert into product_events(product_id,user_id,event_type) values($1,$2,'PURCHASE')",
-        [item.product_id,userId]
+        [
+          item.product_id,
+          userId
+        ]
       );
 
       await delivery.createEntitlement(
@@ -253,7 +516,26 @@ async function createWalletOrder(userId,idempotencyKey){
     );
 
     await client.query(
-      "insert into wallet_transactions(wallet_id,user_id,type,amount,balance_before,balance_after,reference,status) values($1,$2,'PURCHASE',$3,$4,$5,$6,'COMPLETED')",
+      `insert into wallet_transactions(
+        wallet_id,
+        user_id,
+        type,
+        amount,
+        balance_before,
+        balance_after,
+        reference,
+        status
+      )
+      values(
+        $1,
+        $2,
+        'PURCHASE',
+        $3,
+        $4,
+        $5,
+        $6,
+        'COMPLETED'
+      )`,
       [
         wallet.id,
         userId,
@@ -264,7 +546,9 @@ async function createWalletOrder(userId,idempotencyKey){
       ]
     );
 
-    await carts.clear(userId,client);
+    if(!directBuyNow){
+      await carts.clear(userId,client);
+    }
 
     await notifications.notify(
       userId,
@@ -288,7 +572,10 @@ async function createWalletOrder(userId,idempotencyKey){
       client
     );
 
-    return {order};
+    return {
+      order,
+      directBuyNow
+    };
   });
 
   if(result?.order?.recipient_email){
@@ -303,7 +590,10 @@ async function createWalletOrder(userId,idempotencyKey){
   return result;
 }
 
-async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){
+async function createGatewayOrder(
+  userId,
+  {idempotencyKey,returnUrl,buyNowProductId=null}
+){
   const existing=idempotencyKey
     ? (
         await query(
@@ -320,88 +610,112 @@ async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){
     };
   }
 
+  const directProductId=normalizeBuyNowProductId(
+    buyNowProductId
+  );
+
   return withTransaction(async(client)=>{
-    const cartRes=await client.query(
-      `select
-         coalesce(
-           c.recipient_email,
-           (
-             select rc.recipient_email
-             from public.recipient_contacts rc
-             where rc.user_id=c.user_id
-               and rc.is_default=true
-             order by rc.updated_at desc
-             limit 1
-           )
-         ) as recipient_email,
-         coalesce(
-           c.recipient_country_code,
-           (
-             select rc.recipient_country_code
-             from public.recipient_contacts rc
-             where rc.user_id=c.user_id
-               and rc.is_default=true
-             order by rc.updated_at desc
-             limit 1
-           )
-         ) as recipient_country_code,
-         coalesce(
-           c.recipient_dial_code,
-           (
-             select rc.recipient_dial_code
-             from public.recipient_contacts rc
-             where rc.user_id=c.user_id
-               and rc.is_default=true
-             order by rc.updated_at desc
-             limit 1
-           )
-         ) as recipient_dial_code,
-         coalesce(
-           c.recipient_phone,
-           (
-             select rc.recipient_phone
-             from public.recipient_contacts rc
-             where rc.user_id=c.user_id
-               and rc.is_default=true
-             order by rc.updated_at desc
-             limit 1
-           )
-         ) as recipient_phone,
-         ci.id item_id,
-         ci.product_id,
-         ci.quantity,
-         p.name,
-         p.price,
-         p.stock,
-         p.reserved_stock,
-         p.status,
-         p.id
-       from cart_items ci
-       join carts c on c.id=ci.cart_id
-       join products p on p.id=ci.product_id
-       where c.user_id=$1
-       for update`,
-      [userId]
-    );
+    let items;
+    let contact;
 
-    if(!cartRes.rows.length){
-      throw badRequest('CART_EMPTY','Cart kosong.');
-    }
-
-    const contact=normalizeStoredContact(cartRes.rows[0]);
-
-    if(!contact){
-      throw badRequest(
-        'RECIPIENT_CONTACT_REQUIRED',
-        'Lengkapi kontak penerima di Keranjang sebelum checkout.'
+    if(directProductId){
+      const context=await directCheckoutContext(
+        client,
+        userId,
+        directProductId,
+        {gateway:true}
       );
-    }
 
-    const items=cartRes.rows.map(item=>({
-      ...item,
-      quantity:Number(item.quantity),
-      price:Number(item.price)
-    }));
+      items=context.items;
+      contact=context.contact;
+    }else{
+      const cartRes=await client.query(
+        `select
+           coalesce(
+             c.recipient_email,
+             (
+               select rc.recipient_email
+               from public.recipient_contacts rc
+               where rc.user_id=c.user_id
+                 and rc.is_default=true
+               order by rc.updated_at desc
+               limit 1
+             )
+           ) as recipient_email,
+           coalesce(
+             c.recipient_country_code,
+             (
+               select rc.recipient_country_code
+               from public.recipient_contacts rc
+               where rc.user_id=c.user_id
+                 and rc.is_default=true
+               order by rc.updated_at desc
+               limit 1
+             )
+           ) as recipient_country_code,
+           coalesce(
+             c.recipient_dial_code,
+             (
+               select rc.recipient_dial_code
+               from public.recipient_contacts rc
+               where rc.user_id=c.user_id
+                 and rc.is_default=true
+               order by rc.updated_at desc
+               limit 1
+             )
+           ) as recipient_dial_code,
+           coalesce(
+             c.recipient_phone,
+             (
+               select rc.recipient_phone
+               from public.recipient_contacts rc
+               where rc.user_id=c.user_id
+                 and rc.is_default=true
+               order by rc.updated_at desc
+               limit 1
+             )
+           ) as recipient_phone,
+           ci.id item_id,
+           ci.product_id,
+           ci.quantity,
+           p.name,
+           p.price,
+           p.stock,
+           p.reserved_stock,
+           p.status,
+           p.id
+         from cart_items ci
+         join carts c on c.id=ci.cart_id
+         join products p on p.id=ci.product_id
+         where c.user_id=$1
+         for update`,
+        [userId]
+      );
+
+      if(!cartRes.rows.length){
+        throw badRequest(
+          'CART_EMPTY',
+          'Cart kosong.'
+        );
+      }
+
+      contact=normalizeStoredContact(
+        cartRes.rows[0]
+      );
+
+      if(!contact){
+        throw badRequest(
+          'RECIPIENT_CONTACT_REQUIRED',
+          'Lengkapi kontak penerima di Keranjang sebelum checkout.'
+        );
+      }
+
+      items=cartRes.rows.map(item=>({
+        ...item,
+        quantity:Number(item.quantity),
+        price:Number(item.price)
+      }));
+    }
 
     let total=0;
 
@@ -414,8 +728,9 @@ async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){
       }
 
       if(
-        Number(item.stock)-Number(item.reserved_stock)
-        < Number(item.quantity)
+        !directProductId &&
+        Number(item.stock)-Number(item.reserved_stock||0)<
+        Number(item.quantity)
       ){
         throw badRequest(
           'INSUFFICIENT_STOCK',
@@ -423,7 +738,9 @@ async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){
         );
       }
 
-      item.lineTotal=Number(item.price)*Number(item.quantity);
+      item.lineTotal=
+        Number(item.price)*Number(item.quantity);
+
       total+=item.lineTotal;
     }
 
@@ -473,7 +790,15 @@ async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){
 
     for(const item of items){
       await client.query(
-        'insert into order_items(order_id,product_id,product_name,unit_price,quantity,line_total) values($1,$2,$3,$4,$5,$6)',
+        `insert into order_items(
+          order_id,
+          product_id,
+          product_name,
+          unit_price,
+          quantity,
+          line_total
+        )
+        values($1,$2,$3,$4,$5,$6)`,
         [
           order.id,
           item.product_id,
@@ -486,13 +811,17 @@ async function createGatewayOrder(userId,{idempotencyKey,returnUrl}){
 
       await client.query(
         'update products set reserved_stock=reserved_stock+$2 where id=$1',
-        [item.product_id,item.quantity]
+        [
+          item.product_id,
+          item.quantity
+        ]
       );
     }
 
     return {
       order,
-      items
+      items,
+      directBuyNow:Boolean(directProductId)
     };
   });
 }

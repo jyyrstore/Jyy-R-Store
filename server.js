@@ -258,9 +258,38 @@ async function start() {
     const app = await createApp();
     const env = loadEnv();
     const server = app.listen(env.PORT, () => console.log(`[JyyR Store] listening on ${env.APP_URL}`));
+    let shuttingDown = false;
     const shutdown = async (signal) => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+
       console.log(`[JyyR Store] ${signal} received, shutting down`);
-      server.close(async () => { await closeDatabase(); process.exit(0); });
+
+      const forceExit = setTimeout(() => {
+        console.error('[JyyR Store] forced shutdown after timeout');
+        process.exit(1);
+      }, 5000);
+
+      try {
+        server.close();
+
+        if (typeof server.closeIdleConnections === 'function') {
+          server.closeIdleConnections();
+        }
+
+        if (typeof server.closeAllConnections === 'function') {
+          server.closeAllConnections();
+        }
+
+        await closeDatabase();
+
+        clearTimeout(forceExit);
+        process.exit(0);
+      } catch (error) {
+        clearTimeout(forceExit);
+        console.error('[JyyR Store] shutdown failed:', error.message);
+        process.exit(1);
+      }
     };
     process.on('SIGTERM', () => shutdown('SIGTERM'));
     process.on('SIGINT', () => shutdown('SIGINT'));

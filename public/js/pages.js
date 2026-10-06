@@ -1247,7 +1247,7 @@
     const searchRetry=e.target.closest('[data-search-retry]'); if(searchRetry){search();return}
     const openUrl=e.target.closest('[data-open-content-url]'); if(openUrl){window.open(openUrl.dataset.openContentUrl,'_blank','noopener');return}
 
-    const buy=e.target.closest('[data-buy-now]'); if(buy){buy.disabled=true;try{const cart=await api.request('/api/cart');const existing=(cart?.items||[]).find(i=>String(i.product_id)===String(buy.dataset.buyNow));if(existing){await api.request('/api/cart/'+encodeURIComponent(existing.id),{method:'PUT',body:{quantity:1}})}else{await api.request('/api/cart',{method:'POST',body:{productId:buy.dataset.buyNow,quantity:1}})}location.href='/checkout'}catch(err){toast.error(err.message)}finally{buy.disabled=false}}
+    const buy=e.target.closest('[data-buy-now]'); if(buy){buy.disabled=true;try{location.href='/checkout?buy_now='+encodeURIComponent(buy.dataset.buyNow)}catch(err){toast.error(err.message);buy.disabled=false}}
     const add=e.target.closest('[data-add-cart]'); if(add){add.disabled=true;try{await api.request('/api/cart',{method:'POST',body:{productId:add.dataset.addCart,quantity:1}});toast.success('Produk ditambahkan ke keranjang.');await hydrateCartBadge();}catch(err){toast.error(err.message)}finally{add.disabled=false}}
     const rm=e.target.closest('[data-cart-remove]'); if(rm){try{await api.request('/api/cart/'+rm.dataset.cartRemove,{method:'DELETE'});location.reload()}catch(err){toast.error(err.message)}}
     const clearCart=e.target.closest('[data-cart-clear]'); if(clearCart){if(!(await window.JYYRModal.confirm('Kosongkan keranjang? Semua item akan dihapus.')))return;clearCart.disabled=true;try{await api.request('/api/cart',{method:'DELETE'});toast.success('Keranjang dikosongkan.');location.reload()}catch(err){toast.error(err.message)}finally{clearCart.disabled=false}}
@@ -1583,7 +1583,10 @@
             method:'POST',
             body:{
               paymentMethod:method,
-              returnUrl:location.origin+'/orders'
+              returnUrl:location.origin+'/orders',
+              ...(checkout.dataset.buyNowProduct
+                ? {buyNowProductId:checkout.dataset.buyNowProduct}
+                : {})
             }
           }
         );

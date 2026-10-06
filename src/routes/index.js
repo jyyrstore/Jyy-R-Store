@@ -198,7 +198,7 @@ apiRouter.put('/cart/:id',requireAuth,validate(z.object({quantity:z.coerce.numbe
 apiRouter.delete('/cart/:id',requireAuth,asyncHandler(api.cartController.remove));
 apiRouter.delete('/cart',requireAuth,asyncHandler(api.cartController.clear));
 apiRouter.get('/checkout/preview',requireAuth,asyncHandler(api.orderController.preview));
-apiRouter.post('/orders',requireAuth,validate(z.object({paymentMethod:z.enum(['BALANCE','GATEWAY']),idempotencyKey:z.string().min(8).max(100).optional(),returnUrl:z.string().url().optional()})),asyncHandler(api.orderController.create));
+apiRouter.post('/orders',requireAuth,validate(z.object({paymentMethod:z.enum(['BALANCE','GATEWAY']),idempotencyKey:z.string().min(8).max(100).optional(),returnUrl:z.string().url().optional(),buyNowProductId:z.string().uuid().optional()})),asyncHandler(api.orderController.create));
 apiRouter.get('/orders',requireAuth,asyncHandler(api.orderController.list));
 apiRouter.get('/orders/:id',requireAuth,asyncHandler(api.orderController.detail));
 apiRouter.post('/payment/create',requireAuth,validate(z.object({orderId:z.string().uuid(),returnUrl:z.string().url().optional()})),asyncHandler(api.paymentController.create));

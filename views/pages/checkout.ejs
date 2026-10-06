@@ -32,15 +32,17 @@
             </div>
 
             <div class="checkout-item-actions">
-              <button
-                class="button button-secondary checkout-item-remove"
-                type="button"
-                data-checkout-remove="<%= i.id %>"
-                aria-label="Hapus <%= i.name %> dari keranjang"
-                title="Hapus item"
-              >
-                <%- icon('trash') %>
-              </button>
+              <% if(!preview.directBuyNow){ %>
+                <button
+                  class="button button-secondary checkout-item-remove"
+                  type="button"
+                  data-checkout-remove="<%= i.id %>"
+                  aria-label="Hapus <%= i.name %> dari keranjang"
+                  title="Hapus item"
+                >
+                  <%- icon('trash') %>
+                </button>
+              <% } %>
 
               <b><%= formatIDR(i.lineTotal) %></b>
             </div>
@@ -148,9 +150,23 @@
         <strong><%= formatIDR(preview.total) %></strong>
       </div>
 
+      <% if(!preview.items.length || !recipientComplete){ %>
+        <div class="checkout-action-hint" role="status">
+          <%- icon('alert-triangle') %>
+          <span>
+            <% if(!preview.items.length){ %>
+              Tidak ada item yang dapat dibayar.
+            <% }else{ %>
+              Tombol Bayar belum aktif. Lengkapi email dan WhatsApp penerima terlebih dahulu.
+            <% } %>
+          </span>
+        </div>
+      <% } %>
+
       <button
         class="button button-primary button-block"
         data-checkout-confirm
+        data-buy-now-product="<%= preview.buyNowProductId||'' %>"
         <%= preview.items.length && recipientComplete ? '' : 'disabled' %>
       >
         <%- icon('check') %>

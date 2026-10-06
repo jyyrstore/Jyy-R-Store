@@ -214,7 +214,13 @@ async function cartPage(req,res,next){
 }
 async function checkout(req,res,next){
   try{
-    const preview=await orderService.preview(req.user.id);
+    const buyNowProductId=
+      String(req.query.buy_now||'').trim()||null;
+
+    const preview=await orderService.preview(
+      req.user.id,
+      {buyNowProductId}
+    );
     const walletState=await wallet.get(req.user.id);
     const walletSufficient=
       Number(walletState?.balance||0)>=Number(preview.total||0);

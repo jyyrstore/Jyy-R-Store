@@ -2410,124 +2410,84 @@ button[aria-busy="true"]{
 
 
 /* =========================================================
-   MESSAGES COMPOSER UNIFIED FINAL
+   MESSAGES COMPOSER — CONSOLIDATED
    ========================================================= */
 
 .messages-compose-form{
-  display:flex !important;
-  align-items:center !important;
-  gap:8px !important;
-  width:100% !important;
-  min-width:0 !important;
-  padding:6px !important;
-  box-sizing:border-box !important;
-  border:1px solid var(--border) !important;
-  border-radius:15px !important;
-  background:rgba(0,0,0,.14) !important;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  min-width:0;
+  padding:6px;
+  box-sizing:border-box;
+  border:1px solid var(--border);
+  border-radius:15px;
+  background:rgba(0,0,0,.14);
 }
 
 .messages-compose-field{
-  flex:1 1 auto !important;
-  min-width:0 !important;
-  margin:0 !important;
+  flex:1 1 auto;
+  min-width:0;
+  margin:0;
 }
 
 .messages-compose-field textarea{
-  display:block !important;
-  width:100% !important;
-  min-height:40px !important;
-  height:40px !important;
-  max-height:120px !important;
-  resize:none !important;
-  box-sizing:border-box !important;
-  padding:10px 11px !important;
-  border:0 !important;
-  border-radius:10px !important;
-  background:transparent !important;
-  box-shadow:none !important;
+  display:block;
+  width:100%;
+  min-height:40px;
+  height:40px;
+  max-height:120px;
+  resize:none;
+  box-sizing:border-box;
+  padding:10px 11px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  box-shadow:none;
 }
 
 .messages-compose-field textarea:focus{
-  outline:0 !important;
-  border:0 !important;
-  box-shadow:none !important;
+  outline:0;
+  border:0;
+  box-shadow:none;
 }
 
 .messages-send-button{
-  flex:0 0 40px !important;
-  width:40px !important;
-  min-width:40px !important;
-  max-width:40px !important;
-  height:40px !important;
-  min-height:40px !important;
-  padding:0 !important;
-  border-radius:50% !important;
-  display:grid !important;
-  place-items:center !important;
-}
-
-.messages-send-button span{
-  display:none !important;
-}
-
-.messages-send-button .icon{
-  width:16px !important;
-  height:16px !important;
-}
-
-@media(max-width:600px){
-  .messages-compose-form{
-    display:flex !important;
-    flex-direction:row !important;
-    align-items:center !important;
-  }
-
-  .messages-send-button{
-    width:40px !important;
-    min-width:40px !important;
-  }
-}
-
-
-/* =========================================================
-   MESSAGES SEND BUTTON WHATSAPP STYLE
-   ========================================================= */
-
-.messages-send-button{
-  flex:0 0 38px !important;
-  width:38px !important;
-  min-width:38px !important;
-  max-width:38px !important;
-  height:38px !important;
-  min-height:38px !important;
-  padding:0 !important;
-  border:1px solid rgba(255,255,255,.08) !important;
-  border-radius:50% !important;
-  display:grid !important;
-  place-items:center !important;
-  background:rgba(255,255,255,.055) !important;
-  color:var(--text) !important;
-  box-shadow:none !important;
+  flex:0 0 38px;
+  width:38px;
+  min-width:38px;
+  max-width:38px;
+  height:38px;
+  min-height:38px;
+  padding:0;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:rgba(255,255,255,.055);
+  color:var(--text);
+  box-shadow:none;
 }
 
 .messages-send-button:hover{
-  background:rgba(255,255,255,.09) !important;
-  border-color:rgba(255,255,255,.13) !important;
-  transform:none !important;
+  background:rgba(255,255,255,.09);
+  border-color:rgba(255,255,255,.13);
+  transform:none;
 }
 
 .messages-send-button:active{
-  transform:scale(.96) !important;
+  transform:scale(.96);
 }
 
 .messages-send-button .icon{
-  width:16px !important;
-  height:16px !important;
-  color:var(--text) !important;
+  width:16px;
+  height:16px;
+  color:var(--text);
 }
 
 .messages-send-button span{
-  display:none !important;
+  display:none;
 }
 
 
