@@ -311,19 +311,11 @@
 
                     <div class="product-review-user">
                       <strong><%= displayName %></strong>
-                      <span>@<%= review.username || 'user' %></span>
                     </div>
 
-                    <time
-                      class="product-review-time"
-                      datetime="<%= review.purchase_at || review.created_at %>"
-                    >
-                      Pembelian ·
-                      <%= formatDate(
-                        review.purchase_at ||
-                        review.created_at
-                      ) %>
-                    </time>
+                    <span class="product-review-verified">
+                      ✓ Terverifikasi
+                    </span>
 
                   </div>
 
@@ -346,7 +338,10 @@
                   </div>
 
                   <p class="product-review-comment">
-                    <%= review.comment %>
+                    <%= review.comment %><span class="product-review-time"> · <%= formatDate(
+                      review.purchase_at ||
+                      review.created_at
+                    ) %></span>
                   </p>
 
                 </div>

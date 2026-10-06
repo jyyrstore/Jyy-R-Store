@@ -18,7 +18,7 @@ async function get(userId){
 
   const row=(
     await query(
-      'select c.id,c.recipient_email,c.recipient_country_code,c.recipient_dial_code,c.recipient_phone,coalesce(json_agg(json_build_object(\'id\',ci.id,\'quantity\',ci.quantity,\'product_id\',p.id,\'name\',p.name,\'slug\',p.slug,\'price\',p.price,\'stock\',p.stock,\'thumbnail_path\',p.thumbnail_path)) filter(where ci.id is not null),\'[]\') items from carts c left join cart_items ci on ci.cart_id=c.id left join products p on p.id=ci.product_id where c.user_id=$1 group by c.id',
+      'select c.id,coalesce(c.recipient_email,(select rc.recipient_email from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_email,coalesce(c.recipient_country_code,(select rc.recipient_country_code from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_country_code,coalesce(c.recipient_dial_code,(select rc.recipient_dial_code from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_dial_code,coalesce(c.recipient_phone,(select rc.recipient_phone from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_phone,coalesce(json_agg(json_build_object(\'id\',ci.id,\'quantity\',ci.quantity,\'product_id\',p.id,\'name\',p.name,\'slug\',p.slug,\'price\',p.price,\'stock\',p.stock,\'thumbnail_path\',p.thumbnail_path)) filter(where ci.id is not null),\'[]\') items from carts c left join cart_items ci on ci.cart_id=c.id left join products p on p.id=ci.product_id where c.user_id=$1 group by c.id',
       [userId]
     )
   ).rows[0];
@@ -96,4 +96,38 @@ async function clear(userId,client=null){
   await query(clearContact,[userId]);
 }
 
-module.exports={ensure,get,setContact,upsertItem,setItem,removeItem,clear};
+
+async function saveDefaultRecipientContact(userId,contact){
+  await query(
+    'update public.recipient_contacts set is_default=false,updated_at=now() where user_id=$1 and is_default=true',
+    [userId]
+  );
+
+  const result=await query(
+    `insert into public.recipient_contacts
+      (user_id,label,recipient_email,recipient_country_code,recipient_dial_code,recipient_phone,is_default,created_at,updated_at)
+     values
+      ($1,'Utama',$2,$3,$4,$5,true,now(),now())
+     on conflict (user_id,label) do update set
+       recipient_email=excluded.recipient_email,
+       recipient_country_code=excluded.recipient_country_code,
+       recipient_dial_code=excluded.recipient_dial_code,
+       recipient_phone=excluded.recipient_phone,
+       is_default=true,
+       updated_at=now()
+     returning *`,
+    [
+      userId,
+      contact.email,
+      contact.countryCode,
+      contact.dialCode,
+      contact.phone
+    ]
+  );
+
+  return result.rows[0]||null;
+}
+
+module.exports={ensure,get,setContact,upsertItem,setItem,removeItem,clear,
+  saveDefaultRecipientContact,
+};
