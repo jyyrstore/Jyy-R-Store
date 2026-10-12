@@ -1,4 +1,11 @@
-const { withTransaction, query }=require('../../config/database'); const deposits=require('../../repositories/deposits.repository'); const payments=require('../../repositories/payments.repository'); const provider=()=>require('../../config/payment').paymentProvider(); const {loadEnv}=require('../../config/env'); const {badRequest}=require('../../utils/error');
+const { withTransaction, query }=require('../../config/database');
+const deposits=require('../../repositories/deposits.repository');
+const payments=require('../../repositories/payments.repository');
+const paymentConfig=require('../../config/payment');
+const provider=()=>paymentConfig.paymentProvider();
+const resolvedPaymentUrl=paymentConfig.resolvedPaymentUrl;
+const {loadEnv}=require('../../config/env');
+const {badRequest}=require('../../utils/error');
 async function create(userId,{amount,idempotencyKey,returnUrl}){
   if(!Number.isInteger(amount)||amount<1000) throw badRequest('INVALID_DEPOSIT','Minimum deposit adalah Rp 1.000.');
 
@@ -29,6 +36,18 @@ async function create(userId,{amount,idempotencyKey,returnUrl}){
   }
 }
 async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
+  const currentEnv=loadEnv();
+  if(
+    String(currentEnv.PAYMENT_PROVIDER||'').toLowerCase()==='buatqris' &&
+    currentEnv.NODE_ENV==='production' &&
+    currentEnv.BUATQRIS_TEST_MODE
+  ){
+    throw Object.assign(
+      new Error('BuatQris masih sandbox; deposit produksi dinonaktifkan.'),
+      {status:503,code:'BUATQRIS_SANDBOX_MODE',expose:true}
+    );
+  }
+
   const paymentProvider=provider();
 
   if(typeof paymentProvider.configured==='function'&&!paymentProvider.configured()){
@@ -50,7 +69,7 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
       return {
         ...made,
         payment:existingPayment,
-        paymentUrl:existingPayment?.raw_reference?.paymentUrl||existingPayment?.raw_reference?.payment_url||null
+        paymentUrl:resolvedPaymentUrl(existingPayment,null)
       };
     }
   }
@@ -121,7 +140,7 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
   return {
     deposit:{...deposit,reference:payment.reference,payment_id:payment.id},
     payment,
-    paymentUrl:payment.raw_reference?.paymentUrl||payment.raw_reference?.payment_url||providerPayment.paymentUrl
+    paymentUrl:resolvedPaymentUrl(payment,providerPayment.paymentUrl)
   };
 }
 async function list(userId,options={}){

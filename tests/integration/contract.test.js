@@ -8,6 +8,30 @@ const migrations=fs.readdirSync(path.join(root,'database/migrations')).filter(x=
 for(const r of ['/','/store','/product/:slug','/dashboard','/cart','/checkout','/orders','/deposit','/history','/profile','/tickets','/notifications','/messages','/services','/faq','/security','/owner']) test(`required route ${r}`,()=>assert.ok(route.includes(`'${r}'`),r));
 for(const t of ['profiles','roles','categories','products','product_contents','carts','cart_items','orders','order_items','payments','payment_events','deposits','wallets','wallet_transactions','entitlements','download_logs','services','service_orders','tickets','ticket_messages','messages','notifications','notification_preferences','login_history','activity_logs','announcements','faqs','maintenance_settings','site_settings','refunds']) test(`schema includes ${t}`,()=>assert.match(migrations,new RegExp(`create table if not exists ${t}\\b`,'i')));
 test('webhook route is raw-body protected before JSON parser',()=>{const server=fs.readFileSync(path.join(root,'server.js'),'utf8');const webhook=server.indexOf("app.use('/api/payment/webhook'");const json=server.indexOf('express.json');assert.ok(webhook!==-1&&json!==-1&&webhook<json)});
+
+// BEGIN JYYR BUATQRIS CONTRACT TESTS
+test('BuatQris and legacy Xendit callback routes coexist',()=>{
+  const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
+  const routes=fs.readFileSync(path.join(root,'src/routes/index.js'),'utf8');
+
+  assert.match(server,/app\.use\('\/api\/payment\/webhook',\s*webhookRouter\)/);
+  assert.match(server,/app\.use\('\/api\/webhook\/xendit',\s*legacyXenditWebhookRouter\)/);
+  assert.match(routes,/createWebhookRouter\('xendit'\)/);
+});
+
+test('BuatQris webhook code scopes providers and guards sandbox/early events',()=>{
+  const source=fs.readFileSync(
+    path.join(root,'src/services/payment/payment.service.js'),
+    'utf8'
+  );
+
+  assert.match(source,/lower\(provider\)=lower\(\$2\)/);
+  assert.match(source,/PAYMENT_REFERENCE_NOT_READY/);
+  assert.match(source,/PAYMENT_WEBHOOK_SANDBOX_IGNORED/);
+  assert.match(source,/raw_reference\?\.totalAmount|assertBuatQrisTotalAmount\(parsed,payment\)/);
+});
+// END JYYR BUATQRIS CONTRACT TESTS
+
 test('owner APIs require auth + owner middleware',()=>assert.match(route,/const ownerApi=express\.Router\(\); ownerApi\.use\(requireAuth,requireOwner\)/));
 test('owner extended sections are routed',()=>{for(const r of ['roles','messages','storage','login-history','system','top-orders']) assert.ok(page.includes(`'${r}'`),r)});
 test('explicit owner URL routes exist',()=>{assert.match(route,/owner\.get\('\/products\/create'/);assert.match(route,/ownerApi\.get\('\/top-orders'/)});
@@ -294,3 +318,34 @@ test('scheduled expiry route is protected and configured for GitHub Actions Cron
   assert.match(workflow,/APP_URL:\s*\$\{\{\s*secrets\.APP_URL\s*\}\}/);
 assert.match(workflow,/\$\{APP_URL%\/\}\/api\/cron\/expire/);
 });
+
+// BEGIN JYYR_BUATQRIS_ISOLATED_ROUTE_TEST
+test('BuatQris route is isolated and mounted before JSON parsing',()=>{
+  const fs=require('node:fs');
+  const path=require('node:path');
+  const root=path.resolve(__dirname,'../..');
+  const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
+  const routes=fs.readFileSync(path.join(root,'src/routes/index.js'),'utf8');
+
+  assert.match(
+    server,
+    /app\.use\('\/api\/payment\/webhook\/buatqris',\s*buatQrisWebhookRouter\)/
+  );
+  assert.match(routes,/createWebhookRouter\('buatqris'\)/);
+  assert.match(
+    routes,
+    /processWebhook\(raw,signature,payload,providerName\)/
+  );
+
+  const specific=server.indexOf(
+    "app.use('/api/payment/webhook/buatqris', buatQrisWebhookRouter)"
+  );
+  const generic=server.indexOf(
+    "app.use('/api/payment/webhook', webhookRouter)"
+  );
+  const parser=server.indexOf('app.use(express.json');
+
+  assert.ok(specific>=0 && generic>specific);
+  assert.ok(parser>specific);
+});
+// END JYYR_BUATQRIS_ISOLATED_ROUTE_TEST

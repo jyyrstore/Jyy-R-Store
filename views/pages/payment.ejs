@@ -7,7 +7,21 @@
   data-label-expired="<%= labelStatus('EXPIRED') %>"
   data-label-refunded="<%= labelStatus('REFUNDED') %>"
   data-label-cancelled="<%= labelStatus('CANCELLED') %>"
-><%= labelStatus(payment.status) %></span></div><div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted">Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div></section>
+><%= labelStatus(payment.status) %></span></div><div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted">Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div>
+<% const buatqrisImage = payment.raw_reference?.qr_url || payment.raw_reference?.qris_image || null; %>
+<% if (String(payment.provider || '').toLowerCase() === 'buatqris' && buatqrisImage) { %>
+<div class="panel">
+  <h2>QRIS BuatQris</h2>
+  <p>Scan QRIS menggunakan aplikasi pembayaran. Pastikan nominal tagihan sesuai.</p>
+  <img src="<%= buatqrisImage %>" alt="QRIS pembayaran" width="260" height="260"
+       style="display:block;max-width:100%;height:auto;margin:1rem auto">
+  <% const buatqrisPayLink = payment.raw_reference?.paymentUrl || payment.raw_reference?.payment_url; %>
+  <% if (buatqrisPayLink) { %>
+    <p><a href="<%= buatqrisPayLink %>" rel="noopener noreferrer">Buka halaman pembayaran</a></p>
+  <% } %>
+</div>
+<% } %>
+</section>
 
 <script nonce="<%= cspNonce %>">
 (()=>{

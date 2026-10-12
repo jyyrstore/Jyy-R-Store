@@ -1,5 +1,7 @@
 const { withTransaction, query }=require('../../config/database');
-const provider=()=>require('../../config/payment').paymentProvider();
+const paymentConfig=require('../../config/payment');
+const provider=(name)=>paymentConfig.paymentProvider(name);
+const resolvedPaymentUrl=paymentConfig.resolvedPaymentUrl;
 const delivery=require('../../repositories/delivery.repository');
 const carts=require('../../repositories/cart.repository');
 const notifications=require('../notification/notification.service');
@@ -20,6 +22,18 @@ const PAYMENT_TRANSITIONS={
 };
 
 async function createForOrder(userId,order,returnUrl){
+  const currentEnv=loadEnv();
+  if(
+    String(currentEnv.PAYMENT_PROVIDER||'').toLowerCase()==='buatqris' &&
+    currentEnv.NODE_ENV==='production' &&
+    currentEnv.BUATQRIS_TEST_MODE
+  ){
+    throw Object.assign(
+      new Error('BuatQris masih sandbox; pembuatan order produksi dinonaktifkan.'),
+      {status:503,code:'BUATQRIS_SANDBOX_MODE',expose:true}
+    );
+  }
+
   const profile=await profiles.findById(userId).catch(()=>null);
 
   const customerName=String(
@@ -72,10 +86,7 @@ async function createForOrder(userId,order,returnUrl){
     ).rows[0];
 
     if(existing){
-      const paymentUrl=
-        existing.raw_reference?.paymentUrl||
-        existing.raw_reference?.payment_url||
-        null;
+      const paymentUrl=resolvedPaymentUrl(existing,null);
 
       /*
        * A placeholder has no provider reference/payment URL yet.
@@ -242,11 +253,7 @@ async function createForOrder(userId,order,returnUrl){
 
   return {
     payment:saved,
-    paymentUrl:
-      saved.raw_reference?.paymentUrl||
-      saved.raw_reference?.payment_url||
-      result.paymentUrl||
-      null
+    paymentUrl:resolvedPaymentUrl(saved,result.paymentUrl)
   };
 }
 
@@ -256,28 +263,81 @@ async function getStatus(id,userId){
   return p;
 }
 
-async function recordWebhookEvent(client,{paymentId,providerName,eventId,payload}){
-  const inserted=(await client.query(
-    'insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,now()) on conflict (provider_event_id) do nothing returning id',
-    [paymentId||null,providerName,eventId,payload]
+async function recordWebhookEvent(client,{
+  paymentId,providerName,eventId,payload,pending=false
+}){
+  const existing=(await client.query(
+    'select id,processed_at from payment_events where provider_event_id=$1 for update',
+    [eventId]
   )).rows[0];
-  return Boolean(inserted);
-}
 
-async function processWebhook(rawBody,signature,payload){
-  const ok=provider().verifyWebhook(rawBody,signature);
+  if(existing){
+    if(existing.processed_at) return false;
+
+    // Keep early deliveries pending until a matching payment exists.
+    if(pending) return true;
+
+    await client.query(
+      'update payment_events set payment_id=$2,provider=$3,payload=$4,processed_at=now() where id=$1',
+      [existing.id,paymentId||null,providerName,payload]
+    );
+    return true;
+  }
+
+  const inserted=(await client.query(
+    'insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,case when $5::boolean then null else now() end) on conflict (provider_event_id) do nothing returning id',
+    [paymentId||null,providerName,eventId,payload,Boolean(pending)]
+  )).rows[0];
+
+  if(inserted) return true;
+
+  // A concurrent delivery may have inserted the event after our first SELECT.
+  const raced=(await client.query(
+    'select id,processed_at from payment_events where provider_event_id=$1 for update',
+    [eventId]
+  )).rows[0];
+
+  if(!raced || raced.processed_at) return false;
+  if(pending) return true;
+
+  await client.query(
+    'update payment_events set payment_id=$2,provider=$3,payload=$4,processed_at=now() where id=$1',
+    [raced.id,paymentId||null,providerName,payload]
+  );
+  return true;
+}
+async function processWebhook(rawBody,signature,payload,requestedProvider){
+  const providerName=String(
+    requestedProvider||loadEnv().PAYMENT_PROVIDER||'generic-json'
+  ).toLowerCase();
+  const selectedProvider=provider(providerName);
+
+  const ok=selectedProvider.verifyWebhook(rawBody,signature);
   if(!ok) throw Object.assign(new Error('Invalid webhook signature'),{status:401,code:'WEBHOOK_SIGNATURE_INVALID',expose:true});
-  const parsed=provider().parseWebhook(payload,rawBody);
+
+  const parsed=selectedProvider.parseWebhook(payload,rawBody);
   if(!parsed.eventId||!parsed.reference)throw badRequest('INVALID_WEBHOOK','Webhook payload is incomplete.');
+
+  // Store does not use BuatQris withdrawals, but acknowledge and deduplicate them.
+  if(providerName==='buatqris' && parsed.isWithdrawal){
+    return withTransaction(async(client)=>{
+      const recorded=await recordWebhookEvent(client,{
+        paymentId:null,providerName,eventId:parsed.eventId,payload
+      });
+      return recorded
+        ? {duplicate:false,ignored:true,reason:'BUATQRIS_WITHDRAWAL_NOT_USED_BY_STORE'}
+        : {duplicate:true};
+    });
+  }
+
   const result=await withTransaction(async(client)=>{
-    const providerName=loadEnv().PAYMENT_PROVIDER||'generic-json';
     let payment=null;
 
     if(parsed.reference){
       payment=(
         await client.query(
-          'select * from payments where reference=$1 for update',
-          [parsed.reference]
+          'select * from payments where reference=$1 and lower(provider)=lower($2) for update',
+          [parsed.reference,providerName]
         )
       ).rows[0]||null;
     }
@@ -290,14 +350,32 @@ async function processWebhook(rawBody,signature,payload){
     if(!payment&&parsed.orderId){
       payment=(
         await client.query(
-          "select * from payments where order_id=$1 and status in ('PENDING','PAID') order by created_at desc limit 1 for update",
-          [parsed.orderId]
+          "select * from payments where order_id=$1 and lower(provider)=lower($2) and status in ('PENDING','PAID') order by created_at desc limit 1 for update",
+          [parsed.orderId,providerName]
         )
       ).rows[0]||null;
     }
 
     if(!payment){
-      const recorded=await recordWebhookEvent(client,{paymentId:null,providerName,eventId:parsed.eventId,payload});
+      if(providerName==='buatqris'){
+        const recorded=await recordWebhookEvent(client,{
+          paymentId:null,
+          providerName,
+          eventId:parsed.eventId,
+          payload,
+          pending:true
+        });
+        if(!recorded)return {duplicate:true};
+        return {
+          retry:true,
+          reason:'PAYMENT_REFERENCE_NOT_READY',
+          reference:parsed.reference
+        };
+      }
+
+      const recorded=await recordWebhookEvent(client,{
+        paymentId:null,providerName,eventId:parsed.eventId,payload
+      });
       if(!recorded)return {duplicate:true};
       return {
         duplicate:false,
@@ -309,7 +387,28 @@ async function processWebhook(rawBody,signature,payload){
 
     const recorded=await recordWebhookEvent(client,{paymentId:payment.id,providerName,eventId:parsed.eventId,payload});
     if(!recorded)return {duplicate:true};
-    if(Number(parsed.amount)!==Number(payment.amount))throw badRequest('PAYMENT_AMOUNT_MISMATCH','Payment amount does not match transaction amount.');
+    const expectedAmount = providerName === 'buatqris'
+      ? Number(payment.raw_reference?.totalAmount ?? payment.raw_reference?.total_amount)
+      : Number(payment.amount);
+
+    // BuatQris total_amount is the buyer's actual bill, including unique code.
+    if(!Number.isSafeInteger(expectedAmount) ||
+       !Number.isSafeInteger(Number(parsed.amount)) ||
+       Number(parsed.amount)!==expectedAmount){
+      throw badRequest('PAYMENT_AMOUNT_MISMATCH','Payment amount does not match transaction total.');
+    }
+
+    if(providerName==='buatqris'){
+      const storedIsTest=Boolean(
+        payment.raw_reference?.isTest ?? payment.raw_reference?.is_test
+      );
+      if(Boolean(parsed.isTest)!==storedIsTest){
+        throw badRequest(
+          'PAYMENT_TEST_MODE_MISMATCH',
+          'Webhook sandbox/live mode does not match the saved transaction.'
+        );
+      }
+    }
     const statusMap={
       PAID:'PAID',
       SUCCESS:'PAID',
@@ -327,6 +426,26 @@ async function processWebhook(rawBody,signature,payload){
         'INVALID_PAYMENT_STATUS',
         'Webhook payment status tidak dikenal.'
       );
+    }
+
+    if(providerName==='buatqris' && parsed.isTest){
+      // Sandbox callbacks never mutate payment/order state or wallet balance.
+      await client.query(
+        'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
+        [
+          'PAYMENT_WEBHOOK_SANDBOX_IGNORED',
+          'payment',
+          payment.id,
+          {reference:parsed.reference,eventId:parsed.eventId,status:next,is_test:true}
+        ]
+      );
+      return {
+        duplicate:false,
+        ignored:true,
+        sandbox:true,
+        paymentId:payment.id,
+        paymentStatus:payment.status
+      };
     }
 
     const current=String(payment.status||'PENDING').toUpperCase();
@@ -411,6 +530,13 @@ async function processWebhook(rawBody,signature,payload){
       recipientPhone:order.recipient_phone||null
     };
   });
+
+  if(result?.retry){
+    throw Object.assign(
+      new Error('Referensi pembayaran BuatQris belum tersedia; webhook dapat dicoba ulang.'),
+      {status:503,code:'PAYMENT_REFERENCE_NOT_READY',expose:true}
+    );
+  }
 
   if(result?.orderPaid&&result.recipientEmail){
     await sendOrderPaidEmail({

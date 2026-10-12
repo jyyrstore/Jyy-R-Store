@@ -298,8 +298,85 @@ apiRouter.use('/owner',ownerApi);
 const cronRouter=express.Router();
 cronRouter.get('/expire',cron.requireCronSecret,asyncHandler(cron.expire));
 
-const webhookRouter=express.Router();
-webhookRouter.post('/',express.raw({type:'application/json',limit:'1mb'}),asyncHandler(async(req,res)=>{const raw=req.body;const configuredHeader=loadEnv().PAYMENT_WEBHOOK_SIGNATURE_HEADER.toLowerCase();
-const signature=req.headers['x-callback-token']||req.headers[configuredHeader];let payload;try{payload=JSON.parse(raw.toString('utf8'))}catch{throw Object.assign(new Error('Invalid webhook JSON'),{status:400,code:'INVALID_WEBHOOK_JSON',expose:true})}const out=await require('../services/payment/payment.service').processWebhook(raw,signature,payload);return ok(res,out)}));
+function createWebhookRouter(providerResolver){
+  const router=express.Router();
 
-module.exports={apiRouter,pageRouter,cronRouter,webhookRouter};
+  router.post('/',express.raw({type:'application/json',limit:'1mb'}),asyncHandler(async(req,res)=>{
+    const raw=req.body;
+    if(!Buffer.isBuffer(raw)){
+      throw Object.assign(
+        new Error('Raw webhook body is required.'),
+        {status:400,code:'INVALID_WEBHOOK_BODY',expose:true}
+      );
+    }
+
+    const providerName=String(
+      typeof providerResolver==='function' ? providerResolver(req) : providerResolver
+    ).toLowerCase();
+
+    let payload;
+    try{
+      payload=JSON.parse(raw.toString('utf8'));
+    }catch{
+      throw Object.assign(
+        new Error('Invalid webhook JSON'),
+        {status:400,code:'INVALID_WEBHOOK_JSON',expose:true}
+      );
+    }
+
+    let signature='';
+    if(providerName==='buatqris'){
+      const headerEvent=String(req.get('X-BuatQris-Event')||'').trim().toLowerCase();
+      const bodyEvent=String(payload.event||'').trim().toLowerCase();
+      const delivery=String(req.get('X-BuatQris-Delivery')||'').trim();
+      const bodyDelivery=String(
+        payload.transaction_id||payload.withdrawal_id||''
+      ).trim();
+
+      if(!headerEvent || headerEvent!==bodyEvent){
+        throw Object.assign(
+          new Error('BuatQris event header does not match webhook body.'),
+          {status:400,code:'BUATQRIS_EVENT_MISMATCH',expose:true}
+        );
+      }
+
+      if(!delivery || delivery!==bodyDelivery){
+        throw Object.assign(
+          new Error('BuatQris delivery header does not match transaction reference.'),
+          {status:400,code:'BUATQRIS_DELIVERY_MISMATCH',expose:true}
+        );
+      }
+
+      signature=String(req.get('X-BuatQris-Signature')||'');
+    }else{
+      const configuredHeader=String(
+        loadEnv().PAYMENT_WEBHOOK_SIGNATURE_HEADER||'x-signature'
+      ).toLowerCase();
+      signature=req.headers['x-callback-token']||req.headers[configuredHeader]||'';
+    }
+
+    const out=await require('../services/payment/payment.service')
+      .processWebhook(raw,signature,payload,providerName);
+
+    return ok(res,out);
+  }));
+
+  return router;
+}
+
+const webhookRouter=createWebhookRouter(
+  ()=>String(loadEnv().PAYMENT_PROVIDER||'generic-json').toLowerCase()
+);
+
+// Keep the existing callback URL available for transactions created by Xendit.
+const buatQrisWebhookRouter=createWebhookRouter('buatqris');
+const legacyXenditWebhookRouter=createWebhookRouter('xendit');
+
+module.exports={
+  apiRouter,
+  pageRouter,
+  cronRouter,
+  webhookRouter,
+  legacyXenditWebhookRouter,
+  buatQrisWebhookRouter,
+};

@@ -54,6 +54,16 @@ function loadEnv() {
     XENDIT_WEBHOOK_TOKEN: process.env.XENDIT_WEBHOOK_TOKEN || '',
     XENDIT_RETURN_URL: process.env.XENDIT_RETURN_URL || '',
     XENDIT_CANCEL_RETURN_URL: process.env.XENDIT_CANCEL_RETURN_URL || '',
+    BUATQRIS_ACCOUNT_ID: process.env.BUATQRIS_ACCOUNT_ID || '',
+    BUATQRIS_SECRET_TOKEN: process.env.BUATQRIS_SECRET_TOKEN || '',
+    BUATQRIS_SIGNING_SECRET: process.env.BUATQRIS_SIGNING_SECRET || '',
+    BUATQRIS_CALLBACK_URL: process.env.BUATQRIS_CALLBACK_URL ||
+      (process.env.APP_URL
+        ? `${String(process.env.APP_URL).replace(/\/$/, '')}/api/payment/webhook/buatqris`
+        : ''),
+    BUATQRIS_TEST_MODE: bool(process.env.BUATQRIS_TEST_MODE, true),
+    BUATQRIS_FEE_BY: String(process.env.BUATQRIS_FEE_BY || 'user').toLowerCase(),
+    BUATQRIS_QRIS_METHOD: String(process.env.BUATQRIS_QRIS_METHOD || '').toLowerCase(),
     EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || 'smtp',
     EMAIL_FROM: process.env.EMAIL_FROM || '',
     EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "Jyyr Store",
@@ -84,6 +94,17 @@ function loadEnv() {
     SOCIAL_GITHUB: process.env.SOCIAL_GITHUB || '',
     OWNER_USER_ID: process.env.OWNER_USER_ID || ''
   };
+  if (env.BUATQRIS_SECRET_TOKEN && env.BUATQRIS_SECRET_TOKEN.length < 20) {
+    throw new Error('BUATQRIS_SECRET_TOKEN must contain at least 20 characters.');
+  }
+  if (!['user', 'buyer'].includes(env.BUATQRIS_FEE_BY)) {
+    throw new Error('BUATQRIS_FEE_BY must be user or buyer.');
+  }
+  if (env.BUATQRIS_QRIS_METHOD &&
+      !['qris_one', 'qris_two', 'qris_three', 'qris_four'].includes(env.BUATQRIS_QRIS_METHOD)) {
+    throw new Error('BUATQRIS_QRIS_METHOD is invalid.');
+  }
+
   const required = ['SESSION_SECRET', 'COOKIE_SECRET', 'CSRF_SECRET'];
   if (nodeEnv === 'production') {
     required.push(
@@ -92,13 +113,47 @@ function loadEnv() {
       'DATABASE_URL',
       'CRON_SECRET'
     );
-    if(String(env.PAYMENT_PROVIDER||'').toLowerCase()==='xendit'){
-      required.push('XENDIT_SECRET_KEY','XENDIT_WEBHOOK_TOKEN','XENDIT_RETURN_URL');
-    }else{
+    const paymentProvider = String(env.PAYMENT_PROVIDER || '').toLowerCase();
+
+    if (paymentProvider === 'xendit') {
+      required.push('XENDIT_SECRET_KEY', 'XENDIT_WEBHOOK_TOKEN', 'XENDIT_RETURN_URL');
+    } else if (paymentProvider === 'buatqris') {
+      required.push(
+        'BUATQRIS_ACCOUNT_ID',
+        'BUATQRIS_SECRET_TOKEN',
+        'BUATQRIS_SIGNING_SECRET',
+        'BUATQRIS_CALLBACK_URL',
+        'XENDIT_WEBHOOK_TOKEN'
+      );
+    } else if (paymentProvider === 'generic-json') {
       required.push('PAYMENT_WEBHOOK_SECRET');
+    } else {
+      throw new Error('Unsupported PAYMENT_PROVIDER: ' + paymentProvider);
     }
+
     const missing = required.filter((key) => !env[key]);
-    if (missing.length) throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
+    if (missing.length) {
+      throw new Error(
+        `Missing required production environment variables: ${missing.join(', ')}`
+      );
+    }
+
+    if (paymentProvider === 'buatqris') {
+      let callback;
+      try {
+        callback = new URL(env.BUATQRIS_CALLBACK_URL);
+      } catch {
+        throw new Error('BUATQRIS_CALLBACK_URL must be a valid absolute URL.');
+      }
+      if (
+        callback.protocol !== 'https:' ||
+        callback.pathname.replace(/\/$/, '') !== '/api/payment/webhook/buatqris'
+      ) {
+        throw new Error(
+          'BUATQRIS_CALLBACK_URL must use HTTPS and end with /api/payment/webhook/buatqris.'
+        );
+      }
+    }
   } else if (!env.SESSION_SECRET && !env.ALLOW_INCOMPLETE_DEV_CONFIG) {
     throw new Error('SESSION_SECRET is required. Set ALLOW_INCOMPLETE_DEV_CONFIG=true only for local scaffolding/verification.');
   }

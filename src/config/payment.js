@@ -1,6 +1,7 @@
 const crypto=require('crypto');
 
 let provider;
+let providerEnv;
 
 function timingSafeEqualText(a,b){
   const left=Buffer.from(String(a||''));
@@ -259,21 +260,325 @@ class XenditProvider{
   }
 }
 
-function initPaymentProvider(env){
-  switch(String(env.PAYMENT_PROVIDER||'generic-json').toLowerCase()){
-    case 'xendit':
-      provider=new XenditProvider(env);
-      break;
-    case 'generic-json':
-    default:
-      provider=new GenericJsonProvider(env);
-      break;
+
+class BuatQrisProvider {
+  constructor(env) {
+    this.env = env;
+  }
+
+  configured() {
+    return Boolean(
+      this.env.BUATQRIS_ACCOUNT_ID &&
+      this.env.BUATQRIS_SECRET_TOKEN &&
+      String(this.env.BUATQRIS_SECRET_TOKEN).length >= 20
+    );
+  }
+
+  httpsUrl(value, field) {
+    if (!value) return null;
+
+    let parsed;
+    try {
+      parsed = new URL(String(value));
+    } catch {
+      throw Object.assign(
+        new Error(`Respons BuatQris memiliki ${field} yang tidak valid.`),
+        {status:502, code:'BUATQRIS_INVALID_URL', expose:true}
+      );
+    }
+
+    if (parsed.protocol !== 'https:') {
+      throw Object.assign(
+        new Error(`Respons BuatQris ${field} wajib menggunakan HTTPS.`),
+        {status:502, code:'BUATQRIS_INSECURE_URL', expose:true}
+      );
+    }
+
+    return parsed.toString();
+  }
+
+  async createPayment({orderId, amount, testMode} = {}) {
+    if (!this.configured()) {
+      throw Object.assign(
+        new Error('Kredensial BuatQris belum dikonfigurasi.'),
+        {status:503, code:'BUATQRIS_NOT_CONFIGURED', expose:true}
+      );
+    }
+
+    const requestedAmount = Math.round(Number(amount));
+    if (!Number.isSafeInteger(requestedAmount) || requestedAmount < 1000) {
+      throw Object.assign(
+        new Error('Nominal pembayaran BuatQris tidak valid.'),
+        {status:400, code:'BUATQRIS_INVALID_AMOUNT', expose:true}
+      );
+    }
+
+    const mode = testMode === undefined
+      ? this.env.BUATQRIS_TEST_MODE !== false
+      : Boolean(testMode);
+
+    const feeBy = String(this.env.BUATQRIS_FEE_BY || 'user').toLowerCase();
+    const qrisMethod = String(this.env.BUATQRIS_QRIS_METHOD || '').toLowerCase();
+
+    if (!['user', 'buyer'].includes(feeBy)) {
+      throw Object.assign(
+        new Error('BUATQRIS_FEE_BY harus user atau buyer.'),
+        {status:500, code:'BUATQRIS_FEE_CONFIG_INVALID', expose:true}
+      );
+    }
+
+    if (qrisMethod &&
+        !['qris_one', 'qris_two', 'qris_three', 'qris_four'].includes(qrisMethod)) {
+      throw Object.assign(
+        new Error('BUATQRIS_QRIS_METHOD tidak valid.'),
+        {status:500, code:'BUATQRIS_METHOD_CONFIG_INVALID', expose:true}
+      );
+    }
+
+    const form = new URLSearchParams();
+    form.set('action', 'api_create_qris');
+    form.set('account_id', this.env.BUATQRIS_ACCOUNT_ID);
+    form.set('secret_token', this.env.BUATQRIS_SECRET_TOKEN);
+    form.set('amount', String(requestedAmount));
+    form.set(
+      'description',
+      `Pembayaran JYYR-STORE ${String(orderId || '').slice(0, 70)}`.slice(0, 100)
+    );
+    form.set('fee_by', feeBy);
+
+    if (qrisMethod) form.set('qris_method', qrisMethod);
+    if (this.env.BUATQRIS_CALLBACK_URL) {
+      form.set('callback_url', this.env.BUATQRIS_CALLBACK_URL);
+    }
+    if (mode) form.set('test', '1');
+    if (this.env.APP_NAME) form.set('app_name', String(this.env.APP_NAME).slice(0, 100));
+    if (this.env.APP_URL) form.set('app_url', this.env.APP_URL);
+
+    const controller = new AbortController();
+    const timeoutMs = Math.max(1000, Number(this.env.PAYMENT_REQUEST_TIMEOUT_MS || 15000));
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response;
+    try {
+      response = await fetch('https://api.buatqris.site', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          accept: 'application/json'
+        },
+        body: form.toString(),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw Object.assign(
+          new Error('Request BuatQris melewati batas waktu.'),
+          {status:504, code:'BUATQRIS_TIMEOUT', expose:true}
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    const body = await response.json().catch(() => null);
+
+    if (!response.ok || body?.success !== true) {
+      const message = body?.message ||
+        (response.status === 429
+          ? 'Batas permintaan BuatQris tercapai. Coba kembali nanti.'
+          : `BuatQris menolak permintaan (HTTP ${response.status}).`);
+
+      throw Object.assign(
+        new Error(message),
+        {
+          status: response.status === 429 ? 429 : (response.status >= 500 ? 502 : 400),
+          code: response.status === 429 ? 'BUATQRIS_RATE_LIMITED' : 'BUATQRIS_API_ERROR',
+          expose: true
+        }
+      );
+    }
+
+    const data = body.data || {};
+    const reference = String(data.transaction_id || '');
+    const totalAmount = Number(data.total_amount);
+
+    if (!reference || !Number.isSafeInteger(totalAmount) || totalAmount <= 0) {
+      throw Object.assign(
+        new Error('Respons BuatQris tidak memiliki transaction_id/total_amount valid.'),
+        {status:502, code:'BUATQRIS_INVALID_RESPONSE', expose:true}
+      );
+    }
+
+    const paymentUrl = this.httpsUrl(data.payment_url, 'payment_url');
+    const qrUrl = this.httpsUrl(data.qr_url, 'qr_url');
+    const qrisImage = typeof data.qris_image === 'string' &&
+      /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(data.qris_image)
+        ? data.qris_image
+        : null;
+
+    if (!paymentUrl && !qrUrl && !qrisImage) {
+      throw Object.assign(
+        new Error('Respons BuatQris tidak memiliki payment_url, qr_url, atau qris_image yang valid.'),
+        {status:502, code:'BUATQRIS_PAYMENT_METHOD_MISSING', expose:true}
+      );
+    }
+
+    const isTest = data.is_test == null
+      ? mode
+      : (
+        data.is_test === true ||
+        data.is_test === 1 ||
+        ['true', '1', 'yes', 'test'].includes(String(data.is_test).toLowerCase())
+      );
+
+    return {
+      reference,
+      paymentUrl,
+      expiresAt: data.expired_at || null,
+      raw: {
+        ...data,
+        totalAmount,
+        isTest,
+        paymentUrl,
+        qr_url: qrUrl,
+        qris_image: qrisImage
+      }
+    };
+  }
+
+  verifyWebhook(rawBody, signature) {
+    const secret = this.env.BUATQRIS_SIGNING_SECRET;
+    if (!secret || !signature || rawBody == null) return false;
+
+    const expected = 'sha256=' + crypto
+      .createHmac('sha256', secret)
+      .update(rawBody)
+      .digest('hex');
+
+    return timingSafeEqualText(expected, signature);
+  }
+
+  parseWebhook(payload) {
+    const p = payload || {};
+    const event = String(p.event || '').trim().toLowerCase();
+    const bodyStatus = String(p.status || '').trim().toLowerCase();
+    const isWithdrawal = event.startsWith('withdrawal.');
+
+    const reference = String(
+      isWithdrawal
+        ? (p.withdrawal_id || p.transaction_id || '')
+        : (p.transaction_id || '')
+    );
+
+    const eventStatus = {
+      'payment.success':'SUCCESS',
+      'payment.expired':'EXPIRED',
+      'payment.failed':'FAILED'
+    }[event] || '';
+
+    const bodyStatusMap = {
+      success:'SUCCESS',
+      expired:'EXPIRED',
+      failed:'FAILED',
+      pending:'PENDING'
+    };
+
+    let status = eventStatus || bodyStatusMap[bodyStatus] || '';
+    if (
+      eventStatus &&
+      bodyStatusMap[bodyStatus] &&
+      eventStatus !== bodyStatusMap[bodyStatus]
+    ) {
+      status = '';
+    }
+
+    const isTest = (
+      p.is_test === true ||
+      p.is_test === 1 ||
+      ['true', '1', 'yes', 'test'].includes(String(p.is_test).toLowerCase())
+    );
+
+    // Event identity stays constant for the same event and delivery retry.
+    const eventId = reference && event
+      ? `buatqris:${event}:${reference}`
+      : '';
+
+    return {
+      eventId,
+      reference,
+      orderId: null,
+      amount: isWithdrawal ? Number(p.amount) : Number(p.total_amount),
+      status,
+      isTest,
+      isWithdrawal,
+      paidAt: p.paid_at || null,
+      metadata: p
+    };
   }
 }
 
-function paymentProvider(){
-  if(!provider)throw new Error('Payment provider not initialized.');
-  return provider;
+function resolvedPaymentUrl(payment, externalUrl) {
+  const direct = externalUrl ||
+    payment?.raw_reference?.paymentUrl ||
+    payment?.raw_reference?.payment_url;
+
+  if (direct) return String(direct);
+
+  const hasQr = Boolean(
+    payment?.raw_reference?.qr_url ||
+    payment?.raw_reference?.qris_image
+  );
+
+  if (
+    String(payment?.provider || '').toLowerCase() === 'buatqris' &&
+    hasQr &&
+    payment?.id
+  ) {
+    return `/payment/${encodeURIComponent(payment.id)}`;
+  }
+
+  return null;
 }
 
-module.exports={initPaymentProvider,paymentProvider,GenericJsonProvider,XenditProvider};
+function makePaymentProvider(name, env) {
+  switch (String(name || 'generic-json').toLowerCase()) {
+    case 'buatqris':
+      return new BuatQrisProvider(env);
+    case 'xendit':
+      return new XenditProvider(env);
+    case 'generic-json':
+      return new GenericJsonProvider(env);
+    default:
+      throw new Error('Unsupported PAYMENT_PROVIDER: ' + name);
+  }
+}
+
+function initPaymentProvider(env) {
+  providerEnv = env;
+  provider = makePaymentProvider(env.PAYMENT_PROVIDER, env);
+}
+
+function paymentProvider(name) {
+  if (!provider || !providerEnv) {
+    throw new Error('Payment provider not initialized.');
+  }
+
+  if (!name) return provider;
+
+  const wanted = String(name).toLowerCase();
+  const active = String(providerEnv.PAYMENT_PROVIDER || 'generic-json').toLowerCase();
+
+  return wanted === active
+    ? provider
+    : makePaymentProvider(wanted, providerEnv);
+}
+
+module.exports = {
+  initPaymentProvider,
+  paymentProvider,
+  GenericJsonProvider,
+  XenditProvider,
+  BuatQrisProvider,
+  resolvedPaymentUrl
+};
