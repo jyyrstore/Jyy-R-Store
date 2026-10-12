@@ -62,6 +62,8 @@ function loadEnv() {
         ? `${String(process.env.APP_URL).replace(/\/$/, '')}/api/payment/webhook/buatqris`
         : ''),
     BUATQRIS_TEST_MODE: bool(process.env.BUATQRIS_TEST_MODE, true),
+    BUATQRIS_ALLOW_PRODUCTION_SANDBOX:
+      bool(process.env.BUATQRIS_ALLOW_PRODUCTION_SANDBOX, false),
     BUATQRIS_FEE_BY: String(process.env.BUATQRIS_FEE_BY || 'user').toLowerCase(),
     BUATQRIS_QRIS_METHOD: String(process.env.BUATQRIS_QRIS_METHOD || '').toLowerCase(),
     EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || 'smtp',
