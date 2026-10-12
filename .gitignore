@@ -17,4 +17,3 @@ Thumbs.db
 .idea/
 .vercel
 .production-fix-backup-*/
-.env*
