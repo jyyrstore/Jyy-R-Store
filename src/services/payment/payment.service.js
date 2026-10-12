@@ -26,10 +26,11 @@ async function createForOrder(userId,order,returnUrl){
   if(
     String(currentEnv.PAYMENT_PROVIDER||'').toLowerCase()==='buatqris' &&
     currentEnv.NODE_ENV==='production' &&
-    currentEnv.BUATQRIS_TEST_MODE
+    currentEnv.BUATQRIS_TEST_MODE &&
+    !currentEnv.BUATQRIS_ALLOW_PRODUCTION_SANDBOX
   ){
     throw Object.assign(
-      new Error('BuatQris masih sandbox; pembuatan order produksi dinonaktifkan.'),
+      new Error('BuatQris sandbox belum diizinkan untuk Production.'),
       {status:503,code:'BUATQRIS_SANDBOX_MODE',expose:true}
     );
   }
