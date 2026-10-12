@@ -324,7 +324,7 @@ function createWebhookRouter(providerResolver){
       );
     }
 
-    let signature='';
+    let signature;
     if(providerName==='buatqris'){
       const headerEvent=String(req.get('X-BuatQris-Event')||'').trim().toLowerCase();
       const bodyEvent=String(payload.event||'').trim().toLowerCase();

@@ -1569,6 +1569,13 @@
 
     const checkout=e.target.closest('[data-checkout-confirm]');
     if(checkout){
+      if(checkout.dataset.checkoutReady!=='1'){
+        toast.error(
+          'Kontak penerima belum lengkap. Lengkapi email dan WhatsApp penerima terlebih dahulu.'
+        );
+        return;
+      }
+
       const method=
         document.querySelector(
           'input[name="paymentMethod"]:checked'

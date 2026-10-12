@@ -150,24 +150,12 @@
         <strong><%= formatIDR(preview.total) %></strong>
       </div>
 
-      <% if(!preview.items.length || !recipientComplete){ %>
-        <div class="checkout-action-hint" role="status">
-          <%- icon('alert-triangle') %>
-          <span>
-            <% if(!preview.items.length){ %>
-              Tidak ada item yang dapat dibayar.
-            <% }else{ %>
-              Tombol Bayar belum aktif. Lengkapi email dan WhatsApp penerima terlebih dahulu.
-            <% } %>
-          </span>
-        </div>
-      <% } %>
-
       <button
         class="button button-primary button-block"
         data-checkout-confirm
         data-buy-now-product="<%= preview.buyNowProductId||'' %>"
-        <%= preview.items.length && recipientComplete ? '' : 'disabled' %>
+        aria-disabled="<%= preview.items.length && recipientComplete ? 'false' : 'true' %>"
+        data-checkout-ready="<%= preview.items.length && recipientComplete ? '1' : '0' %>"
       >
         <%- icon('check') %>
         <span
