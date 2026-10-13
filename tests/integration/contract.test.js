@@ -117,7 +117,7 @@ test('order payment locks follow order before payment',()=>{
     loop
   );
   const expiryPaymentLock=job.indexOf(
-    'select * from payments where id=$1 for update',
+    'select * from payments where id=$1 and status=',
     loop
   );
   assert.ok(loop>=0 && expiryOrderLock>loop);
@@ -528,5 +528,42 @@ test('BuatQris route is isolated and mounted before JSON parsing',()=>{
     assert.match(source, /BUATQRIS_INVALID_AMOUNT/);
     assert.match(source, /BUATQRIS_FEE_CONFIG_INVALID/);
     assert.match(source, /BUATQRIS_METHOD_CONFIG_INVALID/);
+  });
+}
+
+
+// Verify expiry is checked using the current database clock.
+{
+  const { test } = require('node:test');
+  const assert = require('node:assert/strict');
+  const fs = require('node:fs');
+  const path = require('node:path');
+
+  const paymentSource = fs.readFileSync(
+    path.join(__dirname, '../../src/services/payment/payment.service.js'),
+    'utf8'
+  );
+  const expirySource = fs.readFileSync(
+    path.join(__dirname, '../../src/jobs/payment-expiration.job.js'),
+    'utf8'
+  );
+
+  test('BuatQris checks expiry before retrying a placeholder', () => {
+    assert.match(
+      paymentSource,
+      /expires_at is null or expires_at <= clock_timestamp\(\)/
+    );
+    assert.match(paymentSource, /provisioningReason:'PAYMENT_EXPIRED'/);
+    assert.match(
+      paymentSource,
+      /expires_at=clock_timestamp\(\)\+interval '30 minutes'/
+    );
+  });
+
+  test('expiration job checks current expiry while locking payment', () => {
+    assert.match(
+      expirySource,
+      /status='PENDING' and expires_at is not null and expires_at < clock_timestamp\(\) for update/
+    );
   });
 }

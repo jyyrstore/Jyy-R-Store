@@ -16,7 +16,7 @@ async function run(){
         : null;
 
       const current=(await client.query(
-        'select * from payments where id=$1 for update',
+        "select * from payments where id=$1 and status='PENDING' and expires_at is not null and expires_at < clock_timestamp() for update",
         [payment.id]
       )).rows[0];
 

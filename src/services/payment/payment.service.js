@@ -108,6 +108,22 @@ async function createForOrder(userId,order,returnUrl){
     ).rows[0];
 
     if(existing){
+      // Baris payment sudah terkunci; gunakan waktu aktual database.
+      const expiryCheck=providerName==='buatqris'
+        ? (await client.query(
+            'select (expires_at is null or expires_at <= clock_timestamp()) as expired from payments where id=$1',
+            [existing.id]
+          )).rows[0]
+        : null;
+
+      if(providerName==='buatqris' && expiryCheck?.expired){
+        return {
+          provisioningBlocked:true,
+          provisioningReason:'PAYMENT_EXPIRED',
+          payment:existing
+        };
+      }
+
       const paymentUrl=resolvedPaymentUrl(existing,null);
 
       /*
@@ -149,13 +165,21 @@ async function createForOrder(userId,order,returnUrl){
        * dan tidak boleh memanggil provider lagi.
        */
       if(providerName==='buatqris' && retryKnownNotSent){
-        await client.query(
-          "update payments set raw_reference=coalesce(raw_reference,'{}'::jsonb)||$2::jsonb,updated_at=now() where id=$1 and status='PENDING'",
+        const claimed=await client.query(
+          "update payments set raw_reference=coalesce(raw_reference,'{}'::jsonb)||$2::jsonb,expires_at=clock_timestamp()+interval '30 minutes',updated_at=clock_timestamp() where id=$1 and status='PENDING' and expires_at>clock_timestamp() returning id",
           [
             existing.id,
             JSON.stringify({state:'PROVIDER_RETRY_IN_PROGRESS'})
           ]
         );
+
+        if(!claimed.rowCount){
+          return {
+            provisioningBlocked:true,
+            provisioningReason:'PAYMENT_EXPIRED',
+            payment:existing
+          };
+        }
       }
 
       // Provider lain boleh mencoba ulang menggunakan kunci idempotensi
@@ -229,14 +253,19 @@ async function createForOrder(userId,order,returnUrl){
   });
 
   if(prepared.provisioningBlocked){
+    const expired=prepared.provisioningReason==='PAYMENT_EXPIRED';
+
     throw Object.assign(
       new Error(
-        'Status pembayaran belum dapat dipastikan. '+
-        'Jangan membuat QR baru; transaksi perlu direkonsiliasi.'
+        expired
+          ? 'Pembayaran lokal sudah kedaluwarsa. Proses expiry harus menyelesaikannya sebelum order baru dibuat.'
+          : 'Status pembayaran belum dapat dipastikan. Jangan membuat QR baru; transaksi perlu direkonsiliasi.'
       ),
       {
         status:503,
-        code:'PAYMENT_PROVISIONING_IN_PROGRESS',
+        code:expired
+          ? 'PAYMENT_EXPIRED_REQUIRES_RECONCILIATION'
+          : 'PAYMENT_PROVISIONING_IN_PROGRESS',
         expose:true
       }
     );
