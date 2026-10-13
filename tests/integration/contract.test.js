@@ -551,7 +551,7 @@ test('BuatQris route is isolated and mounted before JSON parsing',()=>{
   test('BuatQris checks expiry before retrying a placeholder', () => {
     assert.match(
       paymentSource,
-      /expires_at is null or expires_at <= clock_timestamp\(\)/
+      /coalesce\(\s*expires_at,\s*created_at \+ interval '30 minutes'\s*\) <= clock_timestamp\(\)/
     );
     assert.match(paymentSource, /provisioningReason:'PAYMENT_EXPIRED'/);
     assert.match(
@@ -561,9 +561,29 @@ test('BuatQris route is isolated and mounted before JSON parsing',()=>{
   });
 
   test('expiration job checks current expiry while locking payment', () => {
+    const fallbackChecks = expirySource.match(
+      /coalesce\(expires_at, created_at \+ interval '30 minutes'\) < clock_timestamp\(\)/g
+    ) || [];
+    assert.ok(
+      fallbackChecks.length >= 2,
+      'Kandidat expiry dan query penguncian harus memakai fallback yang sama.'
+    );
+    assert.match(expirySource, /for update/);
+  });
+
+  test('BuatQris treats NULL expiry consistently with the 30-minute fallback', () => {
     assert.match(
-      expirySource,
-      /status='PENDING' and expires_at is not null and expires_at < clock_timestamp\(\) for update/
+      paymentSource,
+      /coalesce\(\s*expires_at,\s*created_at \+ interval '30 minutes'/
+    );
+    assert.match(paymentSource, /expires_at is null/);
+    assert.match(
+      paymentSource,
+      /set expires_at=created_at \+ interval '30 minutes'/
+    );
+    assert.match(
+      paymentSource,
+      /effective_expires_at/
     );
   });
 }

@@ -111,10 +111,38 @@ async function createForOrder(userId,order,returnUrl){
       // Baris payment sudah terkunci; gunakan waktu aktual database.
       const expiryCheck=providerName==='buatqris'
         ? (await client.query(
-            'select (expires_at is null or expires_at <= clock_timestamp()) as expired from payments where id=$1',
+            `select
+               (
+                 coalesce(
+                   expires_at,
+                   created_at + interval '30 minutes'
+                 ) <= clock_timestamp()
+               ) as expired,
+               (
+                 expires_at is null
+               ) as missing_expiry,
+               coalesce(
+                 expires_at,
+                 created_at + interval '30 minutes'
+               ) as effective_expires_at
+             from payments
+             where id=$1`,
             [existing.id]
           )).rows[0]
         : null;
+
+      if(providerName==='buatqris' && expiryCheck?.missing_expiry){
+        await client.query(
+          `update payments
+           set expires_at=created_at + interval '30 minutes',
+               updated_at=clock_timestamp()
+           where id=$1
+             and expires_at is null`,
+          [existing.id]
+        );
+
+        existing.expires_at=expiryCheck.effective_expires_at;
+      }
 
       if(providerName==='buatqris' && expiryCheck?.expired){
         return {
@@ -166,7 +194,7 @@ async function createForOrder(userId,order,returnUrl){
        */
       if(providerName==='buatqris' && retryKnownNotSent){
         const claimed=await client.query(
-          "update payments set raw_reference=coalesce(raw_reference,'{}'::jsonb)||$2::jsonb,expires_at=clock_timestamp()+interval '30 minutes',updated_at=clock_timestamp() where id=$1 and status='PENDING' and expires_at>clock_timestamp() returning id",
+          "update payments set raw_reference=coalesce(raw_reference,'{}'::jsonb)||$2::jsonb,expires_at=clock_timestamp()+interval '30 minutes',updated_at=clock_timestamp() where id=$1 and status='PENDING' and coalesce(expires_at,created_at+interval '30 minutes')>clock_timestamp() returning id",
           [
             existing.id,
             JSON.stringify({state:'PROVIDER_RETRY_IN_PROGRESS'})

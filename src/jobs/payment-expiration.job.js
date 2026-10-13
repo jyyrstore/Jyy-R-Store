@@ -1,6 +1,6 @@
 const {query,withTransaction}=require('../config/database');
 async function run(){
-  const expired=(await query("select id,order_id from payments where status='PENDING' and expires_at is not null and expires_at < now() limit 500")).rows;
+  const expired=(await query("select id,order_id from payments where status='PENDING' and coalesce(expires_at, created_at + interval '30 minutes') < clock_timestamp() limit 500")).rows;
   for(const payment of expired){
     await withTransaction(async(client)=>{
       /*
@@ -16,7 +16,7 @@ async function run(){
         : null;
 
       const current=(await client.query(
-        "select * from payments where id=$1 and status='PENDING' and expires_at is not null and expires_at < clock_timestamp() for update",
+        "select * from payments where id=$1 and status='PENDING' and coalesce(expires_at, created_at + interval '30 minutes') < clock_timestamp() for update",
         [payment.id]
       )).rows[0];
 
