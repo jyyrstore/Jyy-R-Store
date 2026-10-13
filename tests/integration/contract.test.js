@@ -30,6 +30,50 @@ test('BuatQris webhook code scopes providers and guards sandbox/early events',()
   assert.match(source,/PAYMENT_WEBHOOK_SANDBOX_IGNORED/);
   assert.match(source,/raw_reference\?\.totalAmount|assertBuatQrisTotalAmount\(parsed,payment\)/);
 });
+
+test('public content and preview require PUBLISHED products',()=>{
+  const s=fs.readFileSync(path.join(root,'src/services/delivery/delivery.service.js'),'utf8');
+  assert.match(s,/p\.status product_status/);
+  assert.match(s,/if\(published\s*&& content\.access_type==='PUBLIC'\)/);
+  assert.match(s,/if\(published\s*&& content\.access_type==='PREVIEW'/);
+});
+test('OWNER role cannot be assigned through the normal role API/repository',()=>{
+  const repo=fs.readFileSync(path.join(root,'src/repositories/users.repository.js'),'utf8');
+  const api=fs.readFileSync(path.join(root,'src/controllers/api.controller.js'),'utf8');
+  assert.match(repo,/OWNER_BOOTSTRAP_ONLY/);
+  assert.match(api,/OWNER_BOOTSTRAP_ONLY/);
+});
+test('gateway order checks payment readiness before reserving stock',()=>{
+  const s=fs.readFileSync(path.join(root,'src/controllers/api.controller.js'),'utf8');
+  assert.match(s,/payment\.assertProviderReady\(\);const created=await orders\.createGatewayOrder/);
+});
+test('deposit idempotency is scoped and lookup is user-bound',()=>{
+  const s=fs.readFileSync(path.join(root,'src/services/deposit/deposit.service.js'),'utf8');
+  assert.match(s,/scopedIdempotencyKey\('dep',userId,idempotencyKey\)/);
+  assert.match(s,/scopedIdempotencyKey\('pdep',userId,requestKey\)/);
+  assert.match(s,/paymentService\.assertProviderReady\(\)/);
+  assert.match(s,/where user_id=\$1 and \(idempotency_key=\$2/);
+});
+test('deposit expiration updates pending deposits',()=>{
+  const s=fs.readFileSync(path.join(root,'src/jobs/payment-expiration.job.js'),'utf8');
+  assert.match(s,/update deposits set status='EXPIRED'/);
+});
+
+
+test('deposit placeholder is created before external provider call',()=>{
+  const s=fs.readFileSync(
+    path.join(root,'src/services/deposit/deposit.service.js'),
+    'utf8'
+  );
+  const start=s.indexOf('async function createAndPay(');
+  const placeholder=s.indexOf('insert into payments(',start);
+  const providerCall=s.indexOf('paymentProvider.createPayment(',start);
+  assert.ok(start>=0 && placeholder>start && providerCall>placeholder);
+  assert.match(s,/select \* from deposits where id=\$1 and user_id=\$2 for update/);
+  assert.match(s,/PAYMENT_PROVISIONING_IN_PROGRESS/);
+  assert.match(s,/PROVIDER_RESULT_UNKNOWN/);
+});
+
 // END JYYR BUATQRIS CONTRACT TESTS
 
 test('owner APIs require auth + owner middleware',()=>assert.match(route,/const ownerApi=express\.Router\(\); ownerApi\.use\(requireAuth,requireOwner\)/));

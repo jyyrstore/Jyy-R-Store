@@ -21,8 +21,9 @@ const PAYMENT_TRANSITIONS={
   REFUNDED:new Set(['REFUNDED'])
 };
 
-async function createForOrder(userId,order,returnUrl){
+function assertProviderReady(){
   const currentEnv=loadEnv();
+
   if(
     String(currentEnv.PAYMENT_PROVIDER||'').toLowerCase()==='buatqris' &&
     currentEnv.NODE_ENV==='production' &&
@@ -34,6 +35,23 @@ async function createForOrder(userId,order,returnUrl){
       {status:503,code:'BUATQRIS_SANDBOX_MODE',expose:true}
     );
   }
+
+  const activeProvider=provider();
+  if(
+    typeof activeProvider.configured==='function' &&
+    !activeProvider.configured()
+  ){
+    throw Object.assign(
+      new Error('Payment provider belum dikonfigurasi.'),
+      {status:503,code:'PAYMENT_PROVIDER_NOT_CONFIGURED',expose:true}
+    );
+  }
+
+  return true;
+}
+
+async function createForOrder(userId,order,returnUrl){
+  assertProviderReady();
 
   const profile=await profiles.findById(userId).catch(()=>null);
 
@@ -556,4 +574,4 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
 
   return result;
 }
-module.exports={createForOrder,getStatus,processWebhook};
+module.exports={assertProviderReady,createForOrder,getStatus,processWebhook};

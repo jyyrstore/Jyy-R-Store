@@ -6,6 +6,7 @@ async function run(){
       const current=(await client.query('select * from payments where id=$1 for update',[payment.id])).rows[0];
       if(!current||current.status!=='PENDING') return;
       await client.query("update payments set status='EXPIRED',updated_at=now() where id=$1",[payment.id]);
+      await client.query("update deposits set status='EXPIRED',webhook_status='EXPIRED',updated_at=now() where payment_id=$1 and status='PENDING'",[payment.id]);
       if(current.order_id){
         const order=(await client.query('select * from orders where id=$1 for update',[current.order_id])).rows[0];
         if(order&&order.status==='PENDING'){
@@ -20,6 +21,10 @@ async function run(){
    * Safety net for the tiny window between the gateway order transaction
    * and creation of its local payment placeholder.
    */
+  await query(
+    "update deposits set status='EXPIRED',webhook_status=coalesce(webhook_status,'EXPIRED'),updated_at=now() where status='PENDING' and expires_at is not null and expires_at < now() and not exists(select 1 from payments p where p.id=deposits.payment_id and p.status in ('PAID','PENDING'))"
+  );
+
   const orphanOrders=(
     await query(
       `select o.id

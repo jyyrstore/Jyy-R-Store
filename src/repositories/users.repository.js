@@ -132,6 +132,12 @@ async function changeStatus(id,status){
 }
 
 async function changeRole(id,role){
+  if(String(role).toUpperCase()==='OWNER'){
+    throw Object.assign(
+      new Error('Role OWNER hanya dapat diberikan melalui bootstrap Owner.'),
+      {status:403,code:'OWNER_BOOTSTRAP_ONLY',expose:true}
+    );
+  }
   return (
     await query(
       'update profiles set role=$2,updated_at=now() where id=$1 returning id,username,email,role,status',
