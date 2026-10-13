@@ -592,8 +592,18 @@ async function createWalletOrder(
 
 async function createGatewayOrder(
   userId,
-  {idempotencyKey,returnUrl,buyNowProductId=null}
+  {idempotencyKey,returnUrl,buyNowProductId=null,paymentMode='LIVE'}
 ){
+  const normalizedPaymentMode=String(paymentMode||'LIVE').toUpperCase();
+
+  if(!['SANDBOX','LIVE'].includes(normalizedPaymentMode)){
+    throw badRequest(
+      'INVALID_PAYMENT_MODE',
+      'Mode pembayaran tidak valid.'
+    );
+  }
+
+  const isSandbox=normalizedPaymentMode==='SANDBOX';
   const existing=idempotencyKey
     ? (
         await query(
@@ -766,7 +776,7 @@ async function createGatewayOrder(
           $2,
           $3,
           $3,
-          'GATEWAY',
+          $9,
           'PENDING',
           $4,
           $5,
@@ -783,7 +793,8 @@ async function createGatewayOrder(
           contact.email,
           contact.countryCode,
           contact.dialCode,
-          contact.phone
+          contact.phone,
+          isSandbox ? 'SANDBOX' : 'GATEWAY'
         ]
       )
     ).rows[0];
@@ -809,13 +820,15 @@ async function createGatewayOrder(
         ]
       );
 
-      await client.query(
-        'update products set reserved_stock=reserved_stock+$2 where id=$1',
-        [
-          item.product_id,
-          item.quantity
-        ]
-      );
+      if(!isSandbox){
+        await client.query(
+          'update products set reserved_stock=reserved_stock+$2 where id=$1',
+          [
+            item.product_id,
+            item.quantity
+          ]
+        );
+      }
     }
 
     return {

@@ -1,5 +1,9 @@
+<% const paymentMode=String(payment.raw_reference?.paymentMode || (payment.raw_reference?.isTest===true ? 'SANDBOX' : 'LIVE')).toUpperCase(); %>
+<% const sandboxResult=String(payment.raw_reference?._sandboxResult||'').toUpperCase(); %>
+<% const paymentDisplayStatus=paymentMode==='SANDBOX' && sandboxResult ? sandboxResult : payment.status; %>
+<% const paymentDisplayLabel=paymentMode==='SANDBOX' && sandboxResult ? (sandboxResult==='PAID' ? 'Berhasil (simulasi)' : labelStatus(sandboxResult)) : labelStatus(payment.status); %>
 <section class="page-shell narrow"><div class="page-header"><div><div class="eyebrow">Pembayaran</div><h1>Status pembayaran</h1><p>ID pembayaran <code><%= payment.id %></code></p></div><span
-  class="badge badge-<%= String(payment.status||'').toLowerCase() %>"
+  class="badge badge-<%= String(paymentDisplayStatus||'').toLowerCase() %>"
   data-label-pending="<%= labelStatus('PENDING') %>"
   data-label-processing="<%= labelStatus('PROCESSING') %>"
   data-label-paid="<%= labelStatus('PAID') %>"
@@ -7,7 +11,7 @@
   data-label-expired="<%= labelStatus('EXPIRED') %>"
   data-label-refunded="<%= labelStatus('REFUNDED') %>"
   data-label-cancelled="<%= labelStatus('CANCELLED') %>"
-><%= labelStatus(payment.status) %></span></div><div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted">Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div>
+><%= paymentDisplayLabel %></span></div><div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Mode pembayaran</span><b><%= paymentMode==='SANDBOX' ? 'Sandbox (simulasi)' : 'Live' %></b></div><% if(paymentMode==='SANDBOX' && sandboxResult){ %><div class="summary-row"><span>Hasil webhook Sandbox</span><b><%= sandboxResult==='PAID' ? 'Berhasil diterima (simulasi)' : labelStatus(sandboxResult) %></b></div><% } %><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted">Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div>
 <% const buatqrisImage = payment.raw_reference?.qr_url || payment.raw_reference?.qris_image || null; %>
 <% if (String(payment.provider || '').toLowerCase() === 'buatqris' && buatqrisImage) { %>
 <div class="panel">

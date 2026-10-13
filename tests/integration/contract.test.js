@@ -45,7 +45,7 @@ test('OWNER role cannot be assigned through the normal role API/repository',()=>
 });
 test('gateway order checks payment readiness before reserving stock',()=>{
   const s=fs.readFileSync(path.join(root,'src/controllers/api.controller.js'),'utf8');
-  assert.match(s,/payment\.assertProviderReady\(\);const created=await orders\.createGatewayOrder/);
+  assert.match(s,/payment\.assertProviderReady\(\{testMode:paymentMode==='SANDBOX'\}\);[\s\S]*?orders\.createGatewayOrder/);
 });
 test('deposit idempotency is scoped and lookup is user-bound',()=>{
   const s=fs.readFileSync(path.join(root,'src/services/deposit/deposit.service.js'),'utf8');

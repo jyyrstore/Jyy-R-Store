@@ -114,12 +114,170 @@ const cartController={
 };
 const orderController={
  preview:async(req,res)=>ok(res,await orders.preview(req.user.id)),
- create:async(req,res)=>{const method=req.body.paymentMethod||'BALANCE';const buyNowProductId=req.body.buyNowProductId||null;if(method==='BALANCE')return ok(res,await orders.createWalletOrder(req.user.id,req.body.idempotencyKey||crypto.randomUUID(),{buyNowProductId}),201);const returnUrl=safeSameOriginUrl(req.body.returnUrl,'/orders',loadEnv().APP_ALLOWED_URLS);payment.assertProviderReady();const created=await orders.createGatewayOrder(req.user.id,{idempotencyKey:req.body.idempotencyKey||crypto.randomUUID(),returnUrl,buyNowProductId});const reviewReturnUrl=(()=>{try{const url=new URL(returnUrl);url.searchParams.set('reviewOrder',created.order.id);return url.toString();}catch{return returnUrl;}})();const p=await payment.createForOrder(req.user.id,created.order,reviewReturnUrl);return ok(res,{...created,payment:p},201)},
+ create:async(req,res)=>{
+   const method=String(req.body.paymentMethod||'BALANCE').toUpperCase();
+   const buyNowProductId=req.body.buyNowProductId||null;
+
+   if(method==='BALANCE'){
+     return ok(
+       res,
+       await orders.createWalletOrder(
+         req.user.id,
+         req.body.idempotencyKey||crypto.randomUUID(),
+         {buyNowProductId}
+       ),
+       201
+     );
+   }
+
+   const paymentMode=
+     method==='SANDBOX'
+       ? 'SANDBOX'
+       : ['LIVE','GATEWAY'].includes(method)
+         ? 'LIVE'
+         : null;
+
+   if(!paymentMode){
+     throw Object.assign(
+       new Error('Metode pembayaran tidak valid.'),
+       {status:400,code:'INVALID_PAYMENT_METHOD',expose:true}
+     );
+   }
+
+   if(paymentMode==='SANDBOX' && req.profile?.role!=='OWNER'){
+     throw Object.assign(
+       new Error('Mode Sandbox hanya dapat digunakan oleh Owner.'),
+       {status:403,code:'SANDBOX_OWNER_ONLY',expose:true}
+     );
+   }
+
+   const env=loadEnv();
+   const providerName=String(env.PAYMENT_PROVIDER||'generic-json').toLowerCase();
+
+   if(paymentMode==='SANDBOX' && providerName!=='buatqris'){
+     throw Object.assign(
+       new Error('Mode Sandbox saat ini hanya didukung oleh BuatQris.'),
+       {status:400,code:'SANDBOX_PROVIDER_UNSUPPORTED',expose:true}
+     );
+   }
+
+   if(
+     paymentMode==='SANDBOX' &&
+     env.NODE_ENV==='production' &&
+     !env.BUATQRIS_ALLOW_PRODUCTION_SANDBOX
+   ){
+     throw Object.assign(
+       new Error('Sandbox Production belum diizinkan.'),
+       {status:503,code:'SANDBOX_PRODUCTION_DISABLED',expose:true}
+     );
+   }
+
+   payment.assertProviderReady({testMode:paymentMode==='SANDBOX'});
+
+   const returnUrl=safeSameOriginUrl(
+     req.body.returnUrl,
+     '/orders',
+     env.APP_ALLOWED_URLS
+   );
+
+   const created=await orders.createGatewayOrder(
+     req.user.id,
+     {
+       idempotencyKey:req.body.idempotencyKey||crypto.randomUUID(),
+       returnUrl,
+       buyNowProductId,
+       paymentMode
+     }
+   );
+
+   // Idempotency dapat mengembalikan order lama. Jangan mengganti mode
+   // payment jika metode pembayaran pada order tersebut berbeda.
+   const persistedMethod=String(
+     created.order?.payment_method||''
+   ).toUpperCase();
+
+   const persistedPaymentMode=
+     persistedMethod==='SANDBOX'
+       ? 'SANDBOX'
+       : ['GATEWAY','LIVE'].includes(persistedMethod)
+         ? 'LIVE'
+         : null;
+
+   if(persistedPaymentMode!==paymentMode){
+     throw Object.assign(
+       new Error(
+         'Mode pembayaran tidak cocok dengan order yang sudah tersimpan.'
+       ),
+       {
+         status:409,
+         code:'ORDER_PAYMENT_MODE_MISMATCH',
+         expose:true
+       }
+     );
+   }
+
+   const reviewReturnUrl=(()=>{
+     try{
+       const url=new URL(returnUrl);
+       url.searchParams.set('reviewOrder',created.order.id);
+       return url.toString();
+     }catch{return returnUrl;}
+   })();
+
+   const p=await payment.createForOrder(
+     req.user.id,
+     created.order,
+     reviewReturnUrl,
+     {paymentMode}
+   );
+   return ok(res,{...created,payment:p},201)
+ },
  list:async(req,res)=>ok(res,await orders.getUserOrders(req.user.id,req.query)),
  detail:async(req,res)=>{const o=await require('../repositories/orders.repository').findForUser(req.params.id,req.user.id); if(!o) throw Object.assign(new Error('Order not found.'),{status:404,code:'ORDER_NOT_FOUND',expose:true});return ok(res,o)}
 };
 const paymentController={
- create:async(req,res)=>{const order=await require('../repositories/orders.repository').findForUser(req.body.orderId,req.user.id);if(!order)throw Object.assign(new Error('Order not found.'),{status:404,code:'ORDER_NOT_FOUND',expose:true});const returnUrl=safeSameOriginUrl(req.body.returnUrl,'/orders',loadEnv().APP_ALLOWED_URLS);return ok(res,await payment.createForOrder(req.user.id,order,returnUrl),201)},
+ create:async(req,res)=>{
+     const order=await require('../repositories/orders.repository').findForUser(
+       req.body.orderId,
+       req.user.id
+     );
+     if(!order){
+       throw Object.assign(
+         new Error('Order not found.'),
+         {status:404,code:'ORDER_NOT_FOUND',expose:true}
+       );
+     }
+
+     const paymentMode=
+       String(order.payment_method||'').toUpperCase()==='SANDBOX'
+         ? 'SANDBOX'
+         : 'LIVE';
+
+     if(paymentMode==='SANDBOX' && req.profile?.role!=='OWNER'){
+       throw Object.assign(
+         new Error('Mode Sandbox hanya dapat digunakan oleh Owner.'),
+         {status:403,code:'SANDBOX_OWNER_ONLY',expose:true}
+       );
+     }
+
+     const env=loadEnv();
+     const returnUrl=safeSameOriginUrl(
+       req.body.returnUrl,
+       '/orders',
+       env.APP_ALLOWED_URLS
+     );
+
+     return ok(
+       res,
+       await payment.createForOrder(
+         req.user.id,
+         order,
+         returnUrl,
+         {paymentMode}
+       ),
+       201
+     )
+   },
  status:async(req,res)=>{
     const p=await payment.getStatus(req.params.id,req.user.id);
     return ok(res,{

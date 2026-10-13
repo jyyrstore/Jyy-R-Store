@@ -225,14 +225,28 @@ async function checkout(req,res,next){
     const walletSufficient=
       Number(walletState?.balance||0)>=Number(preview.total||0);
 
+    const env=loadEnv();
     const requested=String(req.query.payment||'').toUpperCase();
+    const isOwner=req.profile?.role==='OWNER';
+    const providerName=String(env.PAYMENT_PROVIDER||'generic-json').toLowerCase();
+
+    const sandboxAvailable=Boolean(
+      isOwner &&
+      providerName==='buatqris' &&
+      (
+        env.NODE_ENV!=='production' ||
+        env.BUATQRIS_ALLOW_PRODUCTION_SANDBOX
+      )
+    );
 
     const selectedPaymentMethod=
-      requested==='GATEWAY'
-        ? 'GATEWAY'
-        : walletSufficient
-          ? 'BALANCE'
-          : 'GATEWAY';
+      requested==='SANDBOX' && sandboxAvailable
+        ? 'SANDBOX'
+        : ['LIVE','GATEWAY'].includes(requested)
+          ? 'LIVE'
+          : walletSufficient
+            ? 'BALANCE'
+            : 'LIVE';
 
     res.render(
       'app',
@@ -241,7 +255,9 @@ async function checkout(req,res,next){
         preview,
         wallet:walletState,
         walletSufficient,
-        selectedPaymentMethod
+        selectedPaymentMethod,
+        isOwner,
+        sandboxAvailable
       })
     );
   }catch(e){

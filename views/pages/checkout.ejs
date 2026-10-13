@@ -127,16 +127,38 @@
             </span>
           </label>
 
-          <label class="payment-option <%= selectedPaymentMethod==='GATEWAY' ? 'is-selected' : '' %>">
+          <% if(isOwner){ %>
+            <label class="payment-option <%= selectedPaymentMethod==='SANDBOX' ? 'is-selected' : '' %> <%= sandboxAvailable ? '' : 'is-unavailable' %>">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="SANDBOX"
+                <%= selectedPaymentMethod==='SANDBOX' ? 'checked' : '' %>
+                <%= sandboxAvailable ? '' : 'disabled' %>
+              >
+              <span class="payment-option__copy">
+                <strong>Sandbox · Pengujian</strong>
+                <small>
+                  <% if(sandboxAvailable){ %>
+                    Uji pembayaran tanpa saldo wallet, stok nyata, atau pemberian produk.
+                  <% } else { %>
+                    Memerlukan provider BuatQris dan izin Sandbox Production jika diperlukan.
+                  <% } %>
+                </small>
+              </span>
+            </label>
+          <% } %>
+
+          <label class="payment-option <%= selectedPaymentMethod==='LIVE' ? 'is-selected' : '' %>">
             <input
               type="radio"
               name="paymentMethod"
-              value="GATEWAY"
-              <%= selectedPaymentMethod==='GATEWAY' ? 'checked' : '' %>
+              value="LIVE"
+              <%= selectedPaymentMethod==='LIVE' ? 'checked' : '' %>
             >
             <span class="payment-option__copy">
-              <strong>Pembayaran online</strong>
-              <small>Bayar melalui metode online yang tersedia.</small>
+              <strong>Live · Pembayaran sungguhan</strong>
+              <small>Bayar melalui provider pembayaran yang dikonfigurasi.</small>
             </span>
           </label>
         </div>

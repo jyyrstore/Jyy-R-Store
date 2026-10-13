@@ -21,13 +21,17 @@ const PAYMENT_TRANSITIONS={
   REFUNDED:new Set(['REFUNDED'])
 };
 
-function assertProviderReady(){
+function assertProviderReady({testMode}={}){
   const currentEnv=loadEnv();
+  const effectiveTestMode=
+    testMode===undefined
+      ? currentEnv.BUATQRIS_TEST_MODE
+      : Boolean(testMode);
 
   if(
     String(currentEnv.PAYMENT_PROVIDER||'').toLowerCase()==='buatqris' &&
     currentEnv.NODE_ENV==='production' &&
-    currentEnv.BUATQRIS_TEST_MODE &&
+    effectiveTestMode &&
     !currentEnv.BUATQRIS_ALLOW_PRODUCTION_SANDBOX
   ){
     throw Object.assign(
@@ -50,8 +54,63 @@ function assertProviderReady(){
   return true;
 }
 
-async function createForOrder(userId,order,returnUrl){
-  assertProviderReady();
+async function createForOrder(userId,order,returnUrl,options={}){
+  const providerName=String(
+    loadEnv().PAYMENT_PROVIDER||'generic-json'
+  ).toLowerCase();
+
+  const paymentMode=String(
+    options.paymentMode ||
+    (
+      String(order?.payment_method||'').toUpperCase()==='SANDBOX'
+        ? 'SANDBOX'
+        : 'LIVE'
+    )
+  ).toUpperCase();
+
+  if(!['SANDBOX','LIVE'].includes(paymentMode)){
+    throw badRequest(
+      'INVALID_PAYMENT_MODE',
+      'Mode pembayaran tidak valid.'
+    );
+  }
+
+  // Mode payment harus cocok dengan metode yang tersimpan pada order.
+  // Jangan izinkan order Saldo atau order dengan mode lain membuat intent.
+  const persistedOrderMethod=String(
+    order?.payment_method||''
+  ).toUpperCase();
+
+  const persistedOrderMode=
+    persistedOrderMethod==='SANDBOX'
+      ? 'SANDBOX'
+      : ['GATEWAY','LIVE'].includes(persistedOrderMethod)
+        ? 'LIVE'
+        : null;
+
+  if(!persistedOrderMode){
+    throw badRequest(
+      'ORDER_PAYMENT_METHOD_INVALID',
+      'Pembayaran online hanya tersedia untuk order gateway.'
+    );
+  }
+
+  if(persistedOrderMode!==paymentMode){
+    throw badRequest(
+      'PAYMENT_MODE_MISMATCH',
+      'Mode pembayaran tidak cocok dengan metode pembayaran order.'
+    );
+  }
+
+  if(paymentMode==='SANDBOX' && providerName!=='buatqris'){
+    throw badRequest(
+      'SANDBOX_PROVIDER_UNSUPPORTED',
+      'Mode Sandbox hanya didukung oleh BuatQris.'
+    );
+  }
+
+  const testMode=paymentMode==='SANDBOX';
+  assertProviderReady({testMode});
 
   const profile=await profiles.findById(userId).catch(()=>null);
 
@@ -66,9 +125,6 @@ async function createForOrder(userId,order,returnUrl){
 
   const customerEmail=order?.recipient_email||profile?.email||null;
   const idempotencyKey=`order:${order.id}:payment`;
-  const providerName=String(
-    loadEnv().PAYMENT_PROVIDER||'generic-json'
-  ).toLowerCase();
 
   /*
    * Transaction #1:
@@ -106,6 +162,31 @@ async function createForOrder(userId,order,returnUrl){
         [locked.id]
       )
     ).rows[0];
+
+    if(existing && providerName==='buatqris'){
+      const raw=existing.raw_reference||{};
+      const storedTest=raw.isTest ?? raw.is_test;
+      const inferredMode=
+        storedTest==null
+          ? null
+          : (
+              storedTest===true ||
+              storedTest===1 ||
+              ['true','1','yes','test'].includes(
+                String(storedTest).toLowerCase()
+              )
+                ? 'SANDBOX'
+                : 'LIVE'
+            );
+      const storedMode=String(raw.paymentMode||'').toUpperCase()||inferredMode;
+
+      if(storedMode && storedMode!==paymentMode){
+        throw badRequest(
+          'PAYMENT_MODE_MISMATCH',
+          'Order ini sudah memiliki payment intent dengan mode berbeda. Jangan membuat transaksi kedua.'
+        );
+      }
+    }
 
     if(existing){
       // Baris payment sudah terkunci; gunakan waktu aktual database.
@@ -197,7 +278,11 @@ async function createForOrder(userId,order,returnUrl){
           "update payments set raw_reference=coalesce(raw_reference,'{}'::jsonb)||$2::jsonb,expires_at=clock_timestamp()+interval '30 minutes',updated_at=clock_timestamp() where id=$1 and status='PENDING' and coalesce(expires_at,created_at+interval '30 minutes')>clock_timestamp() returning id",
           [
             existing.id,
-            JSON.stringify({state:'PROVIDER_RETRY_IN_PROGRESS'})
+            JSON.stringify({
+              state:'PROVIDER_RETRY_IN_PROGRESS',
+              paymentMode,
+              isTest:testMode
+            })
           ]
         );
 
@@ -257,7 +342,9 @@ async function createForOrder(userId,order,returnUrl){
           loadEnv().PAYMENT_PROVIDER||'generic-json',
           Number(locked.total),
           {
-            state:'PROVIDER_PENDING'
+            state:'PROVIDER_PENDING',
+            paymentMode,
+            isTest:testMode
           },
           idempotencyKey
         ]
@@ -318,6 +405,7 @@ async function createForOrder(userId,order,returnUrl){
       amount:prepared.amount,
       customer:prepared.customer,
       returnUrl,
+      testMode,
       idempotencyKey:prepared.idempotencyKey
     });
   }catch(error){
@@ -399,6 +487,10 @@ async function createForOrder(userId,order,returnUrl){
           prepared.amount,
           {
             ...(result.raw||{}),
+            paymentMode,
+            providerReportedIsTest:
+              result.raw?.isTest ?? result.raw?.is_test ?? null,
+            isTest:testMode,
             paymentUrl:result.paymentUrl||null
           },
           prepared.idempotencyKey,
@@ -630,22 +722,119 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
     }
 
     if(providerName==='buatqris' && parsed.isTest){
-      // Sandbox callbacks never mutate payment/order state or wallet balance.
+      const sandboxOrder=Boolean(
+        payment.order_id &&
+        lockedOrder &&
+        String(lockedOrder.payment_method||'').toUpperCase()==='SANDBOX'
+      );
+
+      if(!sandboxOrder){
+        await client.query(
+          'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
+          [
+            'PAYMENT_WEBHOOK_SANDBOX_IGNORED',
+            'payment',
+            payment.id,
+            {reference:parsed.reference,eventId:parsed.eventId,status:next,is_test:true}
+          ]
+        );
+        return {
+          duplicate:false,
+          ignored:true,
+          sandbox:true,
+          paymentId:payment.id,
+          paymentStatus:payment.status
+        };
+      }
+
+      const sandboxCurrent=String(payment.status||'PENDING').toUpperCase();
+      const sandboxAllowed=PAYMENT_TRANSITIONS[sandboxCurrent];
+      const lateSandboxSuccess=
+        next==='PAID' &&
+        ['FAILED','EXPIRED','CANCELLED'].includes(sandboxCurrent);
+
+      if((!sandboxAllowed || !sandboxAllowed.has(next)) && !lateSandboxSuccess){
+        await client.query(
+          'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
+          [
+            'PAYMENT_WEBHOOK_SANDBOX_IGNORED',
+            'payment',
+            payment.id,
+            {reference:parsed.reference,eventId:parsed.eventId,status:next,reason:'INVALID_SANDBOX_STATE_TRANSITION',is_test:true}
+          ]
+        );
+        return {
+          duplicate:false,
+          ignored:true,
+          sandbox:true,
+          paymentId:payment.id,
+          paymentStatus:sandboxCurrent
+        };
+      }
+
+      // Success sandbox is visible as a simulation but never as real revenue.
+      const sandboxStoredStatus=next==='PAID'?'CANCELLED':next;
+
+      await client.query(
+        `update payments
+         set reference=coalesce(reference,$2),
+             status=$3::payment_status,
+             raw_reference=coalesce(raw_reference,'{}'::jsonb)||
+               jsonb_build_object(
+                 '_lastWebhook',$4::jsonb,
+                 '_sandboxResult',$5::text,
+                 'paymentMode','SANDBOX',
+                 'isTest',true
+               ),
+             updated_at=now()
+         where id=$1`,
+        [payment.id,parsed.reference,sandboxStoredStatus,payload,next]
+      );
+
+      let sandboxOrderStatus=lockedOrder.status;
+      if(next!=='PENDING' && lockedOrder.status==='PENDING'){
+        const targetOrderStatus=next==='PAID'?'CANCELLED':next;
+        const updatedOrder=(
+          await client.query(
+            `update orders
+             set status=$2::order_status,updated_at=now()
+             where id=$1
+               and payment_method='SANDBOX'
+               and status='PENDING'
+             returning status`,
+            [lockedOrder.id,targetOrderStatus]
+          )
+        ).rows[0];
+        if(updatedOrder) sandboxOrderStatus=updatedOrder.status;
+      }
+
       await client.query(
         'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
         [
-          'PAYMENT_WEBHOOK_SANDBOX_IGNORED',
+          'PAYMENT_WEBHOOK_SANDBOX_PROCESSED',
           'payment',
           payment.id,
-          {reference:parsed.reference,eventId:parsed.eventId,status:next,is_test:true}
+          {
+            reference:parsed.reference,
+            eventId:parsed.eventId,
+            simulatedResult:next,
+            storedPaymentStatus:sandboxStoredStatus,
+            orderStatus:sandboxOrderStatus,
+            is_test:true,
+            sideEffectsSuppressed:true
+          }
         ]
       );
+
       return {
         duplicate:false,
-        ignored:true,
         sandbox:true,
+        sideEffectsSuppressed:true,
         paymentId:payment.id,
-        paymentStatus:payment.status
+        paymentStatus:sandboxStoredStatus,
+        sandboxResult:next,
+        orderId:lockedOrder.id,
+        orderStatus:sandboxOrderStatus
       };
     }
 

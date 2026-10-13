@@ -43,16 +43,18 @@ async function run(){
             "update orders set status='EXPIRED',updated_at=now() where id=$1",
             [order.id]
           );
-          const items=(await client.query(
-            'select product_id,quantity from order_items where order_id=$1',
-            [order.id]
-          )).rows;
+          if(order.payment_method!=='SANDBOX'){
+            const items=(await client.query(
+              'select product_id,quantity from order_items where order_id=$1',
+              [order.id]
+            )).rows;
 
-          for(const item of items){
-            await client.query(
-              'update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',
-              [item.product_id,item.quantity]
-            );
+            for(const item of items){
+              await client.query(
+                'update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',
+                [item.product_id,item.quantity]
+              );
+            }
           }
         }
       }
@@ -70,7 +72,7 @@ async function run(){
     await query(
       `select o.id
        from orders o
-       where o.payment_method='GATEWAY'
+       where o.payment_method in ('GATEWAY','SANDBOX')
          and o.status='PENDING'
          and o.created_at < now()-interval '30 minutes'
          and not exists(
@@ -94,7 +96,7 @@ async function run(){
 
       if(
         !order||
-        order.payment_method!=='GATEWAY'||
+        !['GATEWAY','SANDBOX'].includes(order.payment_method)||
         order.status!=='PENDING'
       ){
         return;
@@ -111,18 +113,20 @@ async function run(){
         return;
       }
 
-      const items=(
-        await client.query(
-          'select product_id,quantity from order_items where order_id=$1',
-          [order.id]
-        )
-      ).rows;
+      if(order.payment_method!=='SANDBOX'){
+        const items=(
+          await client.query(
+            'select product_id,quantity from order_items where order_id=$1',
+            [order.id]
+          )
+        ).rows;
 
-      for(const item of items){
-        await client.query(
-          'update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',
-          [item.product_id,item.quantity]
-        );
+        for(const item of items){
+          await client.query(
+            'update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',
+            [item.product_id,item.quantity]
+          );
+        }
       }
 
       await client.query(

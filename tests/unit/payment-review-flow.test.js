@@ -103,7 +103,7 @@ test('gateway payment callback becomes order-specific',()=>{
 
   assert.match(
     source,
-    /createForOrder\(req\.user\.id,created\.order,reviewReturnUrl\)/
+    /createForOrder\(\s*req\.user\.id,\s*created\.order,\s*reviewReturnUrl,\s*\{paymentMode\}\s*\)/
   );
 });
 

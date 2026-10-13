@@ -760,7 +760,7 @@ test('gateway expiration recovers orders without payment rows',()=>{
 
   assert.match(
     source,
-    /payment_method='GATEWAY'/
+    /payment_method in \('GATEWAY','SANDBOX'\)/
   );
 
   assert.match(
