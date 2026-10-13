@@ -50,7 +50,7 @@ test('payment provider call is outside the DB transaction',()=>{
   const source=read('src/services/payment/payment.service.js');
 
   const prepared=source.indexOf('const prepared=await withTransaction');
-  const providerCall=source.indexOf('const result=await provider().createPayment',prepared);
+  const providerCall=source.indexOf('result=await provider().createPayment',prepared);
   const finalize=source.indexOf('withTransaction',providerCall);
 
   assert.ok(prepared>=0);
@@ -740,7 +740,7 @@ test('gateway payment creates a local payment placeholder before provider call',
   );
 
   const providerCall=source.indexOf(
-    "const result=await provider().createPayment"
+    "result=await provider().createPayment"
   );
 
   assert.ok(placeholder>=0);
@@ -887,7 +887,7 @@ test('payment webhook can recover placeholder by order id',()=>{
 
   assert.match(
     source,
-    /if\(!payment&&parsed\.orderId\)/
+    /if\(!candidate&&parsed\.orderId\)/
   );
 
   assert.match(

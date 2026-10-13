@@ -124,8 +124,7 @@ function loadEnv() {
         'BUATQRIS_ACCOUNT_ID',
         'BUATQRIS_SECRET_TOKEN',
         'BUATQRIS_SIGNING_SECRET',
-        'BUATQRIS_CALLBACK_URL',
-        'XENDIT_WEBHOOK_TOKEN'
+        'BUATQRIS_CALLBACK_URL'
       );
     } else if (paymentProvider === 'generic-json') {
       required.push('PAYMENT_WEBHOOK_SECRET');

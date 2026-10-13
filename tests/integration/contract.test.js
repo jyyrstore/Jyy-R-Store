@@ -74,6 +74,84 @@ test('deposit placeholder is created before external provider call',()=>{
   assert.match(s,/PROVIDER_RESULT_UNKNOWN/);
 });
 
+
+test('BuatQris order retry blocks uncertain placeholders',()=>{
+  const s=fs.readFileSync(
+    path.join(root,'src/services/payment/payment.service.js'),
+    'utf8'
+  );
+  assert.match(s,/providerName==='buatqris'/);
+  assert.match(s,/provisioningBlocked:true/);
+  assert.match(s,/PAYMENT_PROVISIONING_IN_PROGRESS/);
+  assert.match(s,/PROVIDER_RESULT_UNKNOWN/);
+});
+
+test('order payment locks follow order before payment',()=>{
+  const s=fs.readFileSync(
+    path.join(root,'src/services/payment/payment.service.js'),
+    'utf8'
+  );
+  const start=s.indexOf('async function processWebhook(');
+  const candidate=s.indexOf(
+    'select * from payments where reference=$1 and lower(provider)=lower($2)',
+    start
+  );
+  const orderLock=s.indexOf(
+    'select * from orders where id=$1 for update',
+    start
+  );
+  const paymentLock=s.indexOf(
+    'select * from payments where id=$1 for update',
+    start
+  );
+  assert.ok(start>=0 && candidate>start && orderLock>candidate);
+  assert.ok(paymentLock>orderLock);
+
+  const job=fs.readFileSync(
+    path.join(root,'src/jobs/payment-expiration.job.js'),
+    'utf8'
+  );
+  const loop=job.indexOf('for(const payment of expired)');
+  const expiryOrderLock=job.indexOf(
+    'select * from orders where id=$1 for update',
+    loop
+  );
+  const expiryPaymentLock=job.indexOf(
+    'select * from payments where id=$1 for update',
+    loop
+  );
+  assert.ok(loop>=0 && expiryOrderLock>loop);
+  assert.ok(expiryPaymentLock>expiryOrderLock);
+});
+
+test('payment webhook preserves provider metadata',()=>{
+  const s=fs.readFileSync(
+    path.join(root,'src/services/payment/payment.service.js'),
+    'utf8'
+  );
+  assert.match(
+    s,
+    /raw_reference=coalesce\(raw_reference,'\{\}'::jsonb\)\|\|jsonb_build_object\('_lastWebhook',\$4::jsonb\)/
+  );
+  assert.match(s,/reference=coalesce\(reference,\$2\)/);
+});
+
+test('BuatQris production config has no Xendit token dependency',()=>{
+  const s=fs.readFileSync(
+    path.join(root,'src/config/env.js'),
+    'utf8'
+  );
+  const start=s.indexOf("} else if (paymentProvider === 'buatqris') {");
+  const end=s.indexOf(
+    "} else if (paymentProvider === 'generic-json') {",
+    start
+  );
+  assert.ok(start>=0 && end>start);
+  const block=s.slice(start,end);
+  assert.match(block,/BUATQRIS_SIGNING_SECRET/);
+  assert.doesNotMatch(block,/XENDIT_WEBHOOK_TOKEN/);
+});
+
 // END JYYR BUATQRIS CONTRACT TESTS
 
 test('owner APIs require auth + owner middleware',()=>assert.match(route,/const ownerApi=express\.Router\(\); ownerApi\.use\(requireAuth,requireOwner\)/));
@@ -393,3 +471,62 @@ test('BuatQris route is isolated and mounted before JSON parsing',()=>{
   assert.ok(parser>specific);
 });
 // END JYYR_BUATQRIS_ISOLATED_ROUTE_TEST
+
+
+// Contracts for late successful order-payment callbacks.
+{
+  const { test } = require('node:test');
+  const assert = require('node:assert/strict');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const source = fs.readFileSync(
+    path.join(__dirname, '../../src/services/payment/payment.service.js'),
+    'utf8'
+  );
+
+  test('late paid order requires reconciliation contract', () => {
+    assert.match(source, /const lateOrderPayment=/);
+    assert.match(
+      source,
+      /PAYMENT_PAID_ORDER_REQUIRES_RECONCILIATION/
+    );
+    assert.match(
+      source,
+      /if\s*\(\s*next==='PAID'\s*&&\s*order\.status==='PENDING'\s*\)/
+    );
+  });
+
+  test('order ID recovery includes terminal payment states', () => {
+    assert.match(
+      source,
+      /status in \('PENDING','PAID','FAILED','EXPIRED','CANCELLED'\) order by created_at desc limit 1/
+    );
+  });
+}
+
+
+// Contract for safe retries of BuatQris pre-request failures.
+{
+  const { test } = require('node:test');
+  const assert = require('node:assert/strict');
+  const fs = require('node:fs');
+  const path = require('node:path');
+
+  const source = fs.readFileSync(
+    path.join(__dirname, '../../src/services/payment/payment.service.js'),
+    'utf8'
+  );
+
+  test('BuatQris retries only when request was definitely not sent', () => {
+    assert.match(source, /PROVIDER_REQUEST_NOT_SENT/);
+    assert.match(source, /PROVIDER_RESULT_UNKNOWN/);
+    assert.match(source, /PROVIDER_RETRY_IN_PROGRESS/);
+    assert.match(
+      source,
+      /existing\.raw_reference\?\.state\s*===\s*'PROVIDER_REQUEST_NOT_SENT'/
+    );
+    assert.match(source, /BUATQRIS_INVALID_AMOUNT/);
+    assert.match(source, /BUATQRIS_FEE_CONFIG_INVALID/);
+    assert.match(source, /BUATQRIS_METHOD_CONFIG_INVALID/);
+  });
+}

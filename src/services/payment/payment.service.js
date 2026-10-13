@@ -66,6 +66,9 @@ async function createForOrder(userId,order,returnUrl){
 
   const customerEmail=order?.recipient_email||profile?.email||null;
   const idempotencyKey=`order:${order.id}:payment`;
+  const providerName=String(
+    loadEnv().PAYMENT_PROVIDER||'generic-json'
+  ).toLowerCase();
 
   /*
    * Transaction #1:
@@ -119,6 +122,44 @@ async function createForOrder(userId,order,returnUrl){
         };
       }
 
+      /*
+       * BuatQris belum memiliki kontrak idempotensi provider yang
+       * terverifikasi. Placeholder tanpa reference mungkin sedang
+       * diproses, atau transaksi eksternal sudah dibuat tetapi
+       * responsnya hilang. Jangan membuat QR kedua secara otomatis.
+       */
+      const retryKnownNotSent =
+        existing.raw_reference?.state === 'PROVIDER_REQUEST_NOT_SENT';
+
+      /*
+       * Jangan ulangi provisioning yang hasilnya belum pasti.
+       * Hanya error yang diketahui terjadi sebelum request dikirim
+       * yang boleh mencoba lagi menggunakan payment placeholder sama.
+       */
+      if(providerName==='buatqris' && !retryKnownNotSent){
+        return {
+          provisioningBlocked:true,
+          payment:existing
+        };
+      }
+
+      /*
+       * Klaim retry di dalam transaksi saat payment masih terkunci.
+       * Permintaan bersamaan akan melihat state selain NOT_SENT
+       * dan tidak boleh memanggil provider lagi.
+       */
+      if(providerName==='buatqris' && retryKnownNotSent){
+        await client.query(
+          "update payments set raw_reference=coalesce(raw_reference,'{}'::jsonb)||$2::jsonb,updated_at=now() where id=$1 and status='PENDING'",
+          [
+            existing.id,
+            JSON.stringify({state:'PROVIDER_RETRY_IN_PROGRESS'})
+          ]
+        );
+      }
+
+      // Provider lain boleh mencoba ulang menggunakan kunci idempotensi
+      // yang sama apabila kontrak adapter/provider mendukungnya.
       return {
         existing:false,
         paymentId:existing.id,
@@ -187,6 +228,20 @@ async function createForOrder(userId,order,returnUrl){
     };
   });
 
+  if(prepared.provisioningBlocked){
+    throw Object.assign(
+      new Error(
+        'Status pembayaran belum dapat dipastikan. '+
+        'Jangan membuat QR baru; transaksi perlu direkonsiliasi.'
+      ),
+      {
+        status:503,
+        code:'PAYMENT_PROVISIONING_IN_PROGRESS',
+        expose:true
+      }
+    );
+  }
+
   if(prepared.existing){
     return {
       payment:prepared.payment,
@@ -199,13 +254,45 @@ async function createForOrder(userId,order,returnUrl){
    * Provider call is outside the DB transaction.
    * The local placeholder already protects reserved_stock.
    */
-  const result=await provider().createPayment({
-    orderId:prepared.orderId,
-    amount:prepared.amount,
-    customer:prepared.customer,
-    returnUrl,
-    idempotencyKey:prepared.idempotencyKey
-  });
+  let result;
+  try{
+    result=await provider().createPayment({
+      orderId:prepared.orderId,
+      amount:prepared.amount,
+      customer:prepared.customer,
+      returnUrl,
+      idempotencyKey:prepared.idempotencyKey
+    });
+  }catch(error){
+    /*
+     * Timeout atau error jaringan tidak membuktikan provider gagal
+     * membuat transaksi. Simpan status rekonsiliasi tanpa menghapus
+     * metadata yang sudah ada. Retry BuatQris akan diblokir di atas.
+     */
+    if(providerName==='buatqris'){
+      const definitelyNotSent = new Set([
+        'BUATQRIS_NOT_CONFIGURED',
+        'BUATQRIS_INVALID_AMOUNT',
+        'BUATQRIS_FEE_CONFIG_INVALID',
+        'BUATQRIS_METHOD_CONFIG_INVALID'
+      ]).has(String(error?.code||''));
+      await query(
+        "update payments set raw_reference=coalesce(raw_reference,'{}'::jsonb)||$2::jsonb,updated_at=now() where id=$1 and status='PENDING'",
+        [
+          prepared.paymentId,
+          JSON.stringify({
+            state: definitelyNotSent
+              ? 'PROVIDER_REQUEST_NOT_SENT'
+              : 'PROVIDER_RESULT_UNKNOWN',
+            errorCode:String(
+              error?.code||'PROVIDER_CALL_FAILED'
+            ).slice(0,80)
+          })
+        ]
+      ).catch(()=>{});
+    }
+    throw error;
+  }
 
   /*
    * Transaction #2:
@@ -350,29 +437,67 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
   }
 
   const result=await withTransaction(async(client)=>{
+    let candidate=null;
     let payment=null;
+    let lockedOrder=null;
 
+    /*
+     * Baca kandidat tanpa mengunci payment. Untuk payment order, lock
+     * harus diperoleh dengan urutan ORDER -> PAYMENT, sama seperti
+     * createForOrder dan expiration job.
+     */
     if(parsed.reference){
-      payment=(
+      candidate=(
         await client.query(
-          'select * from payments where reference=$1 and lower(provider)=lower($2) for update',
+          'select * from payments where reference=$1 and lower(provider)=lower($2)',
           [parsed.reference,providerName]
         )
       ).rows[0]||null;
     }
 
     /*
-     * Recovery path for the rare case where the provider succeeded but
-     * the local result update failed. Providers include orderId in
-     * metadata, so the signed webhook can recover the placeholder.
+     * Recovery jika callback datang sebelum reference sempat tersimpan.
      */
-    if(!payment&&parsed.orderId){
-      payment=(
+    if(!candidate&&parsed.orderId){
+      candidate=(
         await client.query(
-          "select * from payments where order_id=$1 and lower(provider)=lower($2) and status in ('PENDING','PAID') order by created_at desc limit 1 for update",
+          "select * from payments where order_id=$1 and lower(provider)=lower($2) and status in ('PENDING','PAID','FAILED','EXPIRED','CANCELLED') order by created_at desc limit 1",
           [parsed.orderId,providerName]
         )
       ).rows[0]||null;
+    }
+
+    if(candidate?.order_id){
+      lockedOrder=(
+        await client.query(
+          'select * from orders where id=$1 for update',
+          [candidate.order_id]
+        )
+      ).rows[0]||null;
+
+      payment=(
+        await client.query(
+          'select * from payments where id=$1 for update',
+          [candidate.id]
+        )
+      ).rows[0]||null;
+    }else if(candidate){
+      // Deposit tidak mempunyai order. Jalur ini mempertahankan
+      // urutan PAYMENT -> DEPOSIT yang digunakan webhook deposit.
+      payment=(
+        await client.query(
+          'select * from payments where id=$1 for update',
+          [candidate.id]
+        )
+      ).rows[0]||null;
+    }
+
+    // Kandidat dapat berubah atau hilang selagi lock diperoleh.
+    if(
+      payment &&
+      String(payment.provider||'').toLowerCase()!==providerName
+    ){
+      payment=null;
     }
 
     if(!payment){
@@ -470,7 +595,13 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
     const current=String(payment.status||'PENDING').toUpperCase();
     const allowed=PAYMENT_TRANSITIONS[current];
 
-    if(!allowed || !allowed.has(next)){
+    const lateOrderPayment=(
+      next==='PAID' &&
+      Boolean(payment.order_id) &&
+      ['FAILED','EXPIRED','CANCELLED'].includes(current)
+    );
+
+    if((!allowed || !allowed.has(next)) && !lateOrderPayment){
       await client.query(
         'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
         [
@@ -496,8 +627,8 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
     }
 
     await client.query(
-      'update payments set status=$2::payment_status,raw_reference=$3,paid_at=case when $2::payment_status=\'PAID\' then coalesce(paid_at,now()) else paid_at end,updated_at=now() where id=$1',
-      [payment.id,next,payload]
+      "update payments set reference=coalesce(reference,$2),status=$3::payment_status,raw_reference=coalesce(raw_reference,'{}'::jsonb)||jsonb_build_object('_lastWebhook',$4::jsonb),paid_at=case when $3::payment_status='PAID' then coalesce(paid_at,now()) else paid_at end,updated_at=now() where id=$1",
+      [payment.id,parsed.reference,next,payload]
     );
 
     if(!payment.order_id){
@@ -516,9 +647,50 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
       await client.query('insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)', ['PAYMENT_WEBHOOK','payment',payment.id,{reference:parsed.reference,status:next,depositId:dep?.id||null}]);
       return {duplicate:false,paymentStatus:next,depositId:dep?.id||null};
     }
-    const order=(await client.query('select * from orders where id=$1 for update',[payment.order_id])).rows[0];
+    const order=lockedOrder;
     if(!order)throw notFound('Order not found.');
-    if(next==='PAID' && order.status!=='PAID'){
+
+    /*
+     * Pembayaran terlambat atau state order tidak normal harus
+     * direkonsiliasi. Jangan memberikan produk secara otomatis.
+     */
+    if(
+      next==='PAID' &&
+      !(
+        current==='PENDING' &&
+        order.status==='PENDING'
+      ) &&
+      !(
+        current==='PAID' &&
+        order.status==='PAID'
+      )
+    ){
+      await client.query(
+        'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
+        [
+          'PAYMENT_PAID_ORDER_REQUIRES_RECONCILIATION',
+          'order',
+          order.id,
+          {
+            paymentId:payment.id,
+            paymentReference:parsed.reference,
+            previousPaymentStatus:current,
+            orderStatus:order.status
+          }
+        ]
+      );
+
+      return {
+        duplicate:false,
+        reconciliationRequired:true,
+        paymentId:payment.id,
+        paymentStatus:next,
+        orderId:order.id,
+        orderStatus:order.status
+      };
+    }
+
+    if(next==='PAID' && order.status==='PENDING'){
       const items=(await client.query('select * from order_items where order_id=$1',[order.id])).rows;
       for(const i of items){
         const p=(await client.query('select stock,reserved_stock from products where id=$1 for update',[i.product_id])).rows[0];
@@ -541,7 +713,7 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
       duplicate:false,
       paymentStatus:next,
       orderId:order.id,
-      orderPaid:next==='PAID'&&order.status!=='PAID',
+      orderPaid:next==='PAID'&&current==='PENDING'&&order.status==='PENDING',
       recipientEmail:order.recipient_email||null,
       orderNumber:order.order_number,
       orderTotal:Number(order.total||0),
