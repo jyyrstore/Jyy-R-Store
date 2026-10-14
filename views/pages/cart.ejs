@@ -96,7 +96,9 @@
             </div>
           </div>
 
-          <form data-recipient-contact-form class="stack-form">
+          <form data-recipient-contact-form class="stack-form" method="POST" action="/cart/contact">
+            <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
+            <input type="hidden" name="returnTo" value="/cart">
             <label class="field">
               <span>Email Penerima</span>
               <input

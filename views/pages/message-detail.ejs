@@ -72,7 +72,11 @@
         <form
           class="message-detail-form"
           data-message-form
+          method="POST"
+          action="/messages"
         >
+          <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
+          <input type="hidden" name="returnTo" value="<%= req.path %>">
 
           <label
             class="message-detail-input"

@@ -1,6 +1,5 @@
 .env
 .env.*
-!.env.example
 node_modules/
 logs/
 coverage/
@@ -17,4 +16,4 @@ Thumbs.db
 .idea/
 .vercel
 .production-fix-backup-*/
-.env*
+!.env.example

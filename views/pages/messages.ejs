@@ -175,7 +175,9 @@
         </div>
       </div>
 
-      <form class="messages-compose-form" data-message-form>
+      <form class="messages-compose-form" data-message-form method="POST" action="/messages">
+          <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
+          <input type="hidden" name="returnTo" value="/messages">
 
         <label class="messages-compose-field" aria-label="Pesan">
 

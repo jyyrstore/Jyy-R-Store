@@ -697,10 +697,10 @@ async function faq(req,res,next){try{res.render('app',base(req,{view:'pages/faq'
 async function security(req,res){res.render('app',base(req,{view:'pages/security'}))}
 async function legal(req,res){const key=requestPath(req).slice(1);const titles={privacy:'Privacy Policy',terms:'Terms of Service',refund:'Refund Policy',dmca:'DMCA / Hak Cipta'}; res.render('app',base(req,{view:'pages/legal',legalKey:key,legalTitle:titles[key]||'Policy'}))}
 async function search(req,res,next){try{res.render('app',base(req,{view:'pages/search',q:req.query.q||'',results:null}));}catch(e){next(e)}}
-async function login(req,res){res.render('app',base(req,{view:'pages/auth',mode:'login',error:req.query.error||''}))}
-async function register(req,res){res.render('app',base(req,{view:'pages/auth',mode:'register',error:req.query.error||''}))}
-async function forgotPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'forgot',error:req.query.error||''}))}
-async function resetPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'reset',error:req.query.error||''}))}
+async function login(req,res){res.render('app',base(req,{view:'pages/auth',mode:'login',error:req.query.error||'',success:req.query.success||''}))}
+async function register(req,res){res.render('app',base(req,{view:'pages/auth',mode:'register',error:req.query.error||'',success:req.query.success||''}))}
+async function forgotPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'forgot',error:req.query.error||'',success:req.query.success||''}))}
+async function resetPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'reset',error:req.query.error||'',success:req.query.success||''}))}
 async function authCallback(req,res,next){
  try{
   const tokenHash=

@@ -1558,3 +1558,10 @@ body.no-scroll{
     animation:none;
   }
 }
+
+
+.alert-success{
+  color:#8ee3ba;
+  background:rgba(69,196,138,.08);
+  border-color:rgba(69,196,138,.28);
+}

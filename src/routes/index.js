@@ -115,6 +115,35 @@ pageRouter.get('/faq',asyncHandler(page.faq));
 pageRouter.get('/security',asyncHandler(page.security)); pageRouter.get('/privacy',asyncHandler(page.legal)); pageRouter.get('/terms',asyncHandler(page.legal)); pageRouter.get('/refund',asyncHandler(page.legal)); pageRouter.get('/dmca',asyncHandler(page.legal));
 pageRouter.get('/auth/login',asyncHandler(page.login));
 pageRouter.get('/auth/register',asyncHandler(page.register));
+
+pageRouter.post(
+  '/auth/login',
+  sensitiveRateLimit(),
+  validate(z.object({
+    email:z.string().email(),
+    password:z.string().min(8)
+  })),
+  asyncHandler(async(req,res,next)=>{
+    try{
+      const authService=require('../services/auth/auth.service');
+      const {setAuthSession}=require('../utils/auth-session');
+      const data=await authService.login(req.body,{
+        ip:req.ip,
+        userAgent:req.get('user-agent')
+      });
+      await setAuthSession(req,data);
+      return res.redirect('/dashboard');
+    }catch(error){
+      if(error?.expose && Number(error.status)<500){
+        return res.redirect(
+          '/auth/login?error='+encodeURIComponent(error.message)
+        );
+      }
+      return next(error);
+    }
+  })
+);
+
 pageRouter.post('/auth/register',
   sensitiveRateLimit(),
   validate(z.object({
@@ -125,14 +154,84 @@ pageRouter.post('/auth/register',
   asyncHandler(async(req,res)=>{
     await require('../services/auth/auth.service').register(req.body);
     return res.redirect(
-      '/auth/login?error=' +
-      encodeURIComponent('Registrasi berhasil. Silakan masuk.')
+      '/auth/login?success=' +
+      encodeURIComponent('Registrasi berhasil. Periksa email jika verifikasi diperlukan.')
     );
   })
 );
 
 pageRouter.get('/auth/forgot-password',asyncHandler(page.forgotPassword));
 pageRouter.get('/auth/reset-password',asyncHandler(page.resetPassword));
+
+pageRouter.post(
+  '/auth/forgot-password',
+  sensitiveRateLimit(),
+  validate(z.object({email:z.string().email()})),
+  asyncHandler(async(req,res,next)=>{
+    try{
+      await require('../services/auth/auth.service')
+        .sendPasswordReset(req.body.email);
+      return res.redirect(
+        '/auth/forgot-password?success='+
+        encodeURIComponent(
+          'Jika email terdaftar, instruksi reset password akan dikirim.'
+        )
+      );
+    }catch(error){
+      if(error?.expose && Number(error.status)<500){
+        return res.redirect(
+          '/auth/forgot-password?error='+
+          encodeURIComponent('Permintaan reset gagal. Coba lagi.')
+        );
+      }
+      return next(error);
+    }
+  })
+);
+
+pageRouter.post(
+  '/auth/reset-password',
+  sensitiveRateLimit(),
+  requireAuth,
+  validate(z.object({password:z.string().min(8)})),
+  asyncHandler(async(req,res,next)=>{
+    try{
+      const authService=require('../services/auth/auth.service');
+      await authService.updatePassword({
+        accessToken:req.session.auth?.accessToken,
+        refreshToken:req.session.auth?.refreshToken
+      },req.body.password);
+
+      await new Promise((resolve,reject)=>{
+        req.session.destroy(error=>{
+          if(error) return reject(error);
+          resolve();
+        });
+      });
+
+      res.clearCookie('connect.sid',{
+        path:'/',
+        httpOnly:true,
+        sameSite:'lax',
+        secure:loadEnv().NODE_ENV==='production'
+      });
+
+      return res.redirect(
+        '/auth/login?success='+
+        encodeURIComponent('Password berhasil diperbarui. Silakan masuk kembali.')
+      );
+    }catch(error){
+      if(error?.expose && Number(error.status)<500){
+        return res.redirect(
+          '/auth/reset-password?error='+
+          encodeURIComponent(error.message)
+        );
+      }
+      return next(error);
+    }
+  })
+);
+
 pageRouter.get('/auth/callback',asyncHandler(page.authCallback));
 pageRouter.get('/dashboard',requireAuth,asyncHandler(page.dashboard));
 pageRouter.get('/cart',requireAuth,asyncHandler(page.cartPage));
@@ -187,6 +286,52 @@ const recipientContactSchema=z.object({
     'Nomor WhatsApp tidak valid.'
   )
 });
+
+
+const pageRecipientContactSchema=recipientContactSchema.extend({
+  returnTo:z.string().max(2048).optional()
+});
+
+pageRouter.post(
+  '/cart/contact',
+  requireAuth,
+  sensitiveRateLimit(),
+  validate(pageRecipientContactSchema),
+  asyncHandler(async(req,res)=>{
+    const {returnTo,...contact}=req.body;
+    await require('../services/cart/cart.service')
+      .setContact(req.user.id,contact);
+
+    const destination=
+      returnTo==='/cart' ||
+      /^\/product\/[a-z0-9-]+$/i.test(String(returnTo||''))
+        ? returnTo
+        : '/cart';
+
+    return res.redirect(destination);
+  })
+);
+
+pageRouter.post(
+  '/messages',
+  requireAuth,
+  sensitiveRateLimit(),
+  validate(z.object({
+    body:z.string().trim().min(1).max(10000),
+    returnTo:z.string().max(2048).optional()
+  })),
+  asyncHandler(async(req,res)=>{
+    await require('../services/support/message.service')
+      .sendFromUser(req.user.id,req.body.body);
+
+    const destination=
+      /^\/messages(?:\/[0-9a-f-]+)?$/i.test(String(req.body.returnTo||''))
+        ? req.body.returnTo
+        : '/messages';
+
+    return res.redirect(destination);
+  })
+);
 
 apiRouter.put(
   '/cart/contact',

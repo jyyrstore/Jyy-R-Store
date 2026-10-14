@@ -38,7 +38,28 @@ const authController={
  login:async(req,res)=>{const d=await auth.login(req.body,{ip:req.ip,userAgent:req.get('user-agent')});await setAuthSession(req,d);return ok(res,{user:d.user},200)},
  logout:async(req,res)=>{await require('../services/audit.service').record(req,{action:'LOGOUT',entityType:'session'}).catch(()=>{});await auth.logout();req.session.destroy(()=>{});return ok(res,{})},
  resetRequest:async(req,res)=>{await auth.sendPasswordReset(req.body.email);return ok(res,{message:'Reset email request accepted.'})},
- resetPassword:async(req,res)=>{await auth.updatePassword({accessToken:req.session.auth?.accessToken,refreshToken:req.session.auth?.refreshToken},req.body.password);return ok(res,{message:'Password updated.'})},
+ resetPassword:async(req,res)=>{
+   await auth.updatePassword({
+     accessToken:req.session.auth?.accessToken,
+     refreshToken:req.session.auth?.refreshToken
+   },req.body.password);
+
+   await new Promise((resolve,reject)=>{
+     req.session.destroy(error=>{
+       if(error) return reject(error);
+       resolve();
+     });
+   });
+
+   res.clearCookie('connect.sid',{
+     path:'/',
+     httpOnly:true,
+     sameSite:'lax',
+     secure:loadEnv().NODE_ENV==='production'
+   });
+
+   return ok(res,{message:'Password updated.'});
+ },
  callback:async(req,res)=>{const d=await auth.exchangeCode(req.query.code);await setAuthSession(req,d);res.redirect(safeNextPath(req.query.next))},
  me:async(req,res)=>ok(res,{user:req.user,profile:req.profile})
 };

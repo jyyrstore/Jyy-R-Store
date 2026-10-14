@@ -51,8 +51,15 @@
         <span><%= error %></span>
       </div>
     <% } %>
+    <% if(success){ %>
+      <div class="alert alert-success" role="status">
+        <%- icon('circle-check') %>
+        <span><%= success %></span>
+      </div>
+    <% } %>
 
-    <form class="stack-form auth-login-form" data-auth-form="login">
+    <form class="stack-form auth-login-form" data-auth-form="login" method="POST" action="/auth/login">
+      <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
       <label class="field">
         <span>Email</span>
         <input
@@ -79,7 +86,7 @@
         <a href="/auth/forgot-password">Lupa password?</a>
       </div>
 
-      <button class="button button-primary button-block auth-login-submit">
+      <button type="submit" class="button button-primary button-block auth-login-submit">
         Masuk
       </button>
     </form>
@@ -108,6 +115,12 @@
     <div class="alert alert-error">
       <%- icon('circle-alert') %>
       <span><%= error %></span>
+    </div>
+  <% } %>
+  <% if(success){ %>
+    <div class="alert alert-success" role="status">
+      <%- icon('circle-check') %>
+      <span><%= success %></span>
     </div>
   <% } %>
 
@@ -156,7 +169,7 @@
         >
       </label>
 
-      <button class="button button-primary button-block">
+      <button type="submit" class="button button-primary button-block">
         Daftar
       </button>
     </form>
@@ -170,7 +183,8 @@
     <h1>Reset password</h1>
     <p>Kami akan mengirim instruksi ke email akun.</p>
 
-    <form class="stack-form" data-auth-form="forgot">
+    <form class="stack-form" data-auth-form="forgot" method="POST" action="/auth/forgot-password">
+      <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
       <label class="field">
         <span>Email</span>
         <input
@@ -180,7 +194,7 @@
         >
       </label>
 
-      <button class="button button-primary button-block">
+      <button type="submit" class="button button-primary button-block">
         Kirim
       </button>
     </form>
@@ -193,7 +207,8 @@
 
     <h1>Password baru</h1>
 
-    <form class="stack-form" data-auth-form="reset">
+    <form class="stack-form" data-auth-form="reset" method="POST" action="/auth/reset-password">
+      <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
       <label class="field">
         <span>Password baru</span>
         <input
@@ -204,7 +219,7 @@
         >
       </label>
 
-      <button class="button button-primary button-block">
+      <button type="submit" class="button button-primary button-block">
         Simpan password
       </button>
     </form>
