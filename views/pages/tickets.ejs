@@ -1,6 +1,158 @@
-<section class="page-shell"><div class="page-header"><div><div class="eyebrow">Bantuan</div><h1>Tiket bantuan</h1></div><button class="button button-primary" data-open-ticket-form><%- icon('plus') %> Buat Tiket</button></div><div class="stack-list"><% tickets.forEach(t=>{ %><a class="list-card" href="/tickets/<%= t.id %>"><div><strong><%= t.ticket_number %></strong><span><%= t.subject %> · <%= t.category %></span></div><div class="align-right"><span class="badge badge-<%= String(t.status||'').toLowerCase() %>"><%= labelStatus(t.status) %></span><span><%= formatDate(t.updated_at) %></span></div></a><% }) %><% if(!tickets.length){ %><%- include('../partials/empty',{title:'Belum ada tiket',description:'Tiket bantuan yang kamu buat akan tampil di sini.'}) %><% } %>
-<%- include('../partials/pagination',{
-  pagination:ticketsPagination,
-  param:'page'
-}) %>
-</div></section>
+<section class="page-shell messages-page tickets-page">
+  <div class="messages-shell">
+
+    <header class="messages-header tickets-header">
+      <div class="messages-header-title">
+        <div class="eyebrow">Bantuan</div>
+        <h1>Tiket bantuan</h1>
+        <p>Lihat status dan lanjutkan penanganan tiket bantuanmu.</p>
+      </div>
+
+      <button
+        class="button button-primary"
+        type="button"
+        data-open-ticket-form
+      >
+        <%- icon('plus') %>
+        Buat Tiket
+      </button>
+    </header>
+
+    <section class="messages-panel" aria-label="Daftar tiket bantuan">
+
+      <div class="messages-panel-top">
+        <div class="messages-panel-heading">
+          <div>
+            <h2>Tiket saya</h2>
+            <span><%= tickets.length %> tiket pada halaman ini</span>
+          </div>
+        </div>
+
+        <label class="messages-search" aria-label="Cari tiket">
+          <%- icon('search', 'messages-search-icon') %>
+          <input
+            type="search"
+            data-message-search
+            placeholder="Cari tiket..."
+            autocomplete="off"
+          >
+        </label>
+      </div>
+
+      <div class="messages-filter-row">
+        <button
+          class="messages-filter active"
+          type="button"
+          aria-pressed="true"
+        >
+          Semua
+        </button>
+
+        <span class="messages-filter-info">
+          <%- icon('clipboard-list') %>
+          Riwayat tiket bantuan Jyyr Store
+        </span>
+      </div>
+
+      <div class="message-chat-list">
+
+        <% if(!tickets.length){ %>
+
+          <div class="messages-empty">
+            <div class="messages-empty-icon">
+              <%- icon('clipboard-list') %>
+            </div>
+
+            <h3>Belum ada tiket</h3>
+
+            <p>
+              Tiket bantuan yang kamu buat akan tampil di sini.
+              Buat tiket baru jika membutuhkan bantuan tim support.
+            </p>
+          </div>
+
+        <% } else { %>
+
+          <% tickets.forEach(t=>{ %>
+
+            <%
+              const statusKey = String(t.status || 'open').toLowerCase();
+              const searchText = [
+                t.ticket_number,
+                t.subject,
+                t.category,
+                t.status,
+                t.priority
+              ].filter(Boolean).join(' ');
+            %>
+
+            <a
+              class="message-chat-row"
+              href="/tickets/<%= t.id %>"
+              data-message-row
+              data-message-search-text="<%= searchText %>"
+            >
+
+              <span class="message-chat-avatar is-support">
+                <%- icon('clipboard-list') %>
+              </span>
+
+              <span class="message-chat-main">
+
+                <span class="message-chat-topline">
+
+                  <span class="message-chat-name">
+                    <strong><%= t.ticket_number %></strong>
+
+                    <span class="message-chat-role">
+                      <%= t.category || 'Bantuan' %>
+                    </span>
+                  </span>
+
+                  <time>
+                    <%= formatDate(t.updated_at || t.created_at) %>
+                  </time>
+
+                </span>
+
+                <span class="message-chat-bottomline">
+
+                  <span class="message-chat-preview">
+                    <%= t.subject || 'Tanpa subjek' %>
+                  </span>
+
+                  <span class="badge badge-<%= statusKey %>">
+                    <%= labelStatus(t.status) %>
+                  </span>
+
+                </span>
+
+              </span>
+
+            </a>
+
+          <% }) %>
+
+          <div
+            class="messages-search-empty"
+            data-message-search-empty
+            hidden
+          >
+            <%- icon('search') %>
+            <strong>Tiket tidak ditemukan</strong>
+            <span>Coba kata kunci lain.</span>
+          </div>
+
+        <% } %>
+
+      </div>
+
+    </section>
+
+    <%- include('../partials/pagination',{
+      pagination:ticketsPagination,
+      param:'page'
+    }) %>
+
+  </div>
+</section>

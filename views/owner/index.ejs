@@ -391,14 +391,114 @@
 }) %>
 </div>
       <% } else if(ownerSection==='tickets'){ %>
-        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Ticket</th><th>User</th><th>Subject</th><th>Status</th><th>Created</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="6"><div class="empty-state compact"><%- icon('user-headset-outline') %><h3>Belum ada ticket</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td data-label="Ticket"><%= row.ticket_number %></td><td data-label="User"><%= row.username %></td><td data-label="Subject"><%= row.subject %></td><td data-label="Status"><%= row.status %></td><td data-label="Created"><%= formatDate(row.created_at) %></td><td data-label="Aksi"><button class="button button-secondary button-small" data-owner-ticket="<%= row.id %>" data-owner-ticket-number="<%= row.ticket_number %>">Balas / Status</button></td></tr><% }) %></tbody></table></div>
-<%- include('../partials/pagination',{
-  pagination:ownerPagination,
-  param:'page',
-  query:req.query,
-  label:'Pagination tiket'
-}) %>
-</div>
+        <section class="messages-page owner-tickets-page">
+          <div class="messages-shell">
+            <section class="messages-panel" aria-label="Manajemen tiket bantuan">
+              <div class="messages-panel-top">
+                <div class="messages-panel-heading">
+                  <div>
+                    <h2>Semua tiket</h2>
+                    <span><%= (items||[]).length %> tiket pada halaman ini</span>
+                  </div>
+                </div>
+
+                <label class="messages-search" aria-label="Cari tiket pengguna">
+                  <%- icon('search', 'messages-search-icon') %>
+                  <input
+                    type="search"
+                    data-message-search
+                    placeholder="Cari nomor, pengguna, atau subjek..."
+                    autocomplete="off"
+                  >
+                </label>
+              </div>
+
+              <div class="messages-filter-row">
+                <span class="messages-filter active" aria-current="true">Semua</span>
+                <span class="messages-filter-info">
+                  <%- icon('clipboard-list') %>
+                  Tiket dari seluruh pengguna
+                </span>
+              </div>
+
+              <div class="message-chat-list">
+                <% if(!(items||[]).length){ %>
+                  <div class="messages-empty">
+                    <div class="messages-empty-icon">
+                      <%- icon('clipboard-list') %>
+                    </div>
+                    <h3>Belum ada tiket</h3>
+                    <p>Tiket bantuan pengguna akan tampil di sini.</p>
+                  </div>
+                <% } else { %>
+                  <% (items||[]).forEach(row=>{ %>
+                    <%
+                      const statusKey = String(row.status || 'OPEN').toLowerCase();
+                      const searchText = [
+                        row.ticket_number,
+                        row.username,
+                        row.subject,
+                        row.category,
+                        row.status,
+                        row.priority
+                      ].filter(Boolean).join(' ');
+                    %>
+
+                    <div
+                      class="message-chat-row owner-ticket-row"
+                      data-message-row
+                      data-message-search-text="<%= searchText %>"
+                    >
+                      <span class="message-chat-avatar is-support">
+                        <%- icon('clipboard-list') %>
+                      </span>
+
+                      <span class="message-chat-main">
+                        <span class="message-chat-topline">
+                          <span class="message-chat-name">
+                            <strong><%= row.ticket_number %></strong>
+                            <span class="message-chat-role">
+                              <%= row.username || 'Pengguna' %>
+                            </span>
+                          </span>
+                          <time><%= formatDate(row.updated_at || row.created_at) %></time>
+                        </span>
+
+                        <span class="message-chat-bottomline">
+                          <span class="message-chat-preview">
+                            <%= row.subject || 'Tanpa subjek' %>
+                          </span>
+                          <span class="badge badge-<%= statusKey %>">
+                            <%= labelStatus(row.status) %>
+                          </span>
+                        </span>
+                      </span>
+
+                      <a class="button button-secondary button-small owner-ticket-action" href="/owner/tickets/<%= row.id %>">Lihat / Balas</a>
+                    </div>
+                  <% }) %>
+
+                  <div
+                    class="messages-search-empty"
+                    data-message-search-empty
+                    hidden
+                  >
+                    <%- icon('search') %>
+                    <strong>Tiket tidak ditemukan</strong>
+                    <span>Coba kata kunci lain.</span>
+                  </div>
+                <% } %>
+              </div>
+            </section>
+
+            <%- include('../partials/pagination',{
+              pagination:ownerPagination,
+              param:'page',
+              query:req.query,
+              label:'Pagination tiket'
+            }) %>
+          </div>
+        </section>
       <% } else if(ownerSection==='services'){ %>
         <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Layanan</th><th>Kategori</th><th>Harga</th><th>Status</th><th>Aksi</th></tr></thead><tbody><% if(!items?.length){ %><tr><td colspan="5"><div class="empty-state compact"><%- icon('layanan') %><h3>Belum ada layanan</h3></div></td></tr><% } %><% (items||[]).forEach(row=>{ %><tr><td data-label="Layanan"><strong><%= row.name %></strong><small class="muted block"><%= row.description||'—' %></small></td><td data-label="Kategori"><%= row.category||'—' %></td><td data-label="Harga"><%= formatIDR(row.price) %></td><td data-label="Status"><%= row.is_active?labelStatus('ACTIVE'):labelStatus('INACTIVE') %></td><td data-label="Aksi"><button class="button button-secondary button-small" data-owner-edit-service='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button></td></tr><% }) %></tbody></table></div></div>
       <% } else if(ownerSection==='faq'){ %>

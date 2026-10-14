@@ -1,1 +1,90 @@
-<section class="page-shell"><div class="page-header"><div><div class="eyebrow">Tiket <%= ticket.ticket_number %></div><h1><%= ticket.subject %></h1><p><span class="badge badge-<%= String(ticket.status||'').toLowerCase() %>"><%= labelStatus(ticket.status) %></span> · <%= ticket.category %></p></div></div><div class="conversation"><% ticket.messages.forEach(m=>{ %><article class="message <%= m.sender_id===currentUser.id?'mine':'theirs' %>"><div class="message-meta"><strong><%= m.username %></strong><span><%= formatDate(m.created_at) %></span></div><p><%= m.body %></p></article><% }) %></div><form class="reply-form inline-form" data-ticket-reply="<%= ticket.id %>"><input name="body" placeholder="Tulis balasan..." autocomplete="off" required><button class="button button-primary">Kirim</button></form></section>
+<section class="page-shell message-detail-page ticket-detail-page">
+  <div class="message-detail-shell">
+    <section class="message-detail-card">
+
+      <header class="message-detail-header ticket-detail-header">
+        <a
+          class="message-detail-back"
+          href="/tickets"
+          aria-label="Kembali ke daftar tiket"
+          title="Kembali"
+        >
+          <%- icon('arrow-back-up') %>
+        </a>
+
+        <div class="message-detail-avatar" aria-hidden="true">
+          <%- icon('user-headset-outline') %>
+        </div>
+
+        <div class="message-detail-user ticket-detail-user">
+          <strong>Jyyr Store</strong>
+          <span>Support Jyyr Store · <%= ticket.category || 'Bantuan' %></span>
+        </div>
+
+        <div class="ticket-detail-reference">
+          <span class="ticket-detail-reference-title">
+            <%= ticket.ticket_number %> · <%= ticket.subject || 'Tiket bantuan' %>
+          </span>
+          <span class="badge badge-<%= String(ticket.status || 'OPEN').toLowerCase() %>">
+            <%= labelStatus(ticket.status) %>
+          </span>
+        </div>
+      </header>
+
+      <div class="message-detail-body">
+        <% (ticket.messages || []).forEach(m=>{ %>
+          <%
+            const isMine = m.sender_id === currentUser.id;
+          %>
+
+          <article class="message-bubble <%= isMine ? 'is-mine' : 'is-theirs' %>">
+            <div class="message-bubble-text"><%= String(m.body || '').trim() %></div>
+
+            <div class="message-bubble-meta">
+              <time><%= formatDate(m.created_at) %></time>
+
+              <% if(isMine){ %>
+                <span
+                  class="message-bubble-status"
+                  aria-label="Terkirim"
+                  title="Terkirim"
+                >
+                  <%- icon('check') %>
+                </span>
+              <% } %>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+
+      <footer class="message-detail-composer">
+        <form
+          class="message-detail-form ticket-detail-form"
+          data-ticket-reply="<%= ticket.id %>"
+        >
+          <label class="message-detail-input" aria-label="Balasan tiket">
+            <textarea
+              name="body"
+              rows="1"
+              maxlength="10000"
+              required
+              aria-label="Balasan tiket"
+              placeholder="Tulis balasan..."
+            ></textarea>
+          </label>
+
+          <button
+            class="message-detail-send"
+            type="submit"
+            aria-label="Kirim balasan"
+            title="Kirim balasan"
+          >
+            <%- icon('send') %>
+            <span>Kirim</span>
+          </button>
+        </form>
+      </footer>
+
+    </section>
+  </div>
+</section>

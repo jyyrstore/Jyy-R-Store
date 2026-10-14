@@ -1,0 +1,152 @@
+<section class="page-shell message-detail-page owner-ticket-detail-page">
+  <div class="message-detail-shell">
+    <section class="message-detail-card">
+
+      <header class="message-detail-header owner-ticket-detail-header">
+        <a
+          class="message-detail-back"
+          href="/owner/tickets"
+          aria-label="Kembali ke daftar tiket"
+          title="Kembali"
+        >
+          <%- icon('arrow-back-up') %>
+        </a>
+
+        <%
+          const ownerTicketInitial =
+            String(ticket.username || 'P').trim().slice(0,1).toUpperCase() || 'P';
+          const ticketStatus =
+            String(ticket.status || 'OPEN').toUpperCase();
+        %>
+
+        <div class="message-detail-avatar" aria-hidden="true">
+          <strong><%= ownerTicketInitial %></strong>
+        </div>
+
+        <div class="message-detail-user owner-ticket-detail-user">
+          <strong><%= ticket.username || 'Pengguna' %></strong>
+          <span><%= ticket.email || 'Pengguna Jyyr Store' %></span>
+        </div>
+
+        <div class="owner-ticket-detail-reference">
+          <span class="owner-ticket-reference-title">
+            <%= ticket.ticket_number %> · <%= ticket.subject || 'Tiket bantuan' %>
+          </span>
+          <span class="badge badge-<%= ticketStatus.toLowerCase() %>">
+            <%= labelStatus(ticket.status) %>
+          </span>
+        </div>
+      </header>
+
+      <div class="message-detail-body">
+        <% if(!(ticket.messages || []).length){ %>
+          <div class="messages-empty">
+            <div class="messages-empty-icon">
+              <%- icon('clipboard-list') %>
+            </div>
+            <h3>Belum ada percakapan</h3>
+            <p>Balas tiket ini untuk memulai percakapan dengan pengguna.</p>
+          </div>
+        <% } else { %>
+          <% (ticket.messages || []).forEach(m=>{ %>
+            <%
+              const isMine = m.sender_id === currentUser.id;
+              const senderLabel = isMine
+                ? 'Owner / Support'
+                : (m.username || ticket.username || 'Pengguna');
+            %>
+
+            <article class="message-bubble <%= isMine ? 'is-mine' : 'is-theirs' %>">
+              <div class="owner-ticket-bubble-author"><%= senderLabel %></div>
+              <div class="message-bubble-text"><%= String(m.body || '').trim() %></div>
+              <div class="message-bubble-meta">
+                <time><%= formatDate(m.created_at) %></time>
+                <% if(isMine){ %>
+                  <span
+                    class="message-bubble-status"
+                    aria-label="Terkirim"
+                    title="Terkirim"
+                  >
+                    <%- icon('check') %>
+                  </span>
+                <% } %>
+              </div>
+            </article>
+          <% }) %>
+        <% } %>
+      </div>
+
+      <footer class="message-detail-composer">
+        <form
+          class="message-detail-form owner-ticket-detail-form"
+          data-owner-ticket-form
+        >
+          <input type="hidden" name="id" value="<%= ticket.id %>">
+
+          <div class="jyyr-select owner-ticket-status-menu" data-jyyr-select>
+            <input
+              type="hidden"
+              name="status"
+              value="<%= ticketStatus %>"
+              data-jyyr-select-value
+            >
+
+            <button
+              class="jyyr-select-trigger owner-ticket-status-trigger"
+              type="button"
+              title="Ubah status tiket"
+              aria-label="Ubah status tiket"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              data-jyyr-select-trigger
+            >
+              <span class="owner-ticket-status-dots" aria-hidden="true">⋮</span>
+              <span data-jyyr-select-label hidden><%= ticketStatus %></span>
+              <span class="jyyr-select-chevron" aria-hidden="true" hidden></span>
+            </button>
+
+            <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
+              <% [
+                ['OPEN','OPEN'],
+                ['WAITING','WAITING'],
+                ['REPLIED','REPLIED'],
+                ['CLOSED','CLOSED']
+              ].forEach(option=>{ %>
+                <button
+                  type="button"
+                  class="jyyr-select-option"
+                  role="option"
+                  data-jyyr-select-option
+                  data-value="<%= option[0] %>"
+                  data-label="<%= option[1] %>"
+                  aria-selected="<%= ticketStatus === option[0] ? 'true' : 'false' %>"
+                ><%= option[1] %></button>
+              <% }) %>
+            </div>
+          </div>
+
+          <label class="message-detail-input" aria-label="Balasan tiket">
+            <textarea
+              name="body"
+              rows="1"
+              maxlength="10000"
+              required
+              aria-label="Balasan tiket"
+              placeholder="Tulis balasan..."
+            ></textarea>
+          </label>
+
+          <button
+            class="message-detail-send"
+            type="submit"
+            aria-label="Kirim balasan"
+            title="Kirim balasan"
+          >
+            <%- icon('send') %>
+          </button>
+        </form>
+      </footer>
+
+    </section>
+  </div>
+</section>

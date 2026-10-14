@@ -800,6 +800,30 @@ async function ownerMessageDetail(req,res,next){
   }
 }
 
+async function ownerTicketDetail(req,res,next){
+  try{
+    const repo=require('../repositories/tickets.repository');
+    const ticket=await repo.detail(req.params.id);
+
+    if(!ticket){
+      const e=new Error('Ticket not found.');
+      e.status=404;
+      e.expose=true;
+      throw e;
+    }
+
+    res.render(
+      'app',
+      base(req,{
+        view:'owner/ticket-detail',
+        ticket
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
+
 function ownerPage(section){
   return async (req,res,next)=>{
     try{
@@ -1078,4 +1102,4 @@ function ownerPage(section){
     }catch(e){next(e)}
   }
 }
-module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ownerMessageDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,register,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};
+module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ownerMessageDetail,ownerTicketDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,register,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};
