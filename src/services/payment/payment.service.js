@@ -889,6 +889,35 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
       } else if(dep && ['FAILED','EXPIRED','CANCELLED','REFUNDED'].includes(next) && dep.status==='PENDING'){
         const depStatus=next==='REFUNDED'?'REFUNDED':next;
         await client.query('update deposits set status=$2,webhook_status=$3,updated_at=now() where id=$1',[dep.id,depStatus,next]);
+
+        // JYYR DEPOSIT FAILURE NOTIFICATION
+        const depositReference=dep.reference||parsed.reference||dep.id;
+        const depositAmount=Number(dep.amount).toLocaleString('id-ID');
+        const depositNotice={
+          FAILED:{
+            title:'Deposit gagal',
+            body:`Deposit ${depositReference} sebesar Rp${depositAmount} gagal diproses.`
+          },
+          EXPIRED:{
+            title:'Deposit kedaluwarsa',
+            body:`Deposit ${depositReference} sebesar Rp${depositAmount} kedaluwarsa sebelum pembayaran selesai.`
+          },
+          CANCELLED:{
+            title:'Deposit dibatalkan',
+            body:`Deposit ${depositReference} sebesar Rp${depositAmount} dibatalkan.`
+          },
+          REFUNDED:{
+            title:'Deposit dikembalikan',
+            body:`Dana deposit ${depositReference} sebesar Rp${depositAmount} telah dikembalikan.`
+          }
+        }[next];
+
+        await notifications.notify(payment.user_id,{
+          type:'DEPOSIT',
+          title:depositNotice.title,
+          body:depositNotice.body,
+          link:'/deposit'
+        },client);
       }
       await client.query('insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)', ['PAYMENT_WEBHOOK','payment',payment.id,{reference:parsed.reference,status:next,depositId:dep?.id||null}]);
       return {duplicate:false,paymentStatus:next,depositId:dep?.id||null};
@@ -953,6 +982,29 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
       await client.query("update orders set status=$2,updated_at=now() where id=$1",[order.id,next]);
       const items=(await client.query('select product_id,quantity from order_items where order_id=$1',[order.id])).rows;
       for(const i of items)await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.product_id,i.quantity]);
+
+      // JYYR ORDER PAYMENT FAILURE NOTIFICATION
+      const paymentFailure={
+        FAILED:{
+          title:'Pembayaran gagal',
+          detail:'gagal diproses'
+        },
+        EXPIRED:{
+          title:'Pembayaran kedaluwarsa',
+          detail:'kedaluwarsa sebelum pembayaran selesai'
+        },
+        CANCELLED:{
+          title:'Pembayaran dibatalkan',
+          detail:'dibatalkan sebelum pembayaran selesai'
+        }
+      }[next];
+
+      await notifications.notify(payment.user_id,{
+        type:'PAYMENT',
+        title:paymentFailure.title,
+        body:`Pembayaran order ${order.order_number} ${paymentFailure.detail}.`,
+        link:`/orders/${order.id}`
+      },client);
     }
     await client.query('insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)', ['PAYMENT_WEBHOOK','payment',payment.id,{reference:parsed.reference,status:next,orderId:order.id}]);
     return {

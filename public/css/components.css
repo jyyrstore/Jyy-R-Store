@@ -224,6 +224,27 @@
 .notification-card{min-width:0}
 .notifications-page .header-actions{
   min-width:0;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.notifications-page .page-header .header-actions .notification-action-button{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:44px;
+  min-width:44px;
+  height:44px;
+  min-height:44px;
+  padding:0;
+  flex:0 0 44px;
+}
+
+.notifications-page .page-header .header-actions .notification-action-button > .icon{
+  width:19px;
+  height:19px;
+  max-width:19px;
+  max-height:19px;
 }
 
 @media(max-width:600px){
@@ -234,28 +255,27 @@
   }
 
   .notifications-page .header-actions{
+    display:flex;
     width:100%;
     min-width:0;
-    display:grid;
-    grid-template-columns:repeat(2,minmax(0,1fr));
+    flex-wrap:wrap;
+    justify-content:flex-start;
     gap:8px;
   }
 
-  .notifications-page .header-actions .button{
-    width:100%;
-    min-width:0;
+  .notifications-page .page-header .header-actions .notification-action-button{
+    width:44px;
+    min-width:44px;
+    height:44px;
     min-height:44px;
-    height:auto;
-    padding:10px 8px;
-    font-size:12px;
-    line-height:1.2;
-    white-space:normal;
-    text-align:center;
+    padding:0;
+    flex:0 0 44px;
   }
+}
 
-  .notifications-page .header-actions .button:last-child{
-    grid-column:1 / -1;
-  }
+
+.notifications-page .header-actions .notification-action-button[hidden]{
+  display:none!important;
 }
 
 .notifications-page .notification-card{position:relative}
@@ -273,14 +293,15 @@
 .notifications-page.selection-mode .notification-select{
   display:flex;
 }
+
+.notifications-page.selection-mode .notification-content>p{
+  padding-right:32px;
+}
 .notifications-page .notification-select input{
   width:18px;
   height:18px;
   margin:0;
   accent-color:var(--primary);
-}
-.notifications-page.selection-mode .notification-card{
-  padding-right:46px;
 }
 .notification-card>.content-icon{width:40px;height:40px;min-width:40px;min-height:40px}
 .notification-card>.content-icon>.icon{width:22px;height:22px;max-width:22px;max-height:22px}

@@ -255,12 +255,16 @@
 
       if(selectAll){
         selectAll.disabled=boxes.length===0;
-        selectAll.querySelector(
-          '[data-notification-selection-label]'
-        ).textContent=
+        const selectionLabel=
           everySelected
             ? 'Batal pilih semua'
             : 'Pilih semua';
+
+        selectAll.setAttribute('aria-label',selectionLabel);
+        selectAll.title=selectionLabel;
+        selectAll.innerHTML=
+          window.JYYRIcon?.(everySelected?'x':'list-check')||
+          selectAll.innerHTML;
         selectAll.setAttribute(
           'aria-pressed',
           everySelected?'true':'false'
@@ -277,6 +281,90 @@
         syncSelection();
       }
     });
+
+    let pressTimer=null;
+    let pressTarget=null;
+    let pressPointerId=null;
+    let pressStartX=0;
+    let pressStartY=0;
+
+    const cancelLongPress=()=>{
+      if(pressTimer!==null){
+        window.clearTimeout(pressTimer);
+      }
+
+      pressTimer=null;
+      pressTarget=null;
+      pressPointerId=null;
+    };
+
+    root.addEventListener('pointerdown',event=>{
+      if(root.classList.contains('selection-mode'))return;
+      if(event.button!==0)return;
+
+      const card=event.target.closest('.notification-card');
+
+      if(!card || !root.contains(card))return;
+
+      if(event.target.closest(
+        'button,input,select,textarea,a,[data-notification-select]'
+      )){
+        return;
+      }
+
+      cancelLongPress();
+
+      pressTarget=card;
+      pressPointerId=event.pointerId;
+      pressStartX=event.clientX;
+      pressStartY=event.clientY;
+
+      pressTimer=window.setTimeout(()=>{
+        const target=pressTarget;
+
+        pressTimer=null;
+        pressTarget=null;
+        pressPointerId=null;
+
+        if(
+          !target ||
+          !root.contains(target) ||
+          root.classList.contains('selection-mode')
+        ){
+          return;
+        }
+
+        const modeButton=root.querySelector(
+          '[data-notification-select-mode]'
+        );
+
+        if(modeButton){
+          modeButton.click();
+        }
+      },1000);
+    });
+
+    root.addEventListener('pointermove',event=>{
+      if(
+        pressTimer===null ||
+        event.pointerId!==pressPointerId
+      ){
+        return;
+      }
+
+      if(
+        Math.hypot(
+          event.clientX-pressStartX,
+          event.clientY-pressStartY
+        )>10
+      ){
+        cancelLongPress();
+      }
+    });
+
+    root.addEventListener('pointerup',cancelLongPress);
+    root.addEventListener('pointercancel',cancelLongPress);
+    root.addEventListener('pointerleave',cancelLongPress);
 
     root.addEventListener('click',event=>{
       if(root.classList.contains('selection-mode'))return;
@@ -1336,10 +1424,16 @@
           enabled
         );
 
-        selectMode.textContent=
+        const selectionModeLabel=
           enabled
             ? 'Batal pilih'
-            : 'Pilih';
+            : 'Pilih notifikasi';
+
+        selectMode.setAttribute('aria-label',selectionModeLabel);
+        selectMode.title=selectionModeLabel;
+        selectMode.innerHTML=
+          window.JYYRIcon?.(enabled?'x':'layers')||
+          selectMode.innerHTML;
 
         selectMode.setAttribute(
           'aria-pressed',
@@ -1367,6 +1461,16 @@
         if(deleteSelected){
           deleteSelected.hidden=!enabled;
           deleteSelected.disabled=true;
+        }
+        const readAllAction=root.querySelector('[data-notification-read-all]');
+        const deleteAllAction=root.querySelector('[data-notification-delete-all]');
+
+        if(readAllAction){
+          readAllAction.hidden=!enabled;
+        }
+
+        if(deleteAllAction){
+          deleteAllAction.hidden=!enabled;
         }
       }
 
@@ -1396,12 +1500,16 @@
           box.checked=shouldSelect;
         });
 
-        selectAll.querySelector(
-          '[data-notification-selection-label]'
-        ).textContent=
+        const selectionLabel=
           shouldSelect
             ? 'Batal pilih semua'
             : 'Pilih semua';
+
+        selectAll.setAttribute('aria-label',selectionLabel);
+        selectAll.title=selectionLabel;
+        selectAll.innerHTML=
+          window.JYYRIcon?.(shouldSelect?'x':'list-check')||
+          selectAll.innerHTML;
 
         selectAll.setAttribute(
           'aria-pressed',
@@ -1870,16 +1978,6 @@
         ['OWNER','OWNER']
       ]
     })}</label><button class="button button-primary" data-user-role="${id}">Change Role</button></div>`)}
-    const tick=e.target.closest('[data-owner-ticket]');if(tick){open(`<form data-owner-ticket-form class="stack-form"><h2>${esc(tick.dataset.ownerTicketNumber)}</h2><input type="hidden" name="id" value="${esc(tick.dataset.ownerTicket)}"><label class="field"><span>Reply</span><textarea name="body" required></textarea></label><label class="field"><span>Status</span>${pickerSelect({
-      name:'status',
-      value:'OPEN',
-      options:[
-        ['OPEN','OPEN'],
-        ['WAITING','WAITING'],
-        ['REPLIED','REPLIED'],
-        ['CLOSED','CLOSED']
-      ]
-    })}</label>${formButtons('Reply / Update')}</form>`)}
     const editCat=e.target.closest('[data-owner-edit-category]');if(editCat){let d;try{d=JSON.parse(editCat.dataset.ownerEditCategory)}catch{return}open(`<form data-owner-category-edit class="stack-form"><h2>Edit Kategori</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Slug</span><input name="slug" value="${esc(d.slug)}"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" ${d.is_active?'checked':''}></label>${formButtons()}</form>`)}
     const editSvc=e.target.closest('[data-owner-edit-service]');if(editSvc){let d;try{d=JSON.parse(editSvc.dataset.ownerEditService)}catch{return}open(`<form data-owner-service-edit class="stack-form"><h2>Edit Service</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Kategori</span><input name="category" value="${esc(d.category||'')}"></label><label class="field"><span>Harga</span><input name="price" type="number" value="${Number(d.price)||0}" min="0"></label><label class="field"><span>Description</span><textarea name="description">${esc(d.description||'')}</textarea></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" ${d.is_active?'checked':''}></label>${formButtons()}</form>`)}
     const editFaq=e.target.closest('[data-owner-edit-faq]');if(editFaq){let d;try{d=JSON.parse(editFaq.dataset.ownerEditFaq)}catch{return}open(`<form data-owner-faq-edit class="stack-form"><h2>Edit FAQ</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Category</span><input name="category" value="${esc(d.category)}"></label><label class="field"><span>Question</span><input name="question" value="${esc(d.question)}"></label><label class="field"><span>Answer</span><textarea name="answer">${esc(d.answer)}</textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" ${d.is_published?'checked':''}></label>${formButtons()}</form>`)}
@@ -2319,7 +2417,53 @@
     const fi=e.target.closest('[data-owner-info-form], [data-owner-info-edit]');if(fi){e.preventDefault();const fd=Object.fromEntries(new FormData(fi));fd.is_published=fd.is_published==='on';const id=fd.id;delete fd.id;try{if(id)await ownerAction('/api/owner/information/'+id,fd,'PUT','Information diperbarui.');else await ownerAction('/api/owner/information',fd,'POST','Information dibuat.');location.reload()}catch(err){toast.error(err.message)}}
     const sf=e.target.closest('[data-service-order-form]');if(sf){e.preventDefault();const fd=Object.fromEntries(new FormData(sf));const serviceId=fd.serviceId;delete fd.serviceId;fd.quantity=Number(fd.quantity||1);try{const r=await api.request('/api/service-orders',{method:'POST',body:{serviceId,requestData:fd}});toast.success('Service berhasil dipesan.');location.href='/orders/'+r.order.id}catch(err){toast.error(err.message)}}
     const nt=e.target.closest('[data-owner-notification-create]');if(nt){e.preventDefault();const fd=Object.fromEntries(new FormData(nt));if(!fd.user_id)fd.user_id=null;try{await ownerAction('/api/owner/notifications',fd,'POST','Notification dibuat.');location.reload()}catch(err){toast.error(err.message)}}
-    const tf=e.target.closest('[data-owner-ticket-form]');if(tf){e.preventDefault();const fd=Object.fromEntries(new FormData(tf));try{if(fd.body)await ownerAction('/api/owner/tickets/'+fd.id+'/reply',{body:fd.body},'POST','Balasan dikirim.');await ownerAction('/api/owner/tickets/'+fd.id+'/status',{status:fd.status},'POST','Status ticket diperbarui.');location.reload()}catch(err){toast.error(err.message)}}
+    const tf=e.target.closest('[data-owner-ticket-form]');
+    if(tf){
+      e.preventDefault();
+
+      const fd=Object.fromEntries(new FormData(tf));
+      const initialStatus=String(
+        tf.dataset.initialStatus||fd.status||''
+      ).toUpperCase();
+      const nextStatus=String(fd.status||'').toUpperCase();
+      const body=String(fd.body||'').trim();
+      const hasReply=body.length>0;
+      const statusChanged=Boolean(
+        nextStatus&&nextStatus!==initialStatus
+      );
+      const updateStatus=
+        statusChanged&&!(hasReply&&nextStatus==='REPLIED');
+
+      if(!hasReply&&!statusChanged){
+        toast.error('Tulis balasan atau pilih status yang berbeda.');
+        return;
+      }
+
+      try{
+        if(hasReply){
+          await ownerAction(
+            '/api/owner/tickets/'+fd.id+'/reply',
+            {body},
+            'POST',
+            'Balasan dikirim.'
+          );
+        }
+
+        if(updateStatus){
+          await ownerAction(
+            '/api/owner/tickets/'+fd.id+'/status',
+            {status:nextStatus},
+            'POST',
+            'Status tiket diperbarui.'
+          );
+        }
+
+        location.reload();
+      }catch(err){
+        toast.error(err.message);
+      }
+    }
+
     const rf=e.target.closest('[data-refund-form]');if(rf){e.preventDefault();const fd=Object.fromEntries(new FormData(rf));try{await ownerAction('/api/owner/refunds/'+fd.order_id,{reason:fd.reason},'POST','Refund diproses.');location.reload()}catch(err){toast.error(err.message)}}
     const omf=e.target.closest('[data-owner-message-form]');
     if(omf){

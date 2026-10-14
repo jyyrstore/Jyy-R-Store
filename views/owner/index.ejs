@@ -444,8 +444,9 @@
                       ].filter(Boolean).join(' ');
                     %>
 
-                    <div
+                    <a
                       class="message-chat-row owner-ticket-row"
+                      href="/owner/tickets/<%= row.id %>"
                       data-message-row
                       data-message-search-text="<%= searchText %>"
                     >
@@ -474,8 +475,8 @@
                         </span>
                       </span>
 
-                      <a class="button button-secondary button-small owner-ticket-action" href="/owner/tickets/<%= row.id %>">Lihat / Balas</a>
-                    </div>
+
+                    </a>
                   <% }) %>
 
                   <div
@@ -521,7 +522,7 @@
     <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="TICKET" data-label="TICKET">TICKET</button>
   </div>
 </div></label><label class="field"><span>User ID (opsional)</span><input name="user_id" placeholder="Kosong = broadcast"></label><label class="field"><span>Title</span><input name="title" required maxlength="160"></label></div><label class="field"><span>Body</span><textarea name="body" maxlength="5000" required></textarea></label><label class="field"><span>Link</span><input name="link"></label><div class="inline-actions"><button class="button button-primary">Kirim</button><button class="button button-secondary" type="button" data-owner-broadcast>Kirim ke Semua</button></div></form></div>
-        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Type</th><th>Title</th><th>User</th><th>Read</th><th>Created</th></tr></thead><tbody><% (items||[]).forEach(row=>{ %><tr><td data-label="Type"><%= row.type %></td><td data-label="Title"><%= row.title %></td><td data-label="User"><%= row.user_id||'ALL' %></td><td data-label="Read"><%= row.is_read?'Ya':'Belum' %></td><td data-label="Created"><%= formatDate(row.created_at) %></td></tr><% }) %></tbody></table></div>
+        <div class="panel table-panel"><div class="table-scroll"><table><thead><tr><th>Type</th><th>Title</th><th>User</th><th>Read</th><th>Created</th></tr></thead><tbody><% (items||[]).forEach(row=>{ %><tr><td data-label="Type"><%= row.type %></td><td data-label="Title"><%= row.title %></td><td data-label="User"><%= row.user_id||'ALL' %></td><td data-label="Read"><%= row.user_id ? (row.is_read ? 'Ya' : 'Belum') : (Number(row.read_count||0).toLocaleString('id-ID') + ' / ' + Number(row.recipient_count||0).toLocaleString('id-ID') + ' dibaca') %></td><td data-label="Created"><%= formatDate(row.created_at) %></td></tr><% }) %></tbody></table></div>
 <%- include('../partials/pagination',{
   pagination:ownerPagination,
   param:'page',

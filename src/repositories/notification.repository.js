@@ -111,7 +111,27 @@ async function adminList(options={}){
       `
         select
           n.*,
-          p.username
+          p.username,
+          case
+            when n.user_id is null then (
+              select count(*)::int
+              from notification_reads nr
+              where nr.notification_id=n.id
+                and nr.read_at is not null
+                and nr.deleted_at is null
+            )
+            when coalesce(n.is_read,false) then 1
+            else 0
+          end as read_count,
+          case
+            when n.user_id is null then (
+              select count(*)::int
+              from profiles recipients
+              where recipients.status!='BANNED'
+                and recipients.deleted_at is null
+            )
+            else 1
+          end as recipient_count
         from notifications n
         left join profiles p on p.id=n.user_id
         order by n.created_at desc

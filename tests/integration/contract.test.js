@@ -155,6 +155,273 @@ test('BuatQris production config has no Xendit token dependency',()=>{
 // END JYYR BUATQRIS CONTRACT TESTS
 
 test('owner APIs require auth + owner middleware',()=>assert.match(route,/const ownerApi=express\.Router\(\); ownerApi\.use\(requireAuth,requireOwner\)/));
+
+
+
+
+test('Owner ticket status trigger centers its vertical dots',()=>{
+  const ownerTicketView=fs.readFileSync(
+    path.join(root,'views/owner/ticket-detail.ejs'),
+    'utf8'
+  );
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  assert.match(
+    ownerTicketView,
+    /<span class="owner-ticket-status-dots" aria-hidden="true"><\/span>/
+  );
+  assert.match(
+    ownerTicketView,
+    /<span data-jyyr-select-label hidden><%= ticketStatus %><\/span>/
+  );
+  assert.match(
+    ownerTicketView,
+    /<span class="jyyr-select-chevron" aria-hidden="true" hidden><\/span>/
+  );
+  assert.doesNotMatch(
+    ownerTicketView,
+    />[ \t]+<span class="owner-ticket-status-dots"/,
+    'Markup ikon harus berada pada baris terpisah.'
+  );
+
+  const button=css.match(
+    /\.owner-ticket-detail-page\s+\.owner-ticket-status-trigger\s*\{([^}]+)\}/
+  );
+  assert.ok(button,'CSS tombol status harus tersedia.');
+  assert.match(button[1],/position\s*:\s*relative\s*;/);
+  assert.match(button[1],/width\s*:\s*38px\s*;/);
+  assert.match(button[1],/height\s*:\s*38px\s*;/);
+  assert.match(button[1],/display\s*:\s*grid\s*;/);
+  assert.match(button[1],/place-items\s*:\s*center\s*;/);
+  assert.match(button[1],/border-radius\s*:\s*50%\s*;/);
+
+  const dots=css.match(/\.owner-ticket-status-dots\s*\{([^}]+)\}/);
+  assert.ok(dots,'CSS tiga titik harus tersedia.');
+  assert.match(dots[1],/position\s*:\s*absolute\s*;/);
+  assert.match(dots[1],/left\s*:\s*50%\s*;/);
+  assert.match(dots[1],/top\s*:\s*50%\s*;/);
+  assert.match(dots[1],/transform\s*:\s*translate\(-50%,-50%\)\s*;/);
+  assert.match(
+    dots[1],
+    /box-shadow\s*:\s*0\s+-7px\s+0\s+currentColor,\s*0\s+7px\s+0\s+currentColor\s*;/
+  );
+
+  const card=css.match(
+    /\.owner-ticket-detail-page\s+\.message-detail-card\s*\{([^}]+)\}/
+  );
+  assert.ok(card,'CSS kartu detail Owner harus tersedia.');
+  assert.match(card[1],/backdrop-filter\s*:\s*none\s*;/);
+  assert.match(card[1],/-webkit-backdrop-filter\s*:\s*none\s*;/);
+});
+
+
+
+
+
+
+
+test('Messages filter text is centered inside its chip',()=>{
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const rule=css.match(/\.messages-filter\s*\{([^}]+)\}/);
+
+  assert.ok(rule,'CSS messages filter harus tersedia.');
+  assert.match(rule[1],/display\s*:\s*inline-flex\s*;/);
+  assert.match(rule[1],/align-items\s*:\s*center\s*;/);
+  assert.match(rule[1],/justify-content\s*:\s*center\s*;/);
+  assert.match(rule[1],/box-sizing\s*:\s*border-box\s*;/);
+});
+
+
+
+test('Owner ticket cards use whole-card navigation',()=>{
+  const ownerView=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const marker='class="message-chat-row owner-ticket-row"';
+  assert.equal(
+    (ownerView.match(/class="message-chat-row owner-ticket-row"/g)||[]).length,
+    1
+  );
+
+  const markerIndex=ownerView.indexOf(marker);
+  const cardStart=ownerView.lastIndexOf('<a',markerIndex);
+  const cardEnd=ownerView.indexOf('</a>',markerIndex);
+
+  assert.ok(cardStart>=0&&cardEnd>markerIndex,'Kartu harus berupa anchor.');
+  const card=ownerView.slice(cardStart,cardEnd+4);
+
+  assert.match(card,/href="\/owner\/tickets\/<%= row\.id %>"/);
+  assert.match(card,/data-message-row/);
+  assert.match(card,/data-message-search-text=/);
+  assert.doesNotMatch(card,/owner-ticket-action|Lihat\s*\/\s*Balas/);
+  assert.equal(
+    (card.match(/<a\b/g)||[]).length,
+    1,
+    'Kartu tidak boleh berisi anchor bersarang.'
+  );
+
+  const rowRule=css.match(/\.owner-ticket-row\s*\{([^{}]+)\}/);
+  assert.ok(rowRule,'CSS kartu tiket harus tersedia.');
+  assert.match(
+    rowRule[1],
+    /grid-template-columns\s*:\s*48px\s+minmax\(0,1fr\)\s*;/
+  );
+  assert.match(rowRule[1],/cursor\s*:\s*pointer\s*;/);
+  assert.doesNotMatch(css,/\.owner-ticket-action\b/);
+});
+
+
+test('Owner ticket detail route is protected and wired to its detail template',()=>{
+  const ownerRoutes=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+  const ownerPage=fs.readFileSync(
+    path.join(root,'src/controllers/page.controller.js'),
+    'utf8'
+  );
+  const ownerTicketView=fs.readFileSync(
+    path.join(root,'views/owner/ticket-detail.ejs'),
+    'utf8'
+  );
+
+  const ownerRouter=ownerRoutes.indexOf(
+    'const owner=express.Router(); owner.use(requireAuth,requireOwner)'
+  );
+  const detailRoute=ownerRoutes.indexOf(
+    "owner.get('/tickets/:id',asyncHandler(page.ownerTicketDetail));"
+  );
+
+  assert.ok(ownerRouter>=0,'Owner router must enforce authentication and Owner authorization');
+  assert.ok(detailRoute>ownerRouter,'Owner ticket detail route must use the protected Owner router');
+  assert.match(
+    ownerPage,
+    /async function ownerTicketDetail\(req,res,next\)[\s\S]*?repo\.detail\(req\.params\.id\)[\s\S]*?view:'owner\/ticket-detail'/
+  );
+  assert.match(ownerTicketView,/data-owner-ticket-form/);
+  assert.match(ownerTicketView,/data-initial-status="<%= ticketStatus %>"/);
+  assert.match(ownerTicketView,/class="[^"]*\bowner-ticket-status-menu\b[^"]*"/);
+});
+
+test('Owner ticket list no longer uses its legacy popup opener',()=>{
+  const ownerView=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.match(ownerView,/href="\/owner\/tickets\/<%= row\.id %>"/);
+  assert.doesNotMatch(browser,/e\.target\.closest\('\[data-owner-ticket\]'\)/);
+});
+
+test('Owner ticket replies keep automatic REPLIED unless a different status is selected',()=>{
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const ownerTicketView=fs.readFileSync(
+    path.join(root,'views/owner/ticket-detail.ejs'),
+    'utf8'
+  );
+  const ticketService=fs.readFileSync(
+    path.join(root,'src/services/support/ticket.service.js'),
+    'utf8'
+  );
+
+  const start=browser.indexOf(
+    "const tf=e.target.closest('[data-owner-ticket-form]')"
+  );
+  const end=browser.indexOf(
+    "const rf=e.target.closest('[data-refund-form]')",
+    start
+  );
+
+  assert.ok(start>=0&&end>start,'Owner ticket submit handler must exist');
+  const handler=browser.slice(start,end);
+
+  assert.ok(handler.includes('const initialStatus=String('));
+  assert.ok(handler.includes('nextStatus&&nextStatus!==initialStatus'));
+  assert.ok(handler.includes('if(hasReply){'));
+  assert.ok(handler.includes('if(updateStatus){'));
+  assert.ok(handler.includes("'/api/owner/tickets/'+fd.id+'/reply'"));
+  assert.ok(handler.includes("'/api/owner/tickets/'+fd.id+'/status'"));
+  assert.match(ticketService,/await repo\.setStatus\(ticketId,'REPLIED'\)/);
+
+  const bodyField=ownerTicketView.match(
+    /<textarea\b[^>]*name="body"[\s\S]*?<\/textarea>/
+  );
+
+  assert.ok(bodyField,'Owner ticket reply textarea must exist');
+  assert.doesNotMatch(
+    bodyField[0],
+    /\brequired\b/,
+    'Changing a status must not require a reply body'
+  );
+});
+
+test('Messages search and composer legacy rules stay removed',()=>{
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const start=css.indexOf('/* =========================================================\n   MESSAGES / CHAT UI');
+  const end=css.indexOf('/* MESSAGES SEARCH INPUT — CANONICAL */');
+
+  assert.ok(start>=0&&end>start,'Messages CSS and canonical search section must exist');
+
+  const legacy=css.slice(start,end);
+  const selectors=[
+    '.messages-search',
+    '.messages-search:focus-within',
+    '.messages-search-icon',
+    '.messages-search input',
+    '.messages-search input::placeholder',
+    '.messages-compose-form',
+    '.messages-compose-field',
+    '.messages-compose-field textarea',
+    '.messages-compose-field textarea:focus',
+    '.messages-compose-field textarea::placeholder',
+    '.messages-send-button',
+    '.messages-send-button .icon'
+  ];
+
+  for(const selector of selectors){
+    const escaped=selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    assert.doesNotMatch(
+      legacy,
+      new RegExp('^[\\t ]*'+escaped+'[\\t ]*\\{','m'),
+      `Legacy duplicate CSS rule remains: ${selector}`
+    );
+  }
+
+  assert.equal(
+    (css.match(/MESSAGES SEARCH INPUT — CANONICAL/g)||[]).length,
+    1
+  );
+  assert.equal(
+    (css.match(/MESSAGES COMPOSER — CANONICAL/g)||[]).length,
+    1
+  );
+});
+
+
 test('owner extended sections are routed',()=>{for(const r of ['roles','messages','storage','login-history','system','top-orders']) assert.ok(page.includes(`'${r}'`),r)});
 test('explicit owner URL routes exist',()=>{assert.match(route,/owner\.get\('\/products\/create'/);assert.match(route,/ownerApi\.get\('\/top-orders'/)});
 test('owner order fulfillment status API is routed',()=>{assert.match(route,/ownerApi\.post\('\/orders\/:id\/status'/);assert.match(fs.readFileSync(path.join(root,'src/services/order/order.service.js'),'utf8'),/ownerUpdateStatus/)});
@@ -587,3 +854,138 @@ test('BuatQris route is isolated and mounted before JSON parsing',()=>{
     );
   });
 }
+
+
+test('mobile bottom navigation matches the floating dark capsule design', () => {
+  const nav = fs.readFileSync(
+    path.join(root, 'views/partials/bottom-nav.ejs'),
+    'utf8'
+  );
+  const styles = fs.readFileSync(
+    path.join(root, 'public/css/responsive.css'),
+    'utf8'
+  );
+
+  assert.match(
+    nav,
+    /href="\/store"[\s\S]*?Toko[\s\S]*?href="\/orders"[\s\S]*?Pesanan[\s\S]*?href="\/"[\s\S]*?Beranda[\s\S]*?href="\/deposit"[\s\S]*?Wallet[\s\S]*?href="\/profile"[\s\S]*?Profil/
+  );
+  assert.match(styles, /border-radius:25px/);
+  assert.match(styles, /backdrop-filter:blur\(24px\) saturate\(140%\)/);
+  assert.match(styles, /\.bottom-nav \.bottom-item\[href="\/"\]::before/);
+  assert.match(
+    styles,
+    /\.bottom-nav \.bottom-item\.active:not\(\[href="\/"\]\)::after/
+  );
+});
+
+
+test('mobile bottom navigation hides tab labels visually while preserving accessible text', () => {
+  const styles = fs.readFileSync(
+    path.join(root, 'public/css/responsive.css'),
+    'utf8'
+  );
+
+  assert.match(styles, /JYYR BOTTOM NAV ICON-ONLY LABELS/);
+  assert.match(
+    styles,
+    /\.bottom-nav \.bottom-item > span\{[^}]*clip-path:inset\(50%\)!important/s
+  );
+  assert.match(styles, /overflow:hidden!important/);
+});
+
+
+test('mobile bottom navigation centers the home icon inside its circle', () => {
+  const styles = fs.readFileSync(
+    path.join(root, 'public/css/responsive.css'),
+    'utf8'
+  );
+
+  assert.match(
+    styles,
+    /\.bottom-nav \.bottom-item\[href="\/"\]::before\{[^}]*box-sizing:border-box/s
+  );
+  assert.match(
+    styles,
+    /\.bottom-nav \.bottom-item\[href="\/"\] svg\{[^}]*top:clamp\(4px, calc\(7\.5vw - 25px\), 8px\)/s
+  );
+  assert.match(
+    styles,
+    /\.bottom-nav \.bottom-item\[href="\/"\] svg\{[^}]*transform:translate\(-50%,-50%\)/s
+  );
+});
+
+
+test('mobile home button glow remains subtle', () => {
+  const styles = fs.readFileSync(
+    path.join(root, 'public/css/responsive.css'),
+    'utf8'
+  );
+  const match = styles.match(
+    /\.bottom-nav \.bottom-item\[href="\/"\]::before\s*\{([^{}]*)\}/s
+  );
+
+  assert.ok(match, 'Home button circle styles must exist');
+  assert.match(match[1], /0 0 0 4px rgba\(38,100,255,\.05\)/);
+  assert.match(match[1], /0 0 12px 2px rgba\(36,99,255,\.24\)/);
+});
+
+
+// JYYR NOTIFICATION AUDIT REGRESSION TESTS
+test('notification page marks unread cards correctly', () => {
+  const template = fs.readFileSync(
+    path.join(root, 'views/pages/notifications.ejs'),
+    'utf8'
+  );
+
+  assert.match(
+    template,
+    /class="notification-card <%= n\.is_read \? '' : 'unread' %>"/
+  );
+});
+
+test('owner broadcast read status reports reader and recipient counts', () => {
+  const repository = fs.readFileSync(
+    path.join(root, 'src/repositories/notification.repository.js'),
+    'utf8'
+  );
+  const ownerView = fs.readFileSync(
+    path.join(root, 'views/owner/index.ejs'),
+    'utf8'
+  );
+
+  assert.match(repository, /as read_count/);
+  assert.match(repository, /as recipient_count/);
+  assert.match(repository, /nr\.read_at is not null/);
+  assert.match(repository, /nr\.deleted_at is null/);
+  assert.ok(ownerView.includes('row.read_count'));
+  assert.ok(ownerView.includes('row.recipient_count'));
+});
+
+test('ticket lifecycle sends notifications to the relevant party', () => {
+  const source = fs.readFileSync(
+    path.join(root, 'src/services/support/ticket.service.js'),
+    'utf8'
+  );
+
+  assert.ok(source.includes('async function notifyOwner'));
+  assert.ok(source.includes('title:`Tiket baru ${t.ticket_number}`'));
+  assert.ok(source.includes('title:`Balasan baru ${t.ticket_number}`'));
+  assert.ok(source.includes('title:`Status tiket ${t.ticket_number} diperbarui`'));
+  assert.ok(source.includes('notifications.notify(t.user_id'));
+  assert.ok(source.includes('/owner/tickets/'));
+});
+
+test('failed and expired payment paths create user notifications', () => {
+  const source = fs.readFileSync(
+    path.join(root, 'src/services/payment/payment.service.js'),
+    'utf8'
+  );
+
+  assert.ok(source.includes('// JYYR DEPOSIT FAILURE NOTIFICATION'));
+  assert.ok(source.includes('// JYYR ORDER PAYMENT FAILURE NOTIFICATION'));
+  assert.ok(source.includes("title:'Deposit gagal'"));
+  assert.ok(source.includes("title:'Deposit kedaluwarsa'"));
+  assert.ok(source.includes("title:'Pembayaran gagal'"));
+  assert.ok(source.includes("title:'Pembayaran kedaluwarsa'"));
+});

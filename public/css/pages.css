@@ -1837,18 +1837,14 @@ button[aria-busy="true"]{
 }
 
 .owner-ticket-row{
-  grid-template-columns:48px minmax(0,1fr) auto;
-  cursor:default;
+  grid-template-columns:48px minmax(0,1fr);
+  cursor:pointer;
 }
 
 .owner-ticket-row:hover{
   background:rgba(255,255,255,.025);
 }
 
-.owner-ticket-action{
-  flex:0 0 auto;
-  white-space:nowrap;
-}
 
 @media(max-width:600px){
   .owner-ticket-row{
@@ -1863,10 +1859,6 @@ button[aria-busy="true"]{
     min-width:43px;
   }
 
-  .owner-ticket-row .owner-ticket-action{
-    grid-column:2;
-    justify-self:start;
-  }
 }
 
 
@@ -1925,46 +1917,10 @@ button[aria-busy="true"]{
   font-size:10px;
 }
 
-.messages-search{
-  min-width:0;
-  width:min(290px,100%);
-  height:38px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:0 11px;
-  box-sizing:border-box;
-  border:1px solid var(--border);
-  border-radius:12px;
-  background:rgba(0,0,0,.16);
-}
 
-.messages-search:focus-within{
-  border-color:var(--border-strong);
-  box-shadow:0 0 0 3px rgba(167,139,250,.07);
-}
 
-.messages-search-icon{
-  width:16px;
-  height:16px;
-  flex:0 0 16px;
-  color:var(--muted);
-}
 
-.messages-search input{
-  width:100%;
-  min-width:0;
-  border:0;
-  outline:0;
-  background:transparent;
-  color:var(--text);
-  font:inherit;
-  font-size:12px;
-}
 
-.messages-search input::placeholder{
-  color:var(--muted);
-}
 
 .messages-filter-row{
   display:flex;
@@ -1977,6 +1933,10 @@ button[aria-busy="true"]{
 .messages-filter{
   height:29px;
   min-height:29px;
+  box-sizing:border-box;
+  justify-content:center;
+  align-items:center;
+  display:inline-flex;
   padding:0 11px;
   border:1px solid var(--border);
   border-radius:999px;
@@ -2263,56 +2223,12 @@ button[aria-busy="true"]{
   line-height:1.5;
 }
 
-.messages-compose-form{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) auto;
-  gap:8px;
-  align-items:end;
-}
 
-.messages-compose-field{
-  display:block;
-  min-width:0;
-}
 
-.messages-compose-field textarea{
-  width:100%;
-  min-height:44px;
-  max-height:140px;
-  resize:vertical;
-  box-sizing:border-box;
-  padding:12px 13px;
-  border:1px solid var(--border);
-  border-radius:13px;
-  background:rgba(0,0,0,.14);
-  color:var(--text);
-  font:inherit;
-  font-size:12px;
-  line-height:1.45;
-}
 
-.messages-compose-field textarea:focus{
-  outline:0;
-  border-color:var(--primary-2);
-  box-shadow:0 0 0 3px rgba(167,139,250,.08);
-}
 
-.messages-compose-field textarea::placeholder{
-  color:var(--muted);
-}
 
-.messages-send-button{
-  min-width:92px;
-  height:44px;
-  min-height:44px;
-  padding:0 13px;
-  font-size:12px;
-}
 
-.messages-send-button .icon{
-  width:15px;
-  height:15px;
-}
 
 .messages-page .pagination{
   margin-top:14px;
@@ -2338,9 +2254,6 @@ button[aria-busy="true"]{
     flex-direction:column;
   }
 
-  .messages-search{
-    width:100%;
-  }
 
   .messages-filter-row{
     padding-left:12px;
@@ -2375,17 +2288,11 @@ button[aria-busy="true"]{
     font-size:11px;
   }
 
-  .messages-compose-form{
-    grid-template-columns:1fr;
-  }
 
-  .messages-send-button{
-    width:100%;
-  }
 }
 
 
-/* MESSAGES SEARCH INPUT FINAL */
+/* MESSAGES SEARCH INPUT — CANONICAL */
 
 .messages-search{
   position:relative;
@@ -2470,7 +2377,7 @@ button[aria-busy="true"]{
 
 
 /* =========================================================
-   MESSAGES COMPOSER — CONSOLIDATED
+   MESSAGES COMPOSER — CANONICAL
    ========================================================= */
 
 .messages-compose-form{
@@ -2622,6 +2529,8 @@ button[aria-busy="true"]{
 }
 
 .owner-ticket-detail-page .owner-ticket-status-trigger{
+  position:relative;
+  box-sizing:border-box;
   width:38px;
   min-width:38px;
   max-width:38px;
@@ -2639,8 +2548,20 @@ button[aria-busy="true"]{
 }
 
 .owner-ticket-status-dots{
-  font-size:25px;
-  line-height:1;
+  position:absolute;
+  left:50%;
+  top:50%;
+  display:block;
+  width:4px;
+  height:4px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:currentColor;
+  box-shadow:0 -7px 0 currentColor, 0 7px 0 currentColor;
+  transform:translate(-50%,-50%);
+  line-height:0;
 }
 
 .owner-ticket-detail-page .owner-ticket-detail-form .message-detail-input{
@@ -2751,6 +2672,11 @@ button[aria-busy="true"]{
   box-shadow:var(--shadow-sm);
   backdrop-filter:blur(16px);
   -webkit-backdrop-filter:blur(16px);
+}
+
+.owner-ticket-detail-page .message-detail-card{
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
 }
 
 /* =========================================================

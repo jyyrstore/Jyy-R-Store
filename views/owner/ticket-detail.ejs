@@ -80,6 +80,7 @@
         <form
           class="message-detail-form owner-ticket-detail-form"
           data-owner-ticket-form
+          data-initial-status="<%= ticketStatus %>"
         >
           <input type="hidden" name="id" value="<%= ticket.id %>">
 
@@ -100,7 +101,7 @@
               aria-expanded="false"
               data-jyyr-select-trigger
             >
-              <span class="owner-ticket-status-dots" aria-hidden="true">⋮</span>
+              <span class="owner-ticket-status-dots" aria-hidden="true"></span>
               <span data-jyyr-select-label hidden><%= ticketStatus %></span>
               <span class="jyyr-select-chevron" aria-hidden="true" hidden></span>
             </button>
@@ -130,7 +131,6 @@
               name="body"
               rows="1"
               maxlength="10000"
-              required
               aria-label="Balasan tiket"
               placeholder="Tulis balasan..."
             ></textarea>

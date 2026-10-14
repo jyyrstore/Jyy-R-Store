@@ -8,55 +8,62 @@
     <% if(notifications.length){ %>
       <div class="header-actions">
         <button
-          class="button button-secondary"
+          class="button button-secondary notification-action-button"
           type="button"
           data-notification-select-mode
+          aria-label="Pilih notifikasi"
+          title="Pilih notifikasi"
           aria-pressed="false">
           <%- icon('layers') %>
-          Pilih
         </button>
 
         <button
-          class="button button-secondary"
+          class="button button-secondary notification-action-button"
           type="button"
           data-notification-select-all
           data-notification-selection-control
+          aria-label="Pilih semua"
+          title="Pilih semua"
           aria-pressed="false"
           hidden>
-          <%- icon('check') %>
-          <span data-notification-selection-label>Pilih semua</span>
+          <%- icon('list-check') %>
         </button>
 
         <button
-          class="button button-secondary"
+          class="button button-secondary notification-action-button"
           type="button"
-          data-notification-read-all>
-          <%- icon('check') %>
-          Tandai semua telah dibaca
+          data-notification-read-all
+          aria-label="Tandai semua telah dibaca"
+          title="Tandai semua telah dibaca"
+          hidden>
+          <%- icon('mail-check') %>
         </button>
 
         <button
-          class="button button-danger"
+          class="button button-danger notification-action-button"
           type="button"
           data-notification-delete-selected
           data-notification-selection-control
+          aria-label="Hapus notifikasi yang dipilih"
+          title="Hapus notifikasi yang dipilih"
           disabled
           hidden>
-          <%- icon('trash-can') %>
-          Hapus pesan yang dipilih
+          <%- icon('trash-check') %>
         </button>
 
         <button
-          class="button button-danger"
+          class="button button-danger notification-action-button"
           type="button"
-          data-notification-delete-all>
+          data-notification-delete-all
+          aria-label="Hapus semua notifikasi"
+          title="Hapus semua notifikasi"
+          hidden>
           <%- icon('trash-can') %>
-          Hapus semua pesan
         </button>
       </div>
     <% } %>
   </div>
-  <div class="stack-list"><% notifications.forEach(n=>{ %><article class="notification-card \1" data-notification-id="<%= n.id %>" data-notification-link="<%= n.link || '' %>">
+  <div class="stack-list"><% notifications.forEach(n=>{ %><article class="notification-card <%= n.is_read ? '' : 'unread' %>" data-notification-id="<%= n.id %>" data-notification-link="<%= n.link || '' %>">
   <label class="notification-select">
     <input
       type="checkbox"
