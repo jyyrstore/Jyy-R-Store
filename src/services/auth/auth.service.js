@@ -113,6 +113,34 @@ async function exchangeCode(code){
  return data;
 }
 
+async function verifyRecoveryToken(tokenHash){
+ if(typeof tokenHash!=='string'||!tokenHash.trim()){
+  throw Object.assign(
+   new Error('Tautan reset password tidak valid atau sudah kedaluwarsa.'),
+   {status:400,code:'RESET_TOKEN_INVALID',expose:true}
+  );
+ }
+
+ const {data,error}=await supabasePublic().auth.verifyOtp({
+  token_hash:tokenHash.trim(),
+  type:'recovery'
+ });
+
+ if(
+  error ||
+  !data?.session?.access_token ||
+  !data?.session?.refresh_token ||
+  !data?.user?.id
+ ){
+  throw Object.assign(
+   new Error('Tautan reset password tidak valid atau sudah kedaluwarsa.'),
+   {status:400,code:'RESET_TOKEN_INVALID',expose:true}
+  );
+ }
+
+ return data;
+}
+
 async function sendPasswordReset(email){
  const {error}=await supabasePublic().auth.resetPasswordForEmail(
  email,
@@ -165,4 +193,4 @@ async function updatePassword({accessToken,refreshToken},password){
  }
 }
 
-module.exports={register,login,logout,exchangeCode,sendPasswordReset,updatePassword};
+module.exports={register,login,logout,exchangeCode,verifyRecoveryToken,sendPasswordReset,updatePassword};

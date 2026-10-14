@@ -701,7 +701,34 @@ async function login(req,res){res.render('app',base(req,{view:'pages/auth',mode:
 async function register(req,res){res.render('app',base(req,{view:'pages/auth',mode:'register',error:req.query.error||''}))}
 async function forgotPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'forgot',error:req.query.error||''}))}
 async function resetPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'reset',error:req.query.error||''}))}
-async function authCallback(req,res,next){ try { if(!req.query.code) return res.redirect('/auth/login?error=Kode autentikasi tidak tersedia.'); const d=await auth.exchangeCode(req.query.code); await setAuthSession(req,d); return res.redirect(safeNextPath(req.query.next)); } catch(e){ return next(e); } }
+async function authCallback(req,res,next){
+ try{
+  const tokenHash=
+   typeof req.query.token_hash==='string'
+    ? req.query.token_hash.trim()
+    : '';
+  const authType=String(req.query.type||'').toLowerCase();
+
+  if(tokenHash && authType==='recovery'){
+   const d=await auth.verifyRecoveryToken(tokenHash);
+   await setAuthSession(req,d);
+   return res.redirect('/auth/reset-password');
+  }
+
+  if(!req.query.code){
+   return res.redirect(
+    '/auth/login?error='+
+    encodeURIComponent('Kode autentikasi tidak tersedia.')
+   );
+  }
+
+  const d=await auth.exchangeCode(req.query.code);
+  await setAuthSession(req,d);
+  return res.redirect(safeNextPath(req.query.next));
+ }catch(e){
+  return next(e);
+ }
+}
 async function paymentStatus(req,res,next){try{const p=await require('../services/payment/payment.service').getStatus(req.params.id,req.user.id);res.render('app',base(req,{view:'pages/payment',payment:p}));}catch(e){next(e)}}
 async function delivery(req,res,next){
   try{
