@@ -4,6 +4,7 @@ const {log}=require('../config/logging');
 const {rateLimit}=require('express-rate-limit');
 const {loadEnv}=require('../config/env');
 const {requestPath}=require('../utils/request-path');
+const {renderPageFormError}=require('../utils/form-error');
 
 const limiterCache=new Map();
 const developmentRequestCache=new Map();
@@ -93,7 +94,19 @@ function sharedOrLocalRateLimit(kind){
       (
         kind==='general' &&
         isSensitiveApiPath(req)
-      )
+      ),
+    handler:(req,res,...args)=>{
+      const options=args[1]||{};
+
+      if(renderPageFormError(req,res,{
+        status:options.statusCode||429,
+        code:'RATE_LIMITED',
+        message:'Terlalu banyak percobaan dalam waktu singkat. Tunggu sebentar, lalu coba lagi.'
+      })) return;
+
+      // Pertahankan handler default rate-limit untuk request non-form/API.
+      return res.status(options.statusCode||429).send(options.message);
+    }
   });
 
   return async function sharedLimiter(req,res,next){
@@ -146,6 +159,12 @@ function sharedOrLocalRateLimit(kind){
       }
 
       if(!result.success){
+        if(renderPageFormError(req,res,{
+          status:429,
+          code:'RATE_LIMITED',
+          message:'Terlalu banyak percobaan dalam waktu singkat. Tunggu sebentar, lalu coba lagi.'
+        })) return;
+
         return res.status(429).json({
           success:false,
           error:{
@@ -174,6 +193,12 @@ function sharedOrLocalRateLimit(kind){
           message:error?.message||String(error)
         }
       );
+
+      if(renderPageFormError(req,res,{
+        status:503,
+        code:'RATE_LIMIT_UNAVAILABLE',
+        message:'Pemeriksaan keamanan sedang tidak tersedia. Coba lagi beberapa saat lagi.'
+      })) return;
 
       return res.status(503).json({
         success:false,
@@ -329,6 +354,12 @@ function csrfMiddleware(req,res,next){
       req.body?._csrf;
 
     if(!safeEqual(sent,token)){
+      if(renderPageFormError(req,res,{
+        status:403,
+        code:'CSRF_INVALID',
+        message:'Sesi keamanan formulir sudah kedaluwarsa atau token tidak valid. Muat ulang halaman, lalu kirim formulir kembali.'
+      })) return;
+
       return res.status(403).json({
         success:false,
         error:{

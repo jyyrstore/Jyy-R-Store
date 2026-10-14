@@ -8,6 +8,7 @@ const {validate}=require('../middleware/validation.middleware');
 const {sensitiveRateLimit}=require('../middleware/security.middleware');
 const {z}=require('zod');
 const {loadEnv}=require('../config/env');
+const {safeNextPath}=require('../utils/url');
 const {ok}=require('../utils/response');
 const cron=require('../controllers/cron.controller');
 
@@ -132,11 +133,20 @@ pageRouter.post(
         userAgent:req.get('user-agent')
       });
       await setAuthSession(req,data);
-      return res.redirect('/dashboard');
+      return res.redirect(
+        safeNextPath(req.query.next,'/dashboard')
+      );
     }catch(error){
       if(error?.expose && Number(error.status)<500){
+        const nextPath=safeNextPath(
+          req.query.next,
+          '/dashboard'
+        );
+
         return res.redirect(
-          '/auth/login?error='+encodeURIComponent(error.message)
+          '/auth/login?next='+
+          encodeURIComponent(nextPath)+
+          '&error='+encodeURIComponent(error.message)
         );
       }
       return next(error);

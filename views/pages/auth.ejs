@@ -58,7 +58,7 @@
       </div>
     <% } %>
 
-    <form class="stack-form auth-login-form" data-auth-form="login" method="POST" action="/auth/login">
+    <form class="stack-form auth-login-form" data-auth-form="login" method="POST" action="/auth/login?next=<%= encodeURIComponent(nextPath || '/dashboard') %>" data-next="<%= nextPath || '/dashboard' %>">
       <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
       <label class="field">
         <span>Email</span>
