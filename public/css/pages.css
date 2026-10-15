@@ -3157,16 +3157,22 @@ a.delivery-card:focus-visible{
 body[data-view="pages/history"] [data-tab="orders"] .list-card .align-right > .badge{font-size:10px;padding:3px 5px;transform:translateX(3px);}
 
 /* HISTORY BALANCE TRANSACTION LAYOUT */
-body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-card{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto auto;align-items:center;column-gap:10px;row-gap:5px;padding:12px}
+.history-mutation-card{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto auto;align-items:center;column-gap:10px;row-gap:5px;padding:12px}
 .history-mutation-type{grid-column:1;grid-row:1;min-width:0;font-size:13px;line-height:1.3}
 .history-mutation-amount{grid-column:2;grid-row:1;justify-self:end;font-size:13px;line-height:1.3;white-space:nowrap}
 .history-mutation-reference{grid-column:1;grid-row:2;min-width:0;margin:0;color:var(--muted);font-size:11px;line-height:1.35;overflow-wrap:anywhere}
 .history-mutation-balance{grid-column:2;grid-row:2;justify-self:end;margin:0;color:var(--muted);font-size:11px;line-height:1.35;text-align:right;white-space:nowrap}
+.deposit-history-list .history-mutation-status{grid-column:2;grid-row:1;justify-self:end;min-width:0;max-width:100%;margin:0;padding:3px 5px;font-size:10px;line-height:1.25;text-align:right;white-space:normal;overflow-wrap:anywhere;display:inline-flex;transform:translateX(3px)}
+.history-mutation-card .history-mutation-status.badge-paid,.history-mutation-card .history-mutation-status.badge-completed,.history-mutation-card .history-mutation-status.badge-success{color:var(--success)}
+.history-mutation-card .history-mutation-status.badge-pending,.history-mutation-card .history-mutation-status.badge-processing,.history-mutation-card .history-mutation-status.badge-expired{color:var(--warning)}
+.history-mutation-card .history-mutation-status.badge-failed{color:#ff9b9e}
+.history-mutation-card .history-mutation-status.badge-refunded{color:var(--primary-2)}
 .history-mutation-date{grid-column:1;grid-row:3;min-width:0;margin:0;color:var(--muted);font-size:10px;line-height:1.4;overflow-wrap:anywhere}
 .history-mutation-zone{grid-column:2;grid-row:3;justify-self:end;margin:0;color:var(--muted);font-size:10px;white-space:nowrap}
 
 /* HISTORY REFERENCE COPY BUTTON */
-body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-reference-copy{
+body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-reference-copy,
+body[data-view="pages/deposit"] .deposit-history-list .history-mutation-reference-copy{
   display:block;
   width:100%;
   min-width:0;
@@ -3190,11 +3196,15 @@ body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-referen
   appearance:none;
   -webkit-appearance:none;
 }
-body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-reference-copy:hover{
+body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-reference-copy:hover,
+body[data-view="pages/deposit"] .deposit-history-list .history-mutation-reference-copy:hover{
   color:var(--action);
 }
-body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-reference-copy:focus-visible{
+body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-reference-copy:focus-visible,
+body[data-view="pages/deposit"] .deposit-history-list .history-mutation-reference-copy:focus-visible{
   outline:2px solid var(--focus);
   outline-offset:2px;
   border-radius:3px;
 }
+
+.deposit-history-list .history-mutation-amount{grid-row:2}

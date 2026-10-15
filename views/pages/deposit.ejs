@@ -1,4 +1,39 @@
-<section class="page-shell"><div class="page-header"><div><h1>Isi Saldo</h1><p>Tambahkan saldo agar pembayaran produk dapat diproses lebih cepat.</p></div></div><div class="stat-card featured wallet-balance"><span>Saldo tersedia</span><strong><%= formatIDR(wallet.balance) %></strong><small>Saldo dapat dipakai pada checkout yang mendukung Wallet.</small></div><div class="section"><h2>Pilih nominal deposit</h2><div class="amount-grid"><% [10000,25000,50000,100000].forEach(v=>{ %><button class="amount-button" data-deposit-amount="<%= v %>"><%= formatIDR(v) %></button><% }) %><label class="field amount-custom"><span>Nominal lain</span><input id="deposit-custom" inputmode="numeric" type="number" min="1000" placeholder="Rp"></label></div><button class="button button-primary button-block" data-deposit-submit><%- icon('wallet') %> Lanjut ke Pembayaran</button><p class="muted small">Setelah nominal dipilih, kamu akan diarahkan ke proses pembayaran yang tersedia.</p></div><div class="section"><div class="section-header"><h2>Riwayat deposit</h2></div><div class="stack-list"><% deposits.forEach(d=>{ %><div class="list-card deposit-history-card"><div class="deposit-history-main"><strong class="deposit-reference" title="<%= d.reference||d.id %>"><%= d.reference||d.id.slice(0,8) %></strong><span><%= formatDate(d.created_at) %></span></div><div class="align-right"><b><%= formatIDR(d.amount) %></b><span class="badge badge-<%= String(d.status||'').toLowerCase() %>"><%= labelStatus(d.status) %></span></div></div><% }) %><% if(!deposits.length){ %><%- include('../partials/empty',{title:'Belum ada deposit',description:'Transaksi deposit akan tampil di sini.'}) %><% } %></div>
+<section class="page-shell"><div class="page-header"><div><h1>Isi Saldo</h1><p>Tambahkan saldo agar pembayaran produk dapat diproses lebih cepat.</p></div></div><div class="stat-card featured wallet-balance"><span>Saldo tersedia</span><strong><%= formatIDR(wallet.balance) %></strong><small>Saldo dapat dipakai pada checkout yang mendukung Wallet.</small></div><div class="section"><h2>Pilih nominal deposit</h2><div class="amount-grid"><% [10000,25000,50000,100000].forEach(v=>{ %><button class="amount-button" data-deposit-amount="<%= v %>"><%= formatIDR(v) %></button><% }) %><div class="amount-custom-row">
+<label class="field amount-custom"><span>Costum Nominal</span><input id="deposit-custom" inputmode="numeric" type="text" placeholder="Rp"></label>
+<div class="field amount-last-deposit-field">
+  <span>Terakhir Deposit</span>
+
+<% if(lastDeposit){ %>
+<button
+  class="amount-button amount-last-deposit-button"
+  type="button"
+  data-deposit-amount="<%= Number(lastDeposit.amount) %>"
+  aria-label="Gunakan nominal deposit terakhir <%= formatIDR(lastDeposit.amount) %>"
+><%= formatIDR(lastDeposit.amount) %></button>
+<% } else { %>
+<button
+  class="amount-button amount-last-deposit-button"
+  type="button"
+  disabled
+>Belum ada deposit</button>
+<% } %>
+
+</div>
+</div>
+</div><button class="button button-primary button-block" data-deposit-submit><%- icon('wallet') %> Lanjut ke Pembayaran</button><p class="muted small">Setelah nominal dipilih, kamu akan diarahkan ke proses pembayaran yang tersedia.</p></div><div class="section"><div class="section-header"><h2>Riwayat deposit</h2></div><div class="stack-list deposit-history-list"><% deposits.forEach(d=>{ %><div class="list-card history-mutation-card">
+  <strong class="history-mutation-type">Deposit</strong>
+  <b class="history-mutation-amount"><%= formatIDR(d.amount) %></b>
+  <button class="history-mutation-reference history-mutation-reference-copy"
+          type="button"
+          data-history-reference-copy
+          data-copy-value="<%= d.reference || d.id || '' %>"
+          aria-label="Salin ID lengkap <%= d.reference || d.id || '' %>"
+          title="Ketuk untuk menyalin ID lengkap"
+          <%= (d.reference || d.id) ? '' : 'disabled' %>><%= String(d.reference || '').toUpperCase().startsWith('DEPOSIT-') ? String(d.reference).slice(0, 16) : (d.reference || (d.id ? String(d.id).slice(0, 8) : '—')) %></button>
+  <span class="history-mutation-status badge badge-<%= String(d.status||'').toLowerCase() %>"><%= labelStatus(d.status) %></span>
+  <span class="history-mutation-date"><%= new Intl.DateTimeFormat('id-ID', {day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Jakarta'}).format(new Date(d.created_at)) %>, <%= new Intl.DateTimeFormat('id-ID', {hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'Asia/Jakarta'}).format(new Date(d.created_at)) %></span>
+  <span class="history-mutation-zone">[ WIB ]</span>
+</div><% }) %><% if(!deposits.length){ %><%- include('../partials/empty',{title:'Belum ada deposit',description:'Transaksi deposit akan tampil di sini.'}) %><% } %></div>
 <%- include('../partials/pagination',{
   pagination:depositsPagination,
   param:'page'

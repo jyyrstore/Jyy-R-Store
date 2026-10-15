@@ -1390,7 +1390,7 @@
         card?.removeAttribute('aria-busy');
       }
     }
-    const amount=e.target.closest('[data-deposit-amount]');if(amount){document.querySelectorAll('[data-deposit-amount]').forEach(x=>x.classList.remove('selected'));amount.classList.add('selected');const custom=document.getElementById('deposit-custom');if(custom)custom.value=Number(amount.dataset.depositAmount)}
+    const amount=e.target.closest('[data-deposit-amount]');if(amount){document.querySelectorAll('[data-deposit-amount]').forEach(x=>x.classList.remove('selected'));amount.classList.add('selected');const custom=document.getElementById('deposit-custom');if(custom)custom.value=Number(amount.dataset.depositAmount).toLocaleString('id-ID')}
     const read=e.target.closest('[data-read-notification]');
     if(read){
       try{
@@ -1644,7 +1644,7 @@
       return;
     }
     const tab=e.target.closest('[data-tab-target]');if(tab){const name=tab.dataset.tabTarget;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));tab.classList.add('active');document.querySelector(`[data-tab="${name}"]`)?.classList.add('active')}
-    const dep=e.target.closest('[data-deposit-submit]');if(dep){const v=Number(document.getElementById('deposit-custom')?.value||0);if(v<1000)return toast.error('Minimum deposit Rp1.000.');dep.disabled=true;try{const r=await api.request('/api/deposit',{method:'POST',body:{amount:v,returnUrl:location.origin+'/deposit'}});if(r.paymentUrl)location.href=r.paymentUrl;else toast.success('Deposit dibuat.')}catch(err){toast.error(err.message)}finally{dep.disabled=false}}
+    const dep=e.target.closest('[data-deposit-submit]');if(dep){const v=Number(String(document.getElementById('deposit-custom')?.value||'').replace(/\D/g,''))||0;if(v<1000)return toast.error('Minimum deposit Rp1.000.');dep.disabled=true;try{const r=await api.request('/api/deposit',{method:'POST',body:{amount:v,returnUrl:location.origin+'/deposit'}});if(r.paymentUrl)location.href=r.paymentUrl;else toast.success('Deposit dibuat.')}catch(err){toast.error(err.message)}finally{dep.disabled=false}}
     const checkoutRemove=e.target.closest('[data-checkout-remove]');
     if(checkoutRemove){
       const id=checkoutRemove.dataset.checkoutRemove;
@@ -3450,6 +3450,37 @@ document.addEventListener('input',(event)=>{
   if(empty){
     empty.hidden=visible>0;
   }
+});
+
+
+/* JYYR DEPOSIT AMOUNT FORMATTING */
+document.addEventListener('input', event => {
+  const input = event.target instanceof Element
+    ? event.target.closest('#deposit-custom')
+    : null;
+
+  if (!input) return;
+
+  const current = input.value;
+  const caret = input.selectionStart ?? current.length;
+  const digitsBeforeCaret =
+    current.slice(0, caret).replace(/\D/g, '').length;
+  const digits = current.replace(/\D/g, '');
+  const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+  if (current === formatted) return;
+
+  input.value = formatted;
+
+  let nextCaret = 0;
+  let counted = 0;
+
+  while (nextCaret < formatted.length && counted < digitsBeforeCaret) {
+    if (/\d/.test(formatted[nextCaret])) counted++;
+    nextCaret++;
+  }
+
+  input.setSelectionRange(nextCaret, nextCaret);
 });
 
 /* JYYR HISTORY REFERENCE COPY */

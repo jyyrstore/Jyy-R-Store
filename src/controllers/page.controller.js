@@ -467,7 +467,7 @@ async function deposit(req,res,next){
     const depositsRepo=require('../repositories/deposits.repository');
     const depositService=require('../services/deposit/deposit.service');
 
-    const [w,deposits,total]=await Promise.all([
+    const [w,deposits,total,latestDeposits]=await Promise.all([
       wallet.get(req.user.id),
       depositService.list(
         req.user.id,
@@ -476,7 +476,8 @@ async function deposit(req,res,next){
           offset:pager.offset
         }
       ),
-      depositsRepo.countForUser(req.user.id)
+      depositsRepo.countForUser(req.user.id),
+      depositService.list(req.user.id,{limit:1,offset:0})
     ]);
 
     res.render(
@@ -485,6 +486,7 @@ async function deposit(req,res,next){
         view:'pages/deposit',
         wallet:w,
         deposits,
+        lastDeposit:latestDeposits[0]||null,
         depositsPagination:
           paginationMeta(
             total,
