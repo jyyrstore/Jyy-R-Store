@@ -2,7 +2,7 @@
 <% const sandboxResult=String(payment.raw_reference?._sandboxResult||'').toUpperCase(); %>
 <% const paymentDisplayStatus=paymentMode==='SANDBOX' && sandboxResult ? sandboxResult : payment.status; %>
 <% const paymentDisplayLabel=paymentMode==='SANDBOX' && sandboxResult ? (sandboxResult==='PAID' ? 'Berhasil (simulasi)' : labelStatus(sandboxResult)) : labelStatus(payment.status); %>
-<section class="page-shell narrow"><div class="page-header"><div><div class="eyebrow">Pembayaran</div><h1>Status pembayaran</h1><p>ID pembayaran <code><%= payment.id %></code></p></div><span
+<section class="page-shell narrow"><div class="page-header"><div><h1>Status pembayaran</h1><p>ID pembayaran <code><%= payment.id %></code></p></div><span
   class="badge badge-<%= String(paymentDisplayStatus||'').toLowerCase() %>"
   data-label-pending="<%= labelStatus('PENDING') %>"
   data-label-processing="<%= labelStatus('PROCESSING') %>"

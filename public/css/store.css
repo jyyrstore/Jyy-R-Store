@@ -849,9 +849,7 @@
   transform:none;
 }
 
-.home-page > .two-column > div:first-child > .eyebrow{
-  transform:translateY(10px);
-}
+
 
 .detail-category-card{
   display:inline-flex;

@@ -24,14 +24,14 @@
 
   <section class="section">
     <div class="section-header">
-      <div><div class="eyebrow">Terbaru</div><h2>Produk terbaru</h2></div>
+      <div><h2>New Product</h2></div>
       <a href="/store" class="text-link">Lihat semua</a>
     </div>
     <div class="product-grid"><% products.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>
   </section>
 
   <section class="section">
-    <div class="section-header"><div><div class="eyebrow">Kategori</div><h2>Temukan berdasarkan kategori</h2></div></div>
+    <div class="section-header"><div><h2>Category</h2></div></div>
     <div class="category-grid">
 <% categories.forEach(c=>{ %>
   <a href="/store?category=<%= c.slug %>" class="category-card">
@@ -46,11 +46,11 @@
 
   <section class="section two-column">
     <div>
-      <div class="eyebrow">Layanan</div><h2>Layanan pilihan</h2>
+      <h2>Service</h2>
       <div class="stack-list"><% services.forEach(s=>{ %><a class="list-card" href="/services"><div><strong><%= s.name %></strong><span><%= s.category || 'Layanan' %></span></div><b><%= formatIDR(s.price) %></b></a><% }) %></div>
     </div>
     <div>
-      <div class="eyebrow">Informasi</div><h2>Informasi terbaru</h2>
+      <h2>New Information</h2>
       <div class="stack-list"><% announcements.forEach(a=>{ %><article class="info-card"><strong><%= a.title %></strong><p><%= a.body %></p></article><% }) %>
         <% if(!announcements.length){ %><%- include('../partials/empty',{title:'Belum ada informasi',description:'Announcement akan tampil di sini.'}) %><% } %>
       </div>

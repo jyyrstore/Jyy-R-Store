@@ -1978,6 +1978,7 @@
         ['OWNER','OWNER']
       ]
     })}</label><button class="button button-primary" data-user-role="${id}">Change Role</button></div>`)}
+    const deleteCat=e.target.closest('[data-owner-delete-category]');if(deleteCat){if(!(await window.JYYRModal.confirm('Hapus kategori ini? Produk yang menggunakan kategori ini akan tetap ada tanpa kategori.')))return;deleteCat.disabled=true;try{await ownerAction('/api/owner/categories/'+encodeURIComponent(deleteCat.dataset.ownerDeleteCategory),{},'DELETE','Kategori dihapus.');location.reload()}catch(err){toast.error(err.message);deleteCat.disabled=false}}
     const editCat=e.target.closest('[data-owner-edit-category]');if(editCat){let d;try{d=JSON.parse(editCat.dataset.ownerEditCategory)}catch{return}open(`<form data-owner-category-edit class="stack-form"><h2>Edit Kategori</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Slug</span><input name="slug" value="${esc(d.slug)}"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" ${d.is_active?'checked':''}></label>${formButtons()}</form>`)}
     const editSvc=e.target.closest('[data-owner-edit-service]');if(editSvc){let d;try{d=JSON.parse(editSvc.dataset.ownerEditService)}catch{return}open(`<form data-owner-service-edit class="stack-form"><h2>Edit Service</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Kategori</span><input name="category" value="${esc(d.category||'')}"></label><label class="field"><span>Harga</span><input name="price" type="number" value="${Number(d.price)||0}" min="0"></label><label class="field"><span>Description</span><textarea name="description">${esc(d.description||'')}</textarea></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" ${d.is_active?'checked':''}></label>${formButtons()}</form>`)}
     const editFaq=e.target.closest('[data-owner-edit-faq]');if(editFaq){let d;try{d=JSON.parse(editFaq.dataset.ownerEditFaq)}catch{return}open(`<form data-owner-faq-edit class="stack-form"><h2>Edit FAQ</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Category</span><input name="category" value="${esc(d.category)}"></label><label class="field"><span>Question</span><input name="question" value="${esc(d.question)}"></label><label class="field"><span>Answer</span><textarea name="answer">${esc(d.answer)}</textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" ${d.is_published?'checked':''}></label>${formButtons()}</form>`)}
@@ -2147,7 +2148,7 @@
     const msg=e.target.closest('[data-message-form]');if(msg){e.preventDefault();const body=new FormData(msg).get('body');const btn=msg.querySelector('button');btn.disabled=true;try{await api.request('/api/messages',{method:'POST',body:{body}});toast.success('Pesan terkirim.');location.reload()}catch(err){toast.error(err.message)}finally{btn.disabled=false}}
     const maint=e.target.closest('[data-owner-maintenance]');if(maint){e.preventDefault();const fd=new FormData(maint);const body={enabled:fd.get('enabled')==='on',title:fd.get('title'),message:fd.get('message'),scheduled_start:fd.get('scheduled_start')||null,scheduled_end:fd.get('scheduled_end')||null,allow_owner_access:fd.get('allow_owner_access')==='on'};try{await api.request('/api/owner/maintenance',{method:'PUT',body});toast.success('Maintenance setting tersimpan.')}catch(err){toast.error(err.message)}}
     const form=e.target.closest('[data-deposit-submit]');if(form){e.preventDefault()}
-    const category=e.target.closest('[data-owner-category-form], [data-owner-category-edit]');if(category){e.preventDefault();const fd=Object.fromEntries(new FormData(category));fd.is_active=fd.is_active==='on';try{const id=fd.id;if(id)await ownerAction('/api/owner/categories/'+id,{name:fd.name,slug:fd.slug,is_active:fd.is_active},'PUT','Kategori diperbarui.');else await ownerAction('/api/owner/categories',{name:fd.name,slug:fd.slug,is_active:fd.is_active},'POST','Kategori dibuat.');location.reload()}catch(err){toast.error(err.message)}}
+    const category=e.target.closest('[data-owner-category-form], [data-owner-category-edit]');if(category){e.preventDefault();const fd=Object.fromEntries(new FormData(category));fd.is_active=fd.is_active==='on';try{const id=fd.id;if(id)await ownerAction('/api/owner/categories/'+id,{name:fd.name,slug:fd.slug,is_active:fd.is_active},'PUT','Kategori diperbarui.');else await ownerAction('/api/owner/categories',{name:fd.name,slug:fd.slug,is_active:fd.is_active},'POST','Kategori dibuat.');location.reload()}catch(err){if(err.code==='CATEGORY_ALREADY_EXISTS')toast.error(err.message,{title:'Category Sudah Dimiliki'});else toast.error(err.message)}}
     const pfm=e.target.closest('[data-owner-product-form]');
     if(pfm){
       e.preventDefault();
@@ -2578,7 +2579,6 @@
         <div class="search-section">
           <div class="section-header">
             <div>
-              <div class="eyebrow">Produk</div>
               <h2>Produk</h2>
             </div>
           </div>
@@ -2588,7 +2588,6 @@
         <div class="search-section">
           <div class="section-header">
             <div>
-              <div class="eyebrow">Kategori</div>
               <h2>Kategori</h2>
             </div>
           </div>
@@ -2598,7 +2597,6 @@
         <div class="search-section">
           <div class="section-header">
             <div>
-              <div class="eyebrow">Layanan</div>
               <h2>Layanan</h2>
             </div>
           </div>
@@ -3451,5 +3449,55 @@ document.addEventListener('input',(event)=>{
 
   if(empty){
     empty.hidden=visible>0;
+  }
+});
+
+/* JYYR HISTORY REFERENCE COPY */
+document.addEventListener('click', async event => {
+  const button = event.target instanceof Element
+    ? event.target.closest('[data-history-reference-copy]')
+    : null;
+
+  if (!button || button.disabled) return;
+
+  const value = button.getAttribute('data-copy-value') || '';
+  if (!value) return;
+
+  event.preventDefault();
+
+  try {
+    let copied = false;
+
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(value);
+        copied = true;
+      } catch {
+        copied = false;
+      }
+    }
+
+    if (!copied) {
+      const field = document.createElement('textarea');
+      field.value = value;
+      field.setAttribute('readonly', '');
+      field.style.cssText =
+        'position:fixed;left:-9999px;top:0;opacity:0;pointer-events:none';
+
+      document.body.appendChild(field);
+      field.select();
+
+      try {
+        copied = document.execCommand('copy');
+      } finally {
+        field.remove();
+      }
+    }
+
+    if (!copied) throw new Error('Clipboard unavailable');
+
+    window.JYYRToast?.success('ID lengkap berhasil disalin.');
+  } catch {
+    window.JYYRToast?.error('Gagal menyalin ID lengkap.');
   }
 });

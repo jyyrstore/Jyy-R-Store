@@ -436,6 +436,7 @@ ownerApi.post('/products/:id/upload-complete',validate(z.object({
 ownerApi.get('/categories',asyncHandler(api.ownerController.categories));
 ownerApi.post('/categories',validate(ownerCategorySchema),asyncHandler(api.ownerController.categoryCreate));
 ownerApi.put('/categories/:id',validate(ownerCategorySchema),asyncHandler(api.ownerController.categoryUpdate));
+ownerApi.delete('/categories/:id',asyncHandler(api.ownerController.categoryDelete));
 ownerApi.get('/orders',asyncHandler(api.ownerController.orders));
 ownerApi.post('/orders/:id/status',validate(z.object({status:z.enum(['PENDING','PAID','PROCESSING','COMPLETED','CANCELLED'])})),asyncHandler(api.ownerController.orderStatus));
 ownerApi.get('/payments',asyncHandler(api.ownerController.payments));

@@ -7,6 +7,61 @@ const page=fs.readFileSync(path.join(root,'src/controllers/page.controller.js'),
 const migrations=fs.readdirSync(path.join(root,'database/migrations')).filter(x=>x.endsWith('.sql')).map(x=>fs.readFileSync(path.join(root,'database/migrations',x),'utf8')).join('\n');
 for(const r of ['/','/store','/product/:slug','/dashboard','/cart','/checkout','/orders','/deposit','/history','/profile','/tickets','/notifications','/messages','/services','/faq','/security','/owner']) test(`required route ${r}`,()=>assert.ok(route.includes(`'${r}'`),r));
 for(const t of ['profiles','roles','categories','products','product_contents','carts','cart_items','orders','order_items','payments','payment_events','deposits','wallets','wallet_transactions','entitlements','download_logs','services','service_orders','tickets','ticket_messages','messages','notifications','notification_preferences','login_history','activity_logs','announcements','faqs','maintenance_settings','site_settings','refunds']) test(`schema includes ${t}`,()=>assert.match(migrations,new RegExp(`create table if not exists ${t}\\b`,'i')));
+test('duplicate Owner category names return a dedicated toast',()=>{
+  const api=fs.readFileSync(path.join(root,'src/controllers/api.controller.js'),'utf8');
+  const browser=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
+
+  assert.ok(api.includes("error?.code==='23505'"));
+  assert.ok(api.includes("error?.constraint==='categories_name_key'"));
+  assert.ok(api.includes("code:'CATEGORY_ALREADY_EXISTS'"));
+  assert.ok(api.includes("new Error('Nama kategori sudah digunakan. Silakan pilih nama lain.')"));
+  assert.equal((api.match(/throw normalizeCategoryWriteError\(error\)/g)||[]).length,2);
+  assert.ok(browser.includes("if(err.code==='CATEGORY_ALREADY_EXISTS')toast.error(err.message,{title:'Category Sudah Dimiliki'});else toast.error(err.message)"));
+});
+
+
+test('Owner category deletion is owner-protected and keeps products',()=>{
+  const repository=fs.readFileSync(
+    path.join(root,'src/repositories/categories.repository.js'),
+    'utf8'
+  );
+  const controller=fs.readFileSync(
+    path.join(root,'src/controllers/api.controller.js'),
+    'utf8'
+  );
+  const ownerView=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.ok(route.includes(
+    "ownerApi.delete('/categories/:id',asyncHandler(api.ownerController.categoryDelete));"
+  ));
+  assert.ok(repository.includes(
+    "delete from categories where id=$1 returning *"
+  ));
+  assert.match(controller,/categoryDelete:async\(req,res\)=>/);
+  assert.match(controller,/code:'CATEGORY_NOT_FOUND'/);
+  assert.match(controller,/action:'DELETE_CATEGORY'/);
+  assert.ok(ownerView.includes(
+    'data-owner-delete-category="<%= row.id %>"'
+  ));
+  assert.ok(browser.includes(
+    "window.JYYRModal.confirm('Hapus kategori ini? Produk yang menggunakan kategori ini akan tetap ada tanpa kategori.')"
+  ));
+  assert.ok(browser.includes(
+    "ownerAction('/api/owner/categories/'+encodeURIComponent(deleteCat.dataset.ownerDeleteCategory),{},'DELETE','Kategori dihapus.')"
+  ));
+  assert.match(
+    migrations,
+    /category_id uuid references categories\(id\) on delete set null/i
+  );
+});
+
 test('webhook route is raw-body protected before JSON parser',()=>{const server=fs.readFileSync(path.join(root,'server.js'),'utf8');const webhook=server.indexOf("app.use('/api/payment/webhook'");const json=server.indexOf('express.json');assert.ok(webhook!==-1&&json!==-1&&webhook<json)});
 
 // BEGIN JYYR BUATQRIS CONTRACT TESTS

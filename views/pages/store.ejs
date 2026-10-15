@@ -1,7 +1,7 @@
 <section class="page-shell">
   <div class="page-header">
     <div>
-      <div class="eyebrow">Store</div>
+
       <h1>Katalog produk</h1>
       <p><%= total %> produk tersedia. Gunakan filter untuk mempersempit pilihan.</p>
     </div>
@@ -36,6 +36,16 @@
       >
     </label>
 
+    <input
+      class="filter-min"
+      name="minPrice"
+      value="<%= req.query.minPrice||'' %>"
+      type="number"
+      min="0"
+      placeholder="Harga min"
+      aria-label="Harga minimum"
+    >
+
     <div class="jyyr-select filter-category" data-jyyr-select>
   <input
     type="hidden"
@@ -55,16 +65,6 @@
       <% }) %>
   </div>
 </div>
-
-    <input
-      class="filter-min"
-      name="minPrice"
-      value="<%= req.query.minPrice||'' %>"
-      type="number"
-      min="0"
-      placeholder="Harga min"
-      aria-label="Harga minimum"
-    >
 
     <input
       class="filter-max"

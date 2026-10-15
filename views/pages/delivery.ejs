@@ -1,20 +1,18 @@
 <section class="page-shell">
   <div class="page-header">
-    <div><div class="eyebrow">Produk Saya</div><h1>Produk Saya</h1><p>Akses produk digital yang sudah tersedia untuk akunmu.</p></div>
+    <div><h1>Produk Saya</h1><p>Akses produk digital yang sudah tersedia untuk akunmu.</p></div>
   </div>
 
   <div class="stack-list">
     <% entitlements.forEach(e=>{ %>
-      <article class="list-card">
-        <div>
-          <div class="eyebrow accent">Akses digital</div>
-          <strong><%= e.product_name || e.product_id %></strong>
-          <span><%= labelStatus(e.status) %> · tersedia sejak <%= formatDate(e.granted_at) %></span>
-        </div>
-        <a class="button button-primary button-small" href="/orders/<%= e.order_id %>">
-          <%- icon('package') %> Buka Order
-        </a>
-      </article>
+      <a class="list-card delivery-card"
+         href="/orders/<%= e.order_id %>"
+         aria-label="Buka order: <%= e.product_name || e.product_id %>">
+        <span class="eyebrow accent delivery-card-label">Akses digital</span>
+        <span class="delivery-card-status"><%= labelStatus(e.status) %></span>
+        <strong class="delivery-card-product"><%= e.product_name || e.product_id %></strong>
+        <span class="delivery-card-date"><%= formatDate(e.granted_at) %></span>
+      </a>
     <% }) %>
 
     <% if(!entitlements.length){ %>
