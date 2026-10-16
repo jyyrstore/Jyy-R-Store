@@ -725,6 +725,7 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
       const sandboxOrder=Boolean(
         payment.order_id &&
         lockedOrder &&
+        String(lockedOrder.user_id)===String(payment.user_id) &&
         String(lockedOrder.payment_method||'').toUpperCase()==='SANDBOX'
       );
 
@@ -747,13 +748,45 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
         };
       }
 
+      const sandboxOwner=(await client.query(
+        `select 1 from profiles
+         where id=$1
+           and role='OWNER'
+           and status not in ('BANNED','SUSPENDED')
+           and deleted_at is null
+         limit 1`,
+        [payment.user_id]
+      )).rows[0];
+
+      if(!sandboxOwner){
+        await client.query(
+          'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
+          [
+            'PAYMENT_WEBHOOK_SANDBOX_IGNORED',
+            'payment',
+            payment.id,
+            {
+              reference:parsed.reference,
+              eventId:parsed.eventId,
+              status:next,
+              reason:'OWNER_AUTHORIZATION_REQUIRED',
+              is_test:true
+            }
+          ]
+        );
+        return {
+          duplicate:false,
+          ignored:true,
+          sandbox:true,
+          reason:'OWNER_AUTHORIZATION_REQUIRED',
+          paymentId:payment.id,
+          paymentStatus:payment.status
+        };
+      }
+
       const sandboxCurrent=String(payment.status||'PENDING').toUpperCase();
       const sandboxAllowed=PAYMENT_TRANSITIONS[sandboxCurrent];
-      const lateSandboxSuccess=
-        next==='PAID' &&
-        ['FAILED','EXPIRED','CANCELLED'].includes(sandboxCurrent);
-
-      if((!sandboxAllowed || !sandboxAllowed.has(next)) && !lateSandboxSuccess){
+      if(!sandboxAllowed || !sandboxAllowed.has(next)){
         await client.query(
           'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
           [
@@ -772,8 +805,8 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
         };
       }
 
-      // Success sandbox is visible as a simulation but never as real revenue.
-      const sandboxStoredStatus=next==='PAID'?'CANCELLED':next;
+      // Sandbox memberi akses uji tanpa mengubah stok atau omzet asli.
+      const sandboxStoredStatus=next;
 
       await client.query(
         `update payments
@@ -786,18 +819,24 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
                  'paymentMode','SANDBOX',
                  'isTest',true
                ),
+             paid_at=case when $3::payment_status='PAID' then coalesce(paid_at,now()) else paid_at end,
              updated_at=now()
          where id=$1`,
         [payment.id,parsed.reference,sandboxStoredStatus,payload,next]
       );
 
       let sandboxOrderStatus=lockedOrder.status;
+      let sandboxAccessGranted=false;
+
       if(next!=='PENDING' && lockedOrder.status==='PENDING'){
-        const targetOrderStatus=next==='PAID'?'CANCELLED':next;
+        const targetOrderStatus=next;
         const updatedOrder=(
           await client.query(
             `update orders
-             set status=$2::order_status,updated_at=now()
+             set status=$2::order_status,
+                 paid_at=case when $2::order_status='PAID'
+                   then coalesce(paid_at,now()) else paid_at end,
+                 updated_at=now()
              where id=$1
                and payment_method='SANDBOX'
                and status='PENDING'
@@ -805,7 +844,45 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
             [lockedOrder.id,targetOrderStatus]
           )
         ).rows[0];
+
         if(updatedOrder) sandboxOrderStatus=updatedOrder.status;
+      }
+
+      // Hanya order Sandbox yang baru berhasil berubah ke PAID mendapat akses uji.
+      // Jangan mengurangi stock atau purchase_count dan jangan mencatat PURCHASE.
+      if(
+        next==='PAID' &&
+        lockedOrder.status==='PENDING' &&
+        sandboxOrderStatus==='PAID'
+      ){
+        const sandboxItems=(await client.query(
+          'select product_id from order_items where order_id=$1',
+          [lockedOrder.id]
+        )).rows;
+
+        for(const item of sandboxItems){
+          await delivery.createEntitlement({
+            userId:payment.user_id,
+            productId:item.product_id,
+            orderId:lockedOrder.id
+          },client);
+        }
+
+        sandboxAccessGranted=true;
+
+        await notifications.notify(payment.user_id,{
+          type:'PAYMENT',
+          title:'Pembayaran Sandbox berhasil',
+          body:`Pembayaran simulasi ${lockedOrder.order_number} berhasil. Order ditandai PAID untuk pengujian Owner; stok dan omzet asli tidak berubah.`,
+          link:`/orders/${lockedOrder.id}`
+        },client);
+
+        await notifications.notify(payment.user_id,{
+          type:'ORDER',
+          title:'Pesanan Sandbox siap diuji',
+          body:`Akses produk order ${lockedOrder.order_number} tersedia untuk pengujian.`,
+          link:`/orders/${lockedOrder.id}`
+        },client);
       }
 
       await client.query(
@@ -821,7 +898,8 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
             storedPaymentStatus:sandboxStoredStatus,
             orderStatus:sandboxOrderStatus,
             is_test:true,
-            sideEffectsSuppressed:true
+            stockAndRevenueSideEffectsSuppressed:true,
+            sandboxAccessGranted
           }
         ]
       );
@@ -829,7 +907,8 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
       return {
         duplicate:false,
         sandbox:true,
-        sideEffectsSuppressed:true,
+        stockAndRevenueSideEffectsSuppressed:true,
+        sandboxAccessGranted,
         paymentId:payment.id,
         paymentStatus:sandboxStoredStatus,
         sandboxResult:next,

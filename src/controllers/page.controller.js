@@ -325,6 +325,12 @@ async function orderDetail(req,res,next){
       throw e;
     }
 
+    if(!['PAID','PROCESSING','COMPLETED'].includes(
+      String(order.status||'').trim().toUpperCase()
+    )){
+      return res.redirect('/orders?notice=order-payment-required');
+    }
+
     const productRepo=require('../repositories/products.repository');
     const accessControl=require('../services/delivery/access-control.service');
 

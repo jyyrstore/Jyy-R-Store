@@ -201,4 +201,23 @@
       );
     }
   };
+
+  const noticeParams = new URLSearchParams(window.location.search);
+
+  if(noticeParams.get('notice') === 'order-payment-required'){
+    noticeParams.delete('notice');
+
+    const remainingQuery = noticeParams.toString();
+    const cleanUrl = window.location.pathname
+      + (remainingQuery ? '?' + remainingQuery : '')
+      + window.location.hash;
+
+    window.history.replaceState(window.history.state, '', cleanUrl);
+
+    window.JYYRToast.warning(
+      'Status pesanan belum mengizinkan akses detail. Periksa status dan pembayaran pesanan di halaman ini.',
+      { title: 'Peringatan', duration: 5000 }
+    );
+  }
+
 })();

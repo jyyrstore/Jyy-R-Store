@@ -254,7 +254,14 @@ const orderController={
    return ok(res,{...created,payment:p},201)
  },
  list:async(req,res)=>ok(res,await orders.getUserOrders(req.user.id,req.query)),
- detail:async(req,res)=>{const o=await require('../repositories/orders.repository').findForUser(req.params.id,req.user.id); if(!o) throw Object.assign(new Error('Order not found.'),{status:404,code:'ORDER_NOT_FOUND',expose:true});return ok(res,o)}
+ detail:async(req,res)=>{
+   const o=await require('../repositories/orders.repository').findForUser(req.params.id,req.user.id);
+   if(!o) throw Object.assign(new Error('Order not found.'),{status:404,code:'ORDER_NOT_FOUND',expose:true});
+   if(!['PAID','PROCESSING','COMPLETED'].includes(String(o.status||'').trim().toUpperCase())){
+     throw Object.assign(new Error('Order detail is only available for confirmed orders.'),{status:403,code:'ORDER_DETAIL_LOCKED',expose:true});
+   }
+   return ok(res,o)
+ }
 };
 const paymentController={
  create:async(req,res)=>{

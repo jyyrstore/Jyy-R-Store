@@ -43,11 +43,21 @@ test('Sandbox order does not reserve stock',()=>{
   assert.match(expiry,/o\.payment_method in \('GATEWAY','SANDBOX'\)/);
 });
 
-test('Sandbox callback records simulation without payment fulfillment',()=>{
+test('Sandbox callback gives Owner test access without real stock or revenue side effects',()=>{
   const service=read('src/services/payment/payment.service.js');
   const page=read('views/pages/payment.ejs');
+  const analytics=read('src/repositories/analytics.repository.js');
+  const start=service.indexOf("if(providerName==='buatqris' && parsed.isTest){");
+  const end=service.indexOf("    const current=String(payment.status||'PENDING').toUpperCase();",start);
+  const sandbox=service.slice(start,end);
+  assert.ok(start>=0 && end>start);
   assert.match(service,/PAYMENT_WEBHOOK_SANDBOX_PROCESSED/);
-  assert.match(service,/sandboxStoredStatus=next==='PAID'\?'CANCELLED':next/);
+  assert.ok(sandbox.includes("const sandboxStoredStatus=next;"));
+  assert.ok(sandbox.includes("paid_at=case when $2::order_status='PAID'"));
+  assert.ok(sandbox.includes('delivery.createEntitlement'));
+  assert.ok(sandbox.includes("role='OWNER'"));
+  assert.ok(sandbox.includes('stockAndRevenueSideEffectsSuppressed:true'));
+  assert.match(analytics,/payment_method is distinct from 'SANDBOX'/i);
   assert.match(service,/'SANDBOX'\s*&&/);
   assert.match(page,/Berhasil diterima \(simulasi\)/);
 });
