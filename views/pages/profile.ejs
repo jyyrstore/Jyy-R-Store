@@ -23,10 +23,7 @@
 
 <section class="page-shell profile-page">
 
-  <section
-  class="profile-hero panel"
-  aria-labelledby="profile-page-title"
->
+  <section class="profile-hero panel" aria-labelledby="profile-page-title">
 
   <div class="profile-card-head">
 
@@ -36,42 +33,42 @@
       </h1>
     </div>
 
-    <button
-      class="button button-secondary button-small profile-edit-trigger"
-      type="button"
-      data-profile-edit-open
-      aria-haspopup="dialog"
-    >
-      <%- icon('edit') %>
-      <span>Edit profil</span>
-    </button>
-
-  </div>
-
-  <div class="profile-identity">
-
     <div class="profile-avatar" aria-hidden="true">
       <span data-profile-avatar>
         <%= profileInitial %>
       </span>
     </div>
 
-    <div class="profile-identity-copy">
+    <button
+      class="button button-secondary button-small profile-edit-trigger"
+      type="button"
+      data-profile-edit-open
+      aria-haspopup="dialog"
+     aria-label="Edit profil">
+      <%- icon('edit') %>
+
+    </button>
+
+  </div>
+
+  <div class="profile-identity">
+
+        <div class="profile-identity-copy">
 
       <h2
-        id="profile-identity-title"
-        data-profile-display
-      >
-        <%= profileName %>
-      </h2>
+          id="profile-identity-title"
+          data-profile-display
+        >
+          <%= profileName %>
+        </h2>
 
       <p
-        class="profile-identity-username"
-        data-profile-username
-        data-profile-detail="username"
-      >
-        @<%= profileUsername %>
-      </p>
+          class="profile-identity-username"
+          data-profile-username
+          data-profile-detail="username"
+        >
+          @<%= profileUsername %>
+        </p>
 
       <p
         class="profile-identity-email"
@@ -81,19 +78,14 @@
         <%= profile.email || 'Tidak tersedia' %>
       </p>
 
-      <p
-        class="profile-identity-bio"
-        data-profile-detail="bio"
-      >
-        <%= profile.bio || 'Belum ada bio.' %>
-      </p>
+
 
       <p
-        class="profile-identity-phone"
-        data-profile-detail="phone"
-      >
-        <%= profile.phone || 'Belum ditambahkan' %>
-      </p>
+          class="profile-identity-bio"
+          data-profile-detail="bio"
+        ><%= profile.bio || 'Belum ada bio.' %></p>
+
+
 
     </div>
 
@@ -161,9 +153,7 @@
           <dd
             class="profile-detail-value-muted profile-detail-bio"
             data-profile-detail="bio"
-          >
-            <%= profile.bio || 'Belum ada bio.' %>
-          </dd>
+          ><%= profile.bio || 'Belum ada bio.' %></dd>
         </div>
 
       </dl>
@@ -367,10 +357,8 @@
 
   <div class="two-column profile-content-grid">
 
-    <section
-      class="profile-security-card"
-      aria-labelledby="profile-security-title"
-    >
+    <a
+      class="profile-security-card" href="/security" aria-label="Lihat Keamanan">
       <div class="profile-security-icon">
         <%- icon('shield-user-broken') %>
       </div>
@@ -379,9 +367,7 @@
 
 
         <h2 id="profile-security-title">
-          <a href="/security" class="profile-security-title-link">
-            Keamanan akun
-          </a>
+          Keamanan akun
         </h2>
 
         <p>
@@ -389,13 +375,8 @@
         </p>
       </div>
 
-      <a
-        class="button button-secondary button-small profile-security-action"
-        href="/security"
-      >
-        Lihat keamanan
-      </a>
-    </section>
+
+    </a>
 
     <section
       class="panel profile-login-panel"
@@ -430,26 +411,21 @@
                 class="profile-login-icon"
                 aria-hidden="true"
               >
-                <%- icon(
-                  String(l.status || '').toUpperCase() === 'SUCCESS'
-                    ? 'check'
-                    : 'alert'
-                ) %>
+                <%- icon('smartphone') %>
               </div>
 
               <div class="profile-login-copy">
-                <strong>
-                  <%= labelStatus(l.status) %>
-                </strong>
-
                 <span>
                   <%= l.device || 'Perangkat tidak diketahui' %>
                 </span>
-
                 <small>
                   <%= l.browser || 'Browser tidak diketahui' %>
                 </small>
               </div>
+
+              <strong class="profile-login-status">
+                <%= labelStatus(l.status) %>
+              </strong>
 
               <time
                 class="profile-login-time"

@@ -47,11 +47,11 @@
   <section class="section two-column">
     <div>
       <h2>Service</h2>
-      <div class="stack-list"><% services.forEach(s=>{ %><a class="list-card" href="/services"><div><strong><%= s.name %></strong><span><%= s.category || 'Layanan' %></span></div><b><%= formatIDR(s.price) %></b></a><% }) %></div>
+      <div class="stack-list"><% services.forEach(s=>{ %><a href="/services"><div><strong><%= s.name %></strong><span><%= s.category || 'Layanan' %></span></div><b><%= formatIDR(s.price) %></b></a><% }) %></div>
     </div>
     <div>
       <h2>New Information</h2>
-      <div class="stack-list"><% announcements.forEach(a=>{ %><article class="info-card"><strong><%= a.title %></strong><p><%= a.body %></p></article><% }) %>
+      <div class="stack-list"><% announcements.forEach(a=>{ %><article><strong><%= a.title %></strong><p><%= a.body %></p></article><% }) %>
         <% if(!announcements.length){ %><%- include('../partials/empty',{title:'Belum ada informasi',description:'Announcement akan tampil di sini.'}) %><% } %>
       </div>
     </div>

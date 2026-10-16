@@ -140,14 +140,16 @@ test('profile form has account-friendly controls',()=>{
   assert.match(source,/readonly/);
 });
 
-test('profile exposes security entry points',()=>{
+test('profile exposes security entry points through the whole-card link',()=>{
   const source=read('views/pages/profile.ejs');
 
-  assert.ok(
-    (source.match(/href="\/security"/g)||[]).length>=2
+  assert.match(
+    source,
+    /<a\b(?=[^>]*\bclass="profile-security-card")(?=[^>]*\bhref="\/security")[^>]*>/s
   );
 
   assert.match(source,/Keamanan akun/);
+  assert.doesNotMatch(source,/profile-security-action-label/);
 });
 
 test('profile login activity has responsive structure',()=>{
