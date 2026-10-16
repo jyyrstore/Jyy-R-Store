@@ -515,6 +515,22 @@ function createWebhookRouter(providerResolver){
     const out=await require('../services/payment/payment.service')
       .processWebhook(raw,signature,payload,providerName);
 
+    if (
+      providerName === 'buatqris' &&
+      out?.retry === true &&
+      out?.reason === 'PAYMENT_REFERENCE_NOT_READY'
+    ) {
+      res.setHeader('Retry-After', '2');
+      return res.status(503).json({
+        success: false,
+        error: {
+          code: 'PAYMENT_REFERENCE_NOT_READY',
+          message: 'Payment reference is not ready; retry webhook delivery.'
+        },
+        requestId: req.id
+      });
+    }
+
     return ok(res,out);
   }));
 

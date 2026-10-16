@@ -18,7 +18,28 @@ async function listForUser(userId,{limit=50,offset=0}={}){
 
   return (
     await query(
-      `select o.*,coalesce(json_agg(json_build_object('product_id',oi.product_id,'product_name',oi.product_name,'quantity',oi.quantity,'line_total',oi.line_total)) filter(where oi.id is not null),'[]') items from orders o left join order_items oi on oi.order_id=o.id where o.user_id=$1 group by o.id order by o.created_at desc limit $2 offset $3`,
+      `select o.*,
+       (select p.id
+ from payments p
+ where p.order_id=o.id
+   and p.status='PENDING'
+   and lower(p.provider)='buatqris'
+ order by p.created_at desc, p.id desc
+ limit 1) as pending_payment_id,
+(select lower(p.provider)
+ from payments p
+ where p.order_id=o.id
+   and p.status='PENDING'
+   and lower(p.provider)='buatqris'
+ order by p.created_at desc, p.id desc
+ limit 1) as pending_payment_provider,
+       coalesce(json_agg(json_build_object('product_id',oi.product_id,'product_name',oi.product_name,'quantity',oi.quantity,'line_total',oi.line_total)) filter(where oi.id is not null),'[]') items
+       from orders o
+       left join order_items oi on oi.order_id=o.id
+       where o.user_id=$1
+       group by o.id
+       order by o.created_at desc
+       limit $2 offset $3`,
       [userId,lim,off]
     )
   ).rows;

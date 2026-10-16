@@ -1,6 +1,97 @@
-<section class="page-shell" data-payment-review-orders="<%= req.query.reviewOrder || '' %>"><div class="page-header"><div><h1>Pesanan saya</h1><p>Lihat status dan detail semua pesananmu.</p></div></div><div class="stack-list"><% orders.forEach(o=>{ %><a class="list-card" href="/orders/<%= o.id %>"><div><strong><%= o.order_number %></strong><span><%= o.items?.map(i=>`${i.product_name} × ${i.quantity}`).join(', ') %></span></div><div class="align-right"><b><%= formatIDR(o.total) %></b><span class="badge badge-<%= String(o.status||'').toLowerCase() %>"><%= labelStatus(o.status) %></span></div></a><% }) %><% if(!orders.length){ %><%- include('../partials/empty',{title:'Belum ada pesanan',description:'Order akan muncul setelah checkout.'}) %><% } %>
+<section class="page-shell" data-payment-review-orders="<%= req.query.reviewOrder || '' %>"><div class="page-header"><div><h1>Pesanan saya</h1><p>Lihat status dan detail semua pesananmu.</p></div></div><div class="stack-list"><% orders.forEach(o=>{ %><a class="list-card" href="/orders/<%= o.id %>"<% if(String(o.status||'').toUpperCase()==='PENDING' && String(o.pending_payment_provider||'').toLowerCase()==='buatqris' && o.pending_payment_id){ %> data-pending-buatqris-payment="<%= o.pending_payment_id %>"<% } %>><div><strong><%= o.order_number %></strong><span><%= o.items?.map(i=>`${i.product_name} × ${i.quantity}`).join(', ') %></span></div><div class="align-right"><b><%= formatIDR(o.total) %></b><span class="badge badge-<%= String(o.status||'').toLowerCase() %>"><%= labelStatus(o.status) %></span></div></a><% }) %><% if(!orders.length){ %><%- include('../partials/empty',{title:'Belum ada pesanan',description:'Order akan muncul setelah checkout.'}) %><% } %>
 <%- include('../partials/pagination',{
   pagination:ordersPagination,
   param:'page'
 }) %>
 </div></section>
+
+<script nonce="<%= cspNonce %>">
+(()=>{
+  const rows=Array.from(document.querySelectorAll(
+    '[data-pending-buatqris-payment]'
+  ));
+  if(!rows.length)return;
+
+  const terminal=new Set([
+    'PAID','FAILED','EXPIRED','CANCELLED','REFUNDED'
+  ]);
+
+  let stopped=false;
+  let inFlight=false;
+  let timer=null;
+  let attempts=0;
+  const maxAttempts=90;
+  const delayMs=20000;
+
+  const schedule=()=>{
+    if(stopped || document.hidden || timer || attempts>=maxAttempts)return;
+    timer=setTimeout(()=>{
+      timer=null;
+      tick();
+    },delayMs);
+  };
+
+  const tick=async()=>{
+    if(stopped || document.hidden || inFlight)return;
+    if(attempts>=maxAttempts)return;
+
+    attempts++;
+    inFlight=true;
+    let finalStatusFound=false;
+
+    try{
+      await Promise.all(rows.map(async row=>{
+        const id=row.dataset.pendingBuatqrisPayment;
+        if(!id)return;
+
+        try{
+          const response=await fetch(
+            '/api/payment/'+encodeURIComponent(id),
+            {
+              credentials:'same-origin',
+              headers:{'Accept':'application/json'}
+            }
+          );
+
+          if(!response.ok)return;
+
+          const out=await response.json();
+          const payment=out.data||out;
+          const status=String(payment.status||'').toUpperCase();
+
+          if(terminal.has(status))finalStatusFound=true;
+        }catch{
+          // Gangguan sementara akan dicoba kembali pada siklus selanjutnya.
+        }
+      }));
+    }finally{
+      inFlight=false;
+    }
+
+    if(finalStatusFound){
+      stopped=true;
+      if(timer)clearTimeout(timer);
+      window.location.reload();
+      return;
+    }
+
+    schedule();
+  };
+
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){
+      if(timer)clearTimeout(timer);
+      timer=null;
+    }else{
+      tick();
+    }
+  });
+
+  window.addEventListener('beforeunload',()=>{
+    stopped=true;
+    if(timer)clearTimeout(timer);
+  });
+
+  tick();
+})();
+</script>
