@@ -709,6 +709,15 @@ class BuatQrisProvider {
   }
 }
 
+/*
+ * qris_method identifies the QRIS instrument, not the payment environment.
+ * Only an explicit "test" marker conflicts with a stored Live payment.
+ */
+function qrisMethodConflictsWithTestMode(qrisMethod, storedIsTest) {
+  return String(qrisMethod ?? '').trim().toLowerCase() === 'test' &&
+    storedIsTest === false;
+}
+
 function resolvedPaymentUrl(payment, externalUrl) {
   const direct = externalUrl ||
     payment?.raw_reference?.paymentUrl ||
@@ -771,5 +780,6 @@ module.exports = {
   GenericJsonProvider,
   XenditProvider,
   BuatQrisProvider,
-  resolvedPaymentUrl
+  resolvedPaymentUrl,
+  qrisMethodConflictsWithTestMode
 };

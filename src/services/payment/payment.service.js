@@ -654,8 +654,10 @@ async function reconcileBuatQrisStatus(id, userId) {
 
     if (
       remote.qris_method != null &&
-      String(remote.qris_method).trim() !== '' &&
-      (String(remote.qris_method).trim().toLowerCase() === 'test') !== storedIsTest
+      paymentConfig.qrisMethodConflictsWithTestMode(
+        remote.qris_method,
+        storedIsTest
+      )
     ) {
       rejectStatus('QRIS_METHOD_MODE_MISMATCH');
       return latestPayment();
