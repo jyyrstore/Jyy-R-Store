@@ -576,11 +576,15 @@ async function reconcileBuatQrisStatus(id, userId) {
        and user_id = $2
        and status = 'PENDING'
        and lower(provider) = 'buatqris'
-       and (
-         raw_reference->>'_buatqrisStatusCheckedAt' is null
-         or (raw_reference->>'_buatqrisStatusCheckedAt')::timestamptz
-              <= clock_timestamp() - interval '10 seconds'
-       )
+       and case
+         when pg_input_is_valid(
+           raw_reference->>'_buatqrisStatusCheckedAt',
+           'timestamp with time zone'
+         )
+         then (raw_reference->>'_buatqrisStatusCheckedAt')::timestamptz
+                <= clock_timestamp() - interval '10 seconds'
+         else true
+       end
      returning *`,
     [id, userId]
   );
@@ -733,19 +737,56 @@ async function reconcileBuatQrisStatus(id, userId) {
 async function reconcilePendingBuatQris({limit = 50} = {}) {
   const cap = Math.min(100, Math.max(1, Number(limit) || 50));
   const candidates = (await query(
-    `select id, user_id, status
+    `with pending_payments as (
+       select
+         id,
+         user_id,
+         status,
+         coalesce(
+           case
+             when raw_reference->>'expired_at' ~
+               '^[0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9]{2}:[0-9]{2}(:[0-9]{2}([.][0-9]{1,9})?)?$'
+              and pg_input_is_valid(
+                raw_reference->>'expired_at',
+                'timestamp without time zone'
+              )
+             then (
+               (raw_reference->>'expired_at')::timestamp without time zone
+                 at time zone 'Asia/Jakarta'
+             )
+             when raw_reference->>'expired_at' ~
+               '^[0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9]{2}:[0-9]{2}(:[0-9]{2}([.][0-9]{1,9})?)?[ ]*(Z|[+-][0-9]{2}:?[0-9]{2})$'
+              and pg_input_is_valid(
+                raw_reference->>'expired_at',
+                'timestamp with time zone'
+              )
+             then (raw_reference->>'expired_at')::timestamptz
+             else null
+           end,
+           expires_at,
+           created_at + interval '30 minutes'
+         ) as reconciliation_expires_at,
+         case
+           when pg_input_is_valid(
+             raw_reference->>'_buatqrisStatusCheckedAt',
+             'timestamp with time zone'
+           )
+           then (raw_reference->>'_buatqrisStatusCheckedAt')::timestamptz
+           else null
+         end as last_status_check_at
        from payments
-      where status = 'PENDING'
-        and lower(provider) = 'buatqris'
-        and reference is not null
-        and coalesce(
-          expires_at,
-          created_at + interval '30 minutes'
-        ) <= clock_timestamp() + interval '5 minutes'
-      order by coalesce(
-        expires_at,
-        created_at + interval '30 minutes'
-      ) asc
+       where status = 'PENDING'
+         and lower(provider) = 'buatqris'
+         and reference is not null
+     )
+     select id, user_id, status
+       from pending_payments
+      where last_status_check_at is null
+         or last_status_check_at <=
+              statement_timestamp() - interval '4 minutes'
+      order by
+        last_status_check_at asc nulls first,
+        reconciliation_expires_at asc
       limit $1`,
     [cap]
   )).rows;
