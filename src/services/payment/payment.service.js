@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+const { log } = require('../../config/logging');
 const { withTransaction, query }=require('../../config/database');
 const paymentConfig=require('../../config/payment');
 const provider=(name)=>paymentConfig.paymentProvider(name);
@@ -517,6 +519,279 @@ async function getStatus(id,userId){
   if(!p||p.user_id!==userId)throw notFound('Payment not found.');
   return p;
 }
+
+
+function isTestFlag(value) {
+  return value === true ||
+    value === 1 ||
+    ['true', '1', 'yes', 'test'].includes(
+      String(value ?? '').trim().toLowerCase()
+    );
+}
+
+async function reconcileBuatQrisStatus(id, userId) {
+  const paymentsRepository = require('../../repositories/payments.repository');
+  const initial = await paymentsRepository.findById(id);
+
+  if (!initial || String(initial.user_id) !== String(userId)) {
+    throw notFound('Payment not found.');
+  }
+
+  if (
+    String(initial.status || '').toUpperCase() !== 'PENDING' ||
+    String(initial.provider || '').toLowerCase() !== 'buatqris' ||
+    !initial.reference
+  ) {
+    return initial;
+  }
+
+  const env = loadEnv();
+  if (!env.BUATQRIS_SIGNING_SECRET) {
+    log('warn', 'buatqris_status_reconciliation_unavailable', {
+      paymentId: String(initial.id),
+      reason: 'SIGNING_SECRET_NOT_CONFIGURED'
+    });
+    return initial;
+  }
+
+  const selectedProvider = provider('buatqris');
+  if (typeof selectedProvider.checkStatus !== 'function') {
+    return initial;
+  }
+
+  /*
+   * Klaim pemeriksaan secara atomik. Polling frontend umumnya berjalan
+   * tiap beberapa detik; maksimal satu pemeriksaan per pembayaran
+   * setiap 10 detik per baris database.
+   */
+  const claimedResult = await query(
+    `update payments
+       set raw_reference =
+         coalesce(raw_reference, '{}'::jsonb) ||
+         jsonb_build_object(
+           '_buatqrisStatusCheckedAt',
+           clock_timestamp()::text
+         )
+     where id = $1
+       and user_id = $2
+       and status = 'PENDING'
+       and lower(provider) = 'buatqris'
+       and (
+         raw_reference->>'_buatqrisStatusCheckedAt' is null
+         or (raw_reference->>'_buatqrisStatusCheckedAt')::timestamptz
+              <= clock_timestamp() - interval '10 seconds'
+       )
+     returning *`,
+    [id, userId]
+  );
+
+  if (!claimedResult.rows[0]) {
+    return (await paymentsRepository.findById(id)) || initial;
+  }
+
+  const payment = claimedResult.rows[0];
+  const savedRaw = payment.raw_reference || {};
+
+  const latestPayment = async () =>
+    (await paymentsRepository.findById(id).catch(() => null)) || payment;
+
+  const rejectStatus = (reason) => {
+    log('warn', 'buatqris_status_reconciliation_rejected', {
+      paymentId: String(payment.id),
+      reference: String(payment.reference),
+      reason
+    });
+  };
+
+  try {
+    const remote = await selectedProvider.checkStatus(payment.reference);
+
+    // ID yang diperiksa harus persis sama dengan referensi tersimpan.
+    if (String(remote.transaction_id || '') !== String(payment.reference)) {
+      rejectStatus('TRANSACTION_ID_MISMATCH');
+      return latestPayment();
+    }
+
+    const expectedTotal = Number(
+      savedRaw.totalAmount ?? savedRaw.total_amount
+    );
+    const reportedTotal = Number(remote.total_amount);
+
+    // Total provider harus cocok dengan total tagihan termasuk kode unik.
+    if (
+      !Number.isSafeInteger(expectedTotal) ||
+      expectedTotal <= 0 ||
+      !Number.isSafeInteger(reportedTotal) ||
+      reportedTotal !== expectedTotal
+    ) {
+      rejectStatus('TOTAL_AMOUNT_MISMATCH');
+      return latestPayment();
+    }
+
+    const expectedAmount = Number(savedRaw.amount ?? payment.amount);
+    if (
+      remote.amount != null &&
+      (
+        !Number.isSafeInteger(Number(remote.amount)) ||
+        Number(remote.amount) !== expectedAmount
+      )
+    ) {
+      rejectStatus('BASE_AMOUNT_MISMATCH');
+      return latestPayment();
+    }
+
+    const storedIsTest = isTestFlag(
+      savedRaw.isTest ?? savedRaw.is_test
+    );
+
+    if (
+      remote.is_test != null &&
+      isTestFlag(remote.is_test) !== storedIsTest
+    ) {
+      rejectStatus('TEST_MODE_MISMATCH');
+      return latestPayment();
+    }
+
+    if (
+      remote.qris_method != null &&
+      String(remote.qris_method).trim() !== '' &&
+      (String(remote.qris_method).trim().toLowerCase() === 'test') !== storedIsTest
+    ) {
+      rejectStatus('QRIS_METHOD_MODE_MISMATCH');
+      return latestPayment();
+    }
+
+    const remoteStatus = String(remote.status || '').toLowerCase();
+
+    // Status pending hanya memperbarui waktu pemeriksaan; tidak melunasi order.
+    if (remoteStatus === 'pending') {
+      return latestPayment();
+    }
+
+    const events = {
+      success: 'payment.success',
+      expired: 'payment.expired',
+      failed: 'payment.failed'
+    };
+    const event = events[remoteStatus];
+
+    if (!event) {
+      rejectStatus('UNKNOWN_PROVIDER_STATUS');
+      return latestPayment();
+    }
+
+    /*
+     * Status dibaca dari API provider terautentikasi melalui HTTPS.
+     * Buat payload internal yang ditandatangani dengan signing secret
+     * server, lalu gunakan processor event yang sama dengan webhook.
+     * Processor tetap memvalidasi nominal, mode, Owner, idempotensi,
+     * dan transisi status sebelum memberikan entitlement.
+     */
+    const payload = {
+      event,
+      transaction_id: String(remote.transaction_id),
+      status: remoteStatus,
+      amount: Number(remote.amount ?? expectedAmount),
+      total_amount: reportedTotal,
+      is_test: storedIsTest,
+      ...(remote.qris_method != null
+        ? {qris_method: String(remote.qris_method)}
+        : {}),
+      ...(remote.paid_at ? {paid_at: remote.paid_at} : {}),
+      _reconciled_via: 'api_check_status'
+    };
+
+    const rawBody = Buffer.from(JSON.stringify(payload));
+    const signature = 'sha256=' + crypto
+      .createHmac('sha256', env.BUATQRIS_SIGNING_SECRET)
+      .update(rawBody)
+      .digest('hex');
+
+    await processWebhook(
+      rawBody,
+      signature,
+      payload,
+      'buatqris'
+    );
+
+    return latestPayment();
+  } catch (error) {
+    log('warn', 'buatqris_status_reconciliation_failed', {
+      paymentId: String(payment.id),
+      reference: String(payment.reference),
+      code: String(error?.code || 'STATUS_CHECK_FAILED').slice(0, 80),
+      message: String(error?.message || error).slice(0, 180)
+    });
+
+    // Jangan mengarang status akhir jika provider/API/database bermasalah.
+    return latestPayment();
+  }
+}
+
+async function reconcilePendingBuatQris({limit = 50} = {}) {
+  const cap = Math.min(100, Math.max(1, Number(limit) || 50));
+  const candidates = (await query(
+    `select id, user_id, status
+       from payments
+      where status = 'PENDING'
+        and lower(provider) = 'buatqris'
+        and reference is not null
+        and coalesce(
+          expires_at,
+          created_at + interval '30 minutes'
+        ) <= clock_timestamp() + interval '5 minutes'
+      order by coalesce(
+        expires_at,
+        created_at + interval '30 minutes'
+      ) asc
+      limit $1`,
+    [cap]
+  )).rows;
+
+  let transitioned = 0;
+  let stillPending = 0;
+  let errors = 0;
+
+  for (const candidate of candidates) {
+    try {
+      const before = await require('../../repositories/payments.repository')
+        .findById(candidate.id);
+
+      if (!before || String(before.status).toUpperCase() !== 'PENDING') {
+        continue;
+      }
+
+      const after = await reconcileBuatQrisStatus(
+        candidate.id,
+        candidate.user_id
+      );
+
+      if (
+        after &&
+        String(after.status).toUpperCase() !==
+          String(before.status).toUpperCase()
+      ) {
+        transitioned++;
+      } else {
+        stillPending++;
+      }
+    } catch (error) {
+      errors++;
+      log('warn', 'buatqris_cron_reconciliation_failed', {
+        paymentId: String(candidate.id),
+        code: String(error?.code || 'RECONCILIATION_FAILED').slice(0, 80)
+      });
+    }
+  }
+
+  return {
+    scanned: candidates.length,
+    transitioned,
+    stillPending,
+    errors
+  };
+}
+
 
 async function recordWebhookEvent(client,{
   paymentId,providerName,eventId,payload,pending=false
@@ -1123,4 +1398,4 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
 
   return result;
 }
-module.exports={assertProviderReady,createForOrder,getStatus,processWebhook};
+module.exports={assertProviderReady,createForOrder,getStatus,reconcileBuatQrisStatus,reconcilePendingBuatQris,processWebhook};

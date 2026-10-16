@@ -68,3 +68,25 @@ test('Production Sandbox requires an explicit opt-in',()=>{
   assert.match(env,/BUATQRIS_ALLOW_PRODUCTION_SANDBOX=false/);
   assert.match(api,/SANDBOX_PRODUCTION_DISABLED/);
 });
+
+
+test('BuatQris status reconciliation runs server-side before expiry',()=>{
+  const provider = read('src/config/payment.js');
+  const service = read('src/services/payment/payment.service.js');
+  const api = read('src/controllers/api.controller.js');
+  const cron = read('src/controllers/cron.controller.js');
+
+  assert.match(provider,/async checkStatus\(transactionId\)/);
+  assert.match(provider,/api_check_status/);
+  assert.match(service,/async function reconcileBuatQrisStatus/);
+  assert.match(service,/_buatqrisStatusCheckedAt/);
+  assert.match(service,/TOTAL_AMOUNT_MISMATCH/);
+  assert.match(service,/createHmac\('sha256', env\.BUATQRIS_SIGNING_SECRET\)/);
+  assert.match(api,/payment\.reconcileBuatQrisStatus\(req\.params\.id,req\.user\.id\)/);
+  assert.match(cron,/reconcilePendingBuatQris/);
+  assert.ok(
+    cron.indexOf('reconcilePendingBuatQris') <
+    cron.indexOf('paymentExpiration.run()'),
+    'Status provider harus diperiksa sebelum pembayaran diexpire.'
+  );
+});

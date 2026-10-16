@@ -316,6 +316,24 @@ async function expire(req, res) {
   const paymentExpiration = require('../jobs/payment-expiration.job');
   const depositExpiration = require('../jobs/deposit-expiration.job');
 
+  const paymentService = require('../services/payment/payment.service');
+  let paymentReconciliation = {
+    scanned: 0,
+    transitioned: 0,
+    stillPending: 0,
+    errors: 0
+  };
+
+  try {
+    paymentReconciliation =
+      await paymentService.reconcilePendingBuatQris({limit: 50});
+  } catch (error) {
+    log('warn', 'payment_status_reconciliation_failed', {
+      message: String(error?.message || error).slice(0, 180)
+    });
+    paymentReconciliation.errors = 1;
+  }
+
   const [payments, deposits] = await Promise.all([
     paymentExpiration.run(),
     depositExpiration.run()
@@ -346,6 +364,7 @@ async function expire(req, res) {
 
   return res.json({
     success: true,
+    paymentReconciliation,
     payments,
     deposits,
     productUploads,

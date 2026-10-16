@@ -447,6 +447,112 @@ class BuatQrisProvider {
     };
   }
 
+  async checkStatus(transactionId) {
+    if (!this.configured()) {
+      throw Object.assign(
+        new Error('Kredensial BuatQris belum dikonfigurasi.'),
+        {status:503, code:'BUATQRIS_NOT_CONFIGURED', expose:false}
+      );
+    }
+
+    const reference = String(transactionId || '').trim();
+    if (!reference) {
+      throw Object.assign(
+        new Error('Transaction ID BuatQris kosong.'),
+        {status:400, code:'BUATQRIS_STATUS_REFERENCE_MISSING', expose:false}
+      );
+    }
+
+    const form = new URLSearchParams({
+      action: 'api_check_status',
+      account_id: this.env.BUATQRIS_ACCOUNT_ID,
+      secret_token: this.env.BUATQRIS_SECRET_TOKEN,
+      transaction_id: reference
+    });
+
+    const controller = new AbortController();
+    const timeoutMs = Math.max(
+      1000,
+      Number(this.env.PAYMENT_REQUEST_TIMEOUT_MS || 15000)
+    );
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    let response;
+    try {
+      response = await fetch('https://api.buatqris.site', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          accept: 'application/json'
+        },
+        body: form.toString(),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw Object.assign(
+          new Error('Pemeriksaan status BuatQris melewati batas waktu.'),
+          {code:'BUATQRIS_STATUS_TIMEOUT', expose:false}
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    const body = await response.json().catch(() => null);
+    if (!response.ok || body?.success !== true) {
+      throw Object.assign(
+        new Error(
+          body?.message ||
+          `BuatQris status check gagal (HTTP ${response.status}).`
+        ),
+        {
+          code: response.status === 429
+            ? 'BUATQRIS_STATUS_RATE_LIMITED'
+            : 'BUATQRIS_STATUS_API_ERROR',
+          expose: false
+        }
+      );
+    }
+
+    const data = body.data || {};
+    const returnedReference = String(data.transaction_id || '').trim();
+    const status = String(data.status || '').trim().toLowerCase();
+
+    if (
+      !returnedReference ||
+      !['pending', 'success', 'expired', 'failed'].includes(status)
+    ) {
+      throw Object.assign(
+        new Error('Respons status BuatQris tidak valid.'),
+        {code:'BUATQRIS_STATUS_INVALID_RESPONSE', expose:false}
+      );
+    }
+
+    for (const field of ['amount', 'total_amount']) {
+      if (
+        data[field] != null &&
+        (!Number.isSafeInteger(Number(data[field])) || Number(data[field]) < 0)
+      ) {
+        throw Object.assign(
+          new Error(`Nilai ${field} dari BuatQris tidak valid.`),
+          {code:'BUATQRIS_STATUS_INVALID_AMOUNT', expose:false}
+        );
+      }
+    }
+
+    return {
+      ...data,
+      transaction_id: returnedReference,
+      status,
+      ...(data.amount != null ? {amount:Number(data.amount)} : {}),
+      ...(data.total_amount != null
+        ? {total_amount:Number(data.total_amount)}
+        : {})
+    };
+  }
+
   verifyWebhook(rawBody, signature) {
     const secret = this.env.BUATQRIS_SIGNING_SECRET;
     if (!secret || !signature || rawBody == null) return false;

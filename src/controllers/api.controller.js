@@ -307,7 +307,7 @@ const paymentController={
      )
    },
  status:async(req,res)=>{
-    const p=await payment.getStatus(req.params.id,req.user.id);
+    const p=await payment.reconcileBuatQrisStatus(req.params.id,req.user.id);
     return ok(res,{
       id:p.id,
       provider:p.provider,
