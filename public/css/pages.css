@@ -1781,6 +1781,73 @@ button[aria-busy="true"]{
 }
 
 /* Order detail: compact product-content spacing */
+/* JYYR ORDER DETAIL HEADER ALIGNMENT */
+.order-detail-page-header {
+  display: block;
+  margin-bottom: 24px;
+}
+
+.order-detail-heading-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.order-detail-heading-cell {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.order-detail-heading-cell:first-child .eyebrow {
+  font-size: clamp(15px, 3.8vw, 17px);
+}
+
+.order-detail-heading-cell h1 {
+  max-width: 100%;
+  margin: 4px 0 0;
+  font-size: clamp(15px, 4.3vw, 20px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.order-detail-status-cell {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.order-detail-status-heading {
+  display: flex;
+  width: 100%;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.order-detail-status-heading .badge {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.order-detail-status-cell p {
+  align-self: stretch;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: right;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+/* END JYYR ORDER DETAIL HEADER ALIGNMENT */
+
+
 .order-download-panel .section {
   margin-top: 0;
 }

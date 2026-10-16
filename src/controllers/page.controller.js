@@ -304,8 +304,17 @@ async function orders(req,res,next){
 
 async function orderDetail(req,res,next){
   try{
+    const orderId=String(req.params.id||'').trim();
+
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(orderId)){
+      const e=new Error('Order not found.');
+      e.status=404;
+      e.expose=true;
+      throw e;
+    }
+
     const order=await require('../repositories/orders.repository').findForUser(
-      req.params.id,
+      orderId,
       req.user.id
     );
 
@@ -324,7 +333,8 @@ async function orderDetail(req,res,next){
         const [
           contents,
           owned,
-          reviewViewer
+          reviewViewer,
+          product
         ]=await Promise.all([
           productRepo.contents(item.product_id),
           accessControl.canAccess(
@@ -334,14 +344,18 @@ async function orderDetail(req,res,next){
           productReviews.viewerState(
             item.product_id,
             req.user.id
-          )
+          ),
+          productRepo.findById(item.product_id)
         ]);
+
+        const published=
+          String(product?.status||'').toUpperCase()==='PUBLISHED';
 
         const mappedContents=await Promise.all(
           contents.map(async content=>{
             const allowed=
-              content.access_type==='PUBLIC' ||
-              (content.access_type==='PREVIEW' && content.is_preview) ||
+              (published && content.access_type==='PUBLIC') ||
+              (published && content.access_type==='PREVIEW' && content.is_preview) ||
               owned;
 
             let preview_url=null;

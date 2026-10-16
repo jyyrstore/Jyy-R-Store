@@ -41,7 +41,7 @@ async function findForUser(id,userId){
       `select o.*,coalesce(json_agg(json_build_object(
         'id',oi.id,
         'product_id',oi.product_id,
-        'product_name',coalesce(p.name,oi.product_name),
+        'product_name',coalesce(oi.product_name,p.name),
         'quantity',oi.quantity,
         'unit_price',oi.unit_price,
         'line_total',oi.line_total

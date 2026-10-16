@@ -28,8 +28,9 @@
     <div class="detail-copy">
       <div class="detail-stock-summary" aria-label="Stok produk">
         <strong><%= Number(product.stock) || 0 %></strong>
-        <span><%= Number(product.stock) > 0 ? 'Tersedia' : 'Habis' %></span>
+        <span class="<%= Number(product.stock) > 0 ? 'is-available' : 'is-unavailable' %>"><%= Number(product.stock) > 0 ? 'Tersedia' : 'Habis' %></span>
       </div>
+
       <div class="detail-category-card"><%= product.category_name || 'Produk' %></div>
 
       <div class="detail-title-row">
@@ -364,8 +365,7 @@
 
         <div class="product-review-list-head">
           <div>
-            <div class="eyebrow">Pengalaman Pembeli</div>
-            <h3>Ulasan terbaru</h3>
+              <h3>Ulasan terbaru</h3>
           </div>
         </div>
 
@@ -464,7 +464,6 @@
     >
       <div class="section-header">
         <div>
-          <div class="eyebrow">Rekomendasi</div>
           <h2 id="product-other-title">Produk Lainnya</h2>
           <p>Produk lain yang bisa Anda pertimbangkan.</p>
         </div>
@@ -527,7 +526,6 @@
     >
       <div class="section-header">
         <div>
-          <div class="eyebrow">Temukan Lebih Banyak</div>
           <h2 id="product-category-title">Jelajahi Kategori</h2>
           <p>Pilih kategori untuk melihat lebih banyak produk.</p>
         </div>
