@@ -13,6 +13,91 @@ async function readJson(response){
   return response.json().catch(()=>({}));
 }
 
+/*
+ * BuatQris returns expired_at as a Jakarta-local timestamp without a
+ * timezone suffix (for example, "2026-10-16 15:39:51").
+ * Normalize it here to ISO UTC. Preserve explicit Z/offset timestamps.
+ * Invalid or unsupported values return null so payment.service.js can
+ * apply its existing 30-minute safety fallback.
+ */
+function normalizeBuatQrisExpiry(value) {
+  if (value == null) return null;
+
+  const input = String(value).trim();
+  if (!input) return null;
+
+  const match = input.match(
+    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,9}))?)?(?:\s*(Z|[+-]\d{2}:?\d{2}))?$/i
+  );
+
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6] || '00');
+  const fraction = match[7] || '';
+  const zonePart = match[8] || null;
+
+  const leapYear =
+    year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [
+    31, leapYear ? 29 : 28, 31, 30, 31, 30,
+    31, 31, 30, 31, 30, 31
+  ];
+
+  if (
+    year < 1 ||
+    month < 1 || month > 12 ||
+    day < 1 || day > daysInMonth[month - 1] ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59
+  ) {
+    return null;
+  }
+
+  let zone = '+07:00';
+
+  if (zonePart) {
+    if (zonePart.toUpperCase() === 'Z') {
+      zone = 'Z';
+    } else {
+      const offset = zonePart.match(/^([+-])(\d{2}):?(\d{2})$/);
+      if (!offset) return null;
+
+      const offsetHours = Number(offset[2]);
+      const offsetMinutes = Number(offset[3]);
+
+      if (
+        offsetHours > 14 ||
+        offsetMinutes > 59 ||
+        (offsetHours === 14 && offsetMinutes !== 0)
+      ) {
+        return null;
+      }
+
+      zone = `${offset[1]}${offset[2]}:${offset[3]}`;
+    }
+  }
+
+  const milliseconds = fraction
+    ? `.${fraction.slice(0, 3).padEnd(3, '0')}`
+    : '';
+
+  const isoInput =
+    `${match[1]}-${match[2]}-${match[3]}T` +
+    `${match[4]}:${match[5]}:${match[6] || '00'}` +
+    `${milliseconds}${zone}`;
+
+  const timestamp = Date.parse(isoInput);
+  return Number.isFinite(timestamp)
+    ? new Date(timestamp).toISOString()
+    : null;
+}
+
 class GenericJsonProvider{
   constructor(env){this.env=env;}
   configured(){return Boolean(this.env.PAYMENT_API_BASE_URL&&this.env.PAYMENT_API_KEY);}
@@ -435,7 +520,7 @@ class BuatQrisProvider {
     return {
       reference,
       paymentUrl,
-      expiresAt: data.expired_at || null,
+      expiresAt: normalizeBuatQrisExpiry(data.expired_at),
       raw: {
         ...data,
         totalAmount,
