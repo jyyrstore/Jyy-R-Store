@@ -2,7 +2,7 @@
 <% const sandboxResult=String(payment.raw_reference?._sandboxResult||'').toUpperCase(); %>
 <% const paymentDisplayStatus=paymentMode==='SANDBOX' && sandboxResult ? sandboxResult : payment.status; %>
 <% const paymentDisplayLabel=paymentMode==='SANDBOX' && sandboxResult ? (sandboxResult==='PAID' ? 'Berhasil (simulasi)' : labelStatus(sandboxResult)) : labelStatus(payment.status); %>
-<section class="page-shell narrow"><div class="page-header"><div><h1>Status pembayaran</h1><p>ID pembayaran <code><%= payment.id %></code></p></div><span
+<section class="page-shell narrow"><div class="page-header"><div><h1><%- icon('qris', 'icon payment-status-qris', 'QRIS') %></h1></div><span
   class="badge badge-<%= String(paymentDisplayStatus||'').toLowerCase() %>"
   data-label-pending="<%= labelStatus('PENDING') %>"
   data-label-processing="<%= labelStatus('PROCESSING') %>"
@@ -15,12 +15,25 @@
 <% const buatqrisImage = payment.raw_reference?.qr_url || payment.raw_reference?.qris_image || null; %>
 <% const buatqrisPayLink = payment.raw_reference?.paymentUrl || payment.raw_reference?.payment_url || null; %>
 <% if (String(payment.provider || '').toLowerCase() === 'buatqris') { %>
+<% const qrisExpiresAt = payment.expires_at && Number.isFinite(Date.parse(String(payment.expires_at))) ? new Date(payment.expires_at) : null; %>
+<% if (qrisExpiresAt) { %>
+<div class="qris-expiry-indicator"
+     data-qris-expiry
+     data-expires-at="<%= qrisExpiresAt.toISOString() %>"
+     role="timer"
+     aria-label="Sisa waktu pembayaran QRIS">
+  <%- icon('timer', 'icon qris-expiry-clock') %>
+  <strong data-qris-expiry-countdown>00.00</strong>
+  <%- icon('hourglass', 'icon qris-expiry-hourglass') %>
+</div>
+<% } %>
 <div class="panel">
-  <h2>QRIS ALL PAYMENT</h2>
+  <h2>QRIS ALL PAYMENT</h2><span class="payment-title-divider" aria-hidden="true"></span>
   <% if (buatqrisImage) { %>
     <p>SCAN QRIS DI BAWAH UNTUK MENYELESAIKAN PEMBAYARAN</p>
     <img src="<%= buatqrisImage %>" alt="QRIS pembayaran" width="260" height="260"
          style="display:block;max-width:100%;height:auto;margin:1rem auto">
+    <p class="qris-amount"><strong>IDR <%= Number(payment.raw_reference?.totalAmount ?? payment.raw_reference?.total_amount ?? payment.amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></p>
   <% } else { %>
     <p>Gunakan halaman pembayaran BuatQris untuk menyelesaikan transaksi.</p>
   <% } %>
@@ -82,8 +95,19 @@
     </div>
   <% } %>
 </div>
+
 <% } %>
-<div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Mode pembayaran</span><b><%= paymentMode==='SANDBOX' ? 'Sandbox (simulasi)' : 'Live' %></b></div><% if(paymentMode==='SANDBOX' && sandboxResult){ %><div class="summary-row"><span>Hasil webhook Sandbox</span><b><%= sandboxResult==='PAID' ? 'Berhasil diterima (simulasi)' : labelStatus(sandboxResult) %></b></div><% } %><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted" data-payment-status-note>Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div>
+<div class="panel"><h2>Rincian Pesanan</h2><span class="payment-title-divider" aria-hidden="true"></span><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Mode pembayaran</span><b><%= paymentMode==='SANDBOX' ? 'Sandbox (simulasi)' : 'Live' %></b></div><% if(paymentMode==='SANDBOX' && sandboxResult){ %><div class="summary-row"><span>Hasil webhook Sandbox</span><b><%= sandboxResult==='PAID' ? 'Berhasil diterima (simulasi)' : labelStatus(sandboxResult) %></b></div><% } %><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><% if (String(payment.provider || '').toLowerCase() !== 'buatqris') { %><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><% } %><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted" data-payment-status-note>Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div>
+<div class="panel">
+  <h2>Payment</h2>
+  <span class="payment-title-divider" aria-hidden="true"></span>
+  <img
+    class="payment-banner-image"
+    src="<%= staticAsset('/images/banners/Banner-Payment.png') %>"
+    alt="Payment"
+    loading="lazy"
+  >
+</div>
 </section>
 
 <script nonce="<%= cspNonce %>">
@@ -92,6 +116,58 @@
   const note=document.querySelector('[data-payment-status-note]');
 
   const qrisActions=document.querySelector('[data-qris-actions]');
+
+  const qrisExpiry=document.querySelector('[data-qris-expiry]');
+  const qrisExpiryCountdown=qrisExpiry?.querySelector('[data-qris-expiry-countdown]');
+  const qrisExpiryDeadline=Date.parse(qrisExpiry?.dataset.expiresAt||'');
+  let qrisExpiryTimer=null;
+
+  const updateQrisExpiryCountdown=()=>{
+    if(!qrisExpiry || !qrisExpiryCountdown)return;
+
+    if(!Number.isFinite(qrisExpiryDeadline)){
+      qrisExpiryCountdown.textContent='00.00';
+      qrisExpiry.classList.add('is-expired');
+      if(qrisExpiryTimer!==null){
+        window.clearInterval(qrisExpiryTimer);
+        qrisExpiryTimer=null;
+      }
+      return;
+    }
+
+    const remainingSeconds=Math.max(
+      0,
+      Math.ceil((qrisExpiryDeadline-Date.now())/1000)
+    );
+
+    if(remainingSeconds===0){
+      qrisExpiryCountdown.textContent='00.00';
+      qrisExpiry.classList.add('is-expired');
+      if(qrisExpiryTimer!==null){
+        window.clearInterval(qrisExpiryTimer);
+        qrisExpiryTimer=null;
+      }
+      return;
+    }
+
+    qrisExpiry.classList.remove('is-expired');
+
+    const minutes=Math.floor(remainingSeconds/60);
+    const seconds=remainingSeconds%60;
+    const pad=value=>String(value).padStart(2,'0');
+
+    qrisExpiryCountdown.textContent=`${pad(minutes)}.${pad(seconds)}`;
+  };
+
+  if(qrisExpiryCountdown){
+    updateQrisExpiryCountdown();
+    if(Number.isFinite(qrisExpiryDeadline) && qrisExpiryDeadline>Date.now()){
+      qrisExpiryTimer=window.setInterval(
+        updateQrisExpiryCountdown,
+        1000
+      );
+    }
+  }
 
   if(qrisActions){
     const notify=(type,message)=>{
@@ -447,7 +523,13 @@
     }
   });
 
-  window.addEventListener('beforeunload',stop);
+  window.addEventListener('beforeunload',()=>{
+    stop();
+    if(qrisExpiryTimer!==null){
+      window.clearInterval(qrisExpiryTimer);
+      qrisExpiryTimer=null;
+    }
+  });
 
   // Status awal PAID hanya mengalihkan pembayaran yang terkait pesanan.
   if(currentStatus==='PAID' && orderId){

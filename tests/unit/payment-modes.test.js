@@ -91,7 +91,7 @@ test('Owner Sandbox simulation uses the authenticated server-side payment flow',
   assert.ok(page.includes('Simulasikan pembayaran berhasil'));
 });
 
-test('BuatQris status reconciliation runs server-side before expiry',()=>{
+test('BuatQris status reconciliation uses server-side fallback, not browser polling',()=>{
   const provider = read('src/config/payment.js');
   const service = read('src/services/payment/payment.service.js');
   const api = read('src/controllers/api.controller.js');
@@ -103,7 +103,7 @@ test('BuatQris status reconciliation runs server-side before expiry',()=>{
   assert.match(service,/_buatqrisStatusCheckedAt/);
   assert.match(service,/TOTAL_AMOUNT_MISMATCH/);
   assert.match(service,/createHmac\('sha256', env\.BUATQRIS_SIGNING_SECRET\)/);
-  assert.match(api,/payment\.reconcileBuatQrisStatus\(req\.params\.id,req\.user\.id\)/);
+  assert.match(api,/payment\.getStatus\(req\.params\.id,req\.user\.id\)/);
   assert.match(cron,/reconcilePendingBuatQris/);
   assert.ok(
     cron.indexOf('reconcilePendingBuatQris') <

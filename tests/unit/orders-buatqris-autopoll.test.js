@@ -37,10 +37,10 @@ test('orders page polls pending BuatQris status through the server API', () => {
   assert.match(view, /window\.location\.reload\(\)/);
 });
 
-test('payment status endpoint retains server-side reconciliation', () => {
+test('payment status polling reads the persisted status without querying BuatQris', () => {
   assert.match(
     api,
-    /payment\.reconcileBuatQrisStatus\(req\.params\.id,req\.user\.id\)/
+    /payment\.getStatus\(req\.params\.id,req\.user\.id\)/
   );
 });
 

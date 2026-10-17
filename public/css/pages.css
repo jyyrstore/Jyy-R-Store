@@ -3562,6 +3562,79 @@ body[data-view="pages/payment"] .page-shell.narrow > .panel img[alt="QRIS pembay
   background: #fff;
 }
 
+body[data-view="pages/payment"] .page-shell.narrow > .panel img.payment-banner-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+}/* Actual QRIS amount directly beneath the QR image */
+body[data-view="pages/payment"] .page-shell.narrow .panel .qris-amount {
+  margin: 0 0 1rem;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.4;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* QRIS logo used as the payment page heading */
+body[data-view="pages/payment"] .page-shell.narrow .page-header h1 .payment-status-qris {
+  display: block;
+  width: min(186px, 100%);
+  height: auto;
+  max-width: 100%;
+  color: #fff;
+  background: transparent;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+
+body[data-view="pages/payment"] .page-shell.narrow > .qris-expiry-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto 20px;
+  color: var(--success);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .qris-expiry-indicator .icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .qris-expiry-hourglass {
+  animation: spin 1.2s linear infinite;
+  transform-origin: center;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .qris-expiry-indicator.is-expired {
+  color: var(--error);
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .qris-expiry-indicator.is-expired .qris-expiry-hourglass {
+  animation-play-state: paused;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .panel .payment-title-divider {
+  display: block;
+  width: 50%;
+  height: 1px;
+  margin: 0 auto 11px;
+  background: var(--border);
+}
+
 body[data-view="pages/payment"] .page-shell.narrow .sandbox-simulation h3 {
   margin: 0 0 8px;
   font-size: 15px;
@@ -3682,7 +3755,8 @@ body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button:disable
 
 /* JYYR QRIS CARD TEXT ALIGNMENT */
 body[data-view="pages/payment"] .page-shell.narrow .panel > h2,
-body[data-view="pages/payment"] .page-shell.narrow .panel > h2 + p {
+body[data-view="pages/payment"] .page-shell.narrow .panel > h2 + p,
+body[data-view="pages/payment"] .page-shell.narrow .panel > .payment-title-divider ~ p {
   text-align: center;
 }
 
