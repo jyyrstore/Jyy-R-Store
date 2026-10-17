@@ -29,6 +29,28 @@
   <% } else if (!buatqrisImage) { %>
     <p class="muted">Tautan dan gambar QRIS belum tersedia. Muat ulang halaman untuk memeriksa kembali.</p>
   <% } %>
+
+  <% const sandboxTestFlag = payment.raw_reference?.isTest ?? payment.raw_reference?.is_test; %>
+  <% const canSimulateSandbox = Boolean(
+    req.profile?.role==='OWNER' &&
+    paymentMode==='SANDBOX' &&
+    String(payment.provider||'').toLowerCase()==='buatqris' &&
+    String(payment.status||'').toUpperCase()==='PENDING' &&
+    ['true','1','yes','test'].includes(String(sandboxTestFlag ?? '').toLowerCase()) &&
+    payment.order_id &&
+    payment.reference
+  ); %>
+
+  <% if (canSimulateSandbox) { %>
+    <div class="sandbox-simulation" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
+      <h3>Pengujian Owner</h3>
+      <p class="muted">Tidak perlu membayar sungguhan. Simulasi berlaku hanya untuk pesanan Sandbox ini dan tidak memengaruhi stok atau omzet asli.</p>
+      <button class="button button-secondary button-block" type="button" data-sandbox-simulate>
+        Simulasikan pembayaran berhasil
+      </button>
+      <p class="muted small" data-sandbox-simulate-feedback aria-live="polite">Khusus Owner · transaksi Sandbox yang masih menunggu.</p>
+    </div>
+  <% } %>
 </div>
 <% } %>
 </section>
@@ -48,6 +70,9 @@
 
   const initialStatus='<%= payment.status %>';
   const orderId=<%- JSON.stringify(String(payment.order_id || '')) %>;
+  const simulatePaymentId=<%- JSON.stringify(String(payment.id || '')) %>;
+  const simulationButton=document.querySelector('[data-sandbox-simulate]');
+  const simulationFeedback=document.querySelector('[data-sandbox-simulate-feedback]');
 
   let currentStatus=String(initialStatus||'').toUpperCase();
   let stopped=false;
@@ -187,6 +212,58 @@
     if(!stopped && !terminal.has(currentStatus)){
       delay=3000;
       tick();
+    }
+  });
+
+  simulationButton?.addEventListener('click',async()=>{
+    if(simulationButton.disabled)return;
+
+    simulationButton.disabled=true;
+    simulationButton.textContent='Memproses simulasi…';
+
+    if(simulationFeedback){
+      simulationFeedback.textContent='Meminta konfirmasi dari server…';
+    }
+
+    try{
+      if(!window.JYYRApi?.request){
+        throw new Error('API JYYR belum siap. Muat ulang halaman lalu coba kembali.');
+      }
+
+      const result=await window.JYYRApi.request(
+        '/api/payment/'+encodeURIComponent(simulatePaymentId)+'/simulate',
+        {method:'POST',body:{}}
+      );
+
+      if(
+        String(result?.paymentStatus||'').toUpperCase()!=='PAID' ||
+        String(result?.orderStatus||'').toUpperCase()!=='PAID'
+      ){
+        throw new Error('Server belum mengonfirmasi status PAID.');
+      }
+
+      currentStatus='PAID';
+
+      if(badge){
+        badge.textContent=statusLabel('PAID');
+      }
+
+      stop();
+
+      if(simulationFeedback){
+        simulationFeedback.textContent='Simulasi dikonfirmasi server. Mengalihkan ke pesanan…';
+      }
+
+      location.replace(
+        '/orders?reviewOrder='+encodeURIComponent(orderId)
+      );
+    }catch(error){
+      if(simulationFeedback){
+        simulationFeedback.textContent=error?.message||'Simulasi gagal. Silakan coba lagi.';
+      }
+
+      simulationButton.disabled=false;
+      simulationButton.textContent='Coba simulasi lagi';
     }
   });
 

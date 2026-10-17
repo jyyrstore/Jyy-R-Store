@@ -70,6 +70,27 @@ test('Production Sandbox requires an explicit opt-in',()=>{
 });
 
 
+test('Owner Sandbox simulation uses the authenticated server-side payment flow',()=>{
+  const routes=read('src/routes/index.js');
+  const api=read('src/controllers/api.controller.js');
+  const service=read('src/services/payment/payment.service.js');
+  const page=read('views/pages/payment.ejs');
+
+  assert.ok(routes.includes(
+    "apiRouter.post('/payment/:id/simulate',requireAuth,sensitiveRateLimit,asyncHandler(api.paymentController.simulateSandbox));"
+  ));
+  assert.ok(api.includes('simulateSandbox:async(req,res)=>'));
+  assert.ok(api.includes("req.profile?.role!=='OWNER'"));
+  assert.ok(api.includes('payment.simulateSandboxPayment('));
+  assert.ok(service.includes('async function simulateSandboxPayment(id,userId)'));
+  assert.ok(service.includes("createHmac('sha256',env.BUATQRIS_SIGNING_SECRET)"));
+  assert.ok(service.includes("role='OWNER'"));
+  assert.ok(service.includes("payment_method||'').toUpperCase()!=='SANDBOX'"));
+  assert.ok(page.includes('data-sandbox-simulate'));
+  assert.ok(page.includes("paymentMode==='SANDBOX'"));
+  assert.ok(page.includes('Simulasikan pembayaran berhasil'));
+});
+
 test('BuatQris status reconciliation runs server-side before expiry',()=>{
   const provider = read('src/config/payment.js');
   const service = read('src/services/payment/payment.service.js');

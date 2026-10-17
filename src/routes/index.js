@@ -359,6 +359,7 @@ apiRouter.get('/orders',requireAuth,asyncHandler(api.orderController.list));
 apiRouter.get('/orders/:id',requireAuth,asyncHandler(api.orderController.detail));
 apiRouter.post('/payment/create',requireAuth,validate(z.object({orderId:z.string().uuid(),returnUrl:z.string().url().optional()})),asyncHandler(api.paymentController.create));
 apiRouter.get('/payment/:id',requireAuth,asyncHandler(api.paymentController.status));
+apiRouter.post('/payment/:id/simulate',requireAuth,sensitiveRateLimit,asyncHandler(api.paymentController.simulateSandbox));
 apiRouter.post('/deposit',requireAuth,validate(z.object({amount:z.coerce.number().int().min(1000),idempotencyKey:z.string().min(8).max(100).optional(),returnUrl:z.string().url().optional()})),asyncHandler(api.depositController.create));
 apiRouter.get('/deposit',requireAuth,asyncHandler(api.depositController.list));
 apiRouter.get('/balance',requireAuth,asyncHandler(api.depositController.wallet));

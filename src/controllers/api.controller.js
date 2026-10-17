@@ -319,6 +319,22 @@ const paymentController={
       created_at:p.created_at||null,
       updated_at:p.updated_at||null
     });
+  },
+ simulateSandbox:async(req,res)=>{
+    if(req.profile?.role!=='OWNER'){
+      throw Object.assign(
+        new Error('Simulasi pembayaran hanya tersedia untuk Owner.'),
+        {status:403,code:'SANDBOX_OWNER_ONLY',expose:true}
+      );
+    }
+
+    return ok(
+      res,
+      await payment.simulateSandboxPayment(
+        req.params.id,
+        req.user.id
+      )
+    );
   }
 };
 const depositController={

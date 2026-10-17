@@ -529,6 +529,197 @@ function isTestFlag(value) {
     );
 }
 
+
+async function simulateSandboxPayment(id,userId){
+  const env=loadEnv();
+  const providerName=String(env.PAYMENT_PROVIDER||'').toLowerCase();
+
+  if(providerName!=='buatqris'){
+    throw Object.assign(
+      new Error('Simulasi hanya tersedia saat provider BuatQris aktif.'),
+      {status:503,code:'SANDBOX_PROVIDER_UNSUPPORTED',expose:true}
+    );
+  }
+
+  if(
+    env.NODE_ENV==='production' &&
+    !env.BUATQRIS_ALLOW_PRODUCTION_SANDBOX
+  ){
+    throw Object.assign(
+      new Error('Sandbox Production belum diizinkan.'),
+      {status:503,code:'SANDBOX_PRODUCTION_DISABLED',expose:true}
+    );
+  }
+
+  const paymentsRepo=require('../../repositories/payments.repository');
+  const payment=await paymentsRepo.findById(id);
+
+  if(!payment || String(payment.user_id)!==String(userId)){
+    throw notFound('Payment not found.');
+  }
+
+  const raw=payment.raw_reference||{};
+  const storedTest=raw.isTest ?? raw.is_test;
+
+  if(
+    String(payment.provider||'').toLowerCase()!=='buatqris' ||
+    !payment.order_id ||
+    !payment.reference ||
+    String(raw.paymentMode||'').toUpperCase()!=='SANDBOX' ||
+    !isTestFlag(storedTest)
+  ){
+    throw badRequest(
+      'SANDBOX_PAYMENT_REQUIRED',
+      'Simulasi hanya berlaku untuk pembayaran BuatQris Sandbox.'
+    );
+  }
+
+  const owner=(await query(
+    `select 1 from profiles
+     where id=$1
+       and role='OWNER'
+       and status not in ('BANNED','SUSPENDED')
+       and deleted_at is null
+     limit 1`,
+    [userId]
+  )).rows[0];
+
+  if(!owner){
+    throw Object.assign(
+      new Error('Simulasi hanya dapat digunakan oleh Owner aktif.'),
+      {status:403,code:'SANDBOX_OWNER_ONLY',expose:true}
+    );
+  }
+
+  const order=(await query(
+    'select id,user_id,status,payment_method from orders where id=$1',
+    [payment.order_id]
+  )).rows[0];
+
+  if(
+    !order ||
+    String(order.user_id)!==String(userId) ||
+    String(order.payment_method||'').toUpperCase()!=='SANDBOX'
+  ){
+    throw badRequest(
+      'SANDBOX_ORDER_REQUIRED',
+      'Pesanan ini bukan pesanan Sandbox milik Owner.'
+    );
+  }
+
+  const paymentStatus=String(payment.status||'').toUpperCase();
+  const orderStatus=String(order.status||'').toUpperCase();
+
+  // Klik ulang setelah simulasi berhasil tetap aman/idempoten.
+  if(
+    paymentStatus==='PAID' &&
+    orderStatus==='PAID' &&
+    String(raw._sandboxResult||'').toUpperCase()==='PAID'
+  ){
+    return {
+      duplicate:true,
+      sandbox:true,
+      paymentStatus:'PAID',
+      orderStatus:'PAID',
+      orderId:order.id,
+      sandboxAccessGranted:true,
+      stockAndRevenueSideEffectsSuppressed:true
+    };
+  }
+
+  if(paymentStatus!=='PENDING' || orderStatus!=='PENDING'){
+    throw Object.assign(
+      new Error(
+        'Simulasi hanya tersedia saat pembayaran dan pesanan masih PENDING.'
+      ),
+      {status:409,code:'SANDBOX_PAYMENT_NOT_PENDING',expose:true}
+    );
+  }
+
+  if(!env.BUATQRIS_SIGNING_SECRET){
+    throw Object.assign(
+      new Error('BUATQRIS_SIGNING_SECRET belum dikonfigurasi di server.'),
+      {
+        status:503,
+        code:'BUATQRIS_SIGNING_SECRET_NOT_CONFIGURED',
+        expose:true
+      }
+    );
+  }
+
+  const amount=Number(raw.totalAmount ?? raw.total_amount);
+  if(!Number.isSafeInteger(amount) || amount<=0){
+    throw badRequest(
+      'SANDBOX_AMOUNT_UNAVAILABLE',
+      'Nominal total BuatQris tidak tersedia; simulasi dibatalkan.'
+    );
+  }
+
+  // Gunakan alur webhook asli: verifikasi HMAC, transisi status,
+  // pencatatan event, dan pemberian akses Sandbox.
+  const payload={
+    event:'payment.success',
+    status:'success',
+    transaction_id:String(payment.reference),
+    total_amount:amount,
+    is_test:true,
+    paid_at:new Date().toISOString()
+  };
+
+  const rawBody=Buffer.from(JSON.stringify(payload),'utf8');
+  const signature='sha256='+crypto
+    .createHmac('sha256',env.BUATQRIS_SIGNING_SECRET)
+    .update(rawBody)
+    .digest('hex');
+
+  const result=await processWebhook(
+    rawBody,
+    signature,
+    payload,
+    'buatqris'
+  );
+
+  // Request lain mungkin berhasil lebih dahulu. Verifikasi hasil akhir DB.
+  if(result?.duplicate){
+    const freshPayment=await paymentsRepo.findById(id);
+    const freshOrder=(await query(
+      'select id,status from orders where id=$1 and user_id=$2',
+      [payment.order_id,userId]
+    )).rows[0];
+
+    if(
+      String(freshPayment?.status||'').toUpperCase()==='PAID' &&
+      String(freshPayment?.raw_reference?._sandboxResult||'').toUpperCase()==='PAID' &&
+      String(freshOrder?.status||'').toUpperCase()==='PAID'
+    ){
+      return {
+        duplicate:true,
+        sandbox:true,
+        paymentStatus:'PAID',
+        orderStatus:'PAID',
+        orderId:freshOrder.id,
+        sandboxAccessGranted:true,
+        stockAndRevenueSideEffectsSuppressed:true
+      };
+    }
+  }
+
+  if(
+    result?.ignored ||
+    result?.paymentStatus!=='PAID' ||
+    result?.orderStatus!=='PAID'
+  ){
+    throw Object.assign(
+      new Error(
+        'Server belum dapat mengonfirmasi pembayaran Sandbox sebagai PAID.'
+      ),
+      {status:409,code:'SANDBOX_SIMULATION_NOT_CONFIRMED',expose:true}
+    );
+  }
+
+  return result;
+}
+
 async function reconcileBuatQrisStatus(id, userId) {
   const paymentsRepository = require('../../repositories/payments.repository');
   const initial = await paymentsRepository.findById(id);
@@ -1441,4 +1632,4 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
 
   return result;
 }
-module.exports={assertProviderReady,createForOrder,getStatus,reconcileBuatQrisStatus,reconcilePendingBuatQris,processWebhook};
+module.exports={assertProviderReady,createForOrder,getStatus,simulateSandboxPayment,reconcileBuatQrisStatus,reconcilePendingBuatQris,processWebhook};
