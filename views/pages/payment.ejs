@@ -11,22 +11,52 @@
   data-label-expired="<%= labelStatus('EXPIRED') %>"
   data-label-refunded="<%= labelStatus('REFUNDED') %>"
   data-label-cancelled="<%= labelStatus('CANCELLED') %>"
-><%= paymentDisplayLabel %></span></div><div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Mode pembayaran</span><b><%= paymentMode==='SANDBOX' ? 'Sandbox (simulasi)' : 'Live' %></b></div><% if(paymentMode==='SANDBOX' && sandboxResult){ %><div class="summary-row"><span>Hasil webhook Sandbox</span><b><%= sandboxResult==='PAID' ? 'Berhasil diterima (simulasi)' : labelStatus(sandboxResult) %></b></div><% } %><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted">Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div>
+><%= paymentDisplayLabel %></span></div>
 <% const buatqrisImage = payment.raw_reference?.qr_url || payment.raw_reference?.qris_image || null; %>
 <% const buatqrisPayLink = payment.raw_reference?.paymentUrl || payment.raw_reference?.payment_url || null; %>
 <% if (String(payment.provider || '').toLowerCase() === 'buatqris') { %>
 <div class="panel">
-  <h2>QRIS BuatQris</h2>
+  <h2>QRIS ALL PAYMENT</h2>
   <% if (buatqrisImage) { %>
-    <p>Scan QRIS menggunakan aplikasi pembayaran. Pastikan nominal tagihan sesuai.</p>
+    <p>SCAN QRIS DI BAWAH UNTUK MENYELESAIKAN PEMBAYARAN</p>
     <img src="<%= buatqrisImage %>" alt="QRIS pembayaran" width="260" height="260"
          style="display:block;max-width:100%;height:auto;margin:1rem auto">
   <% } else { %>
     <p>Gunakan halaman pembayaran BuatQris untuk menyelesaikan transaksi.</p>
   <% } %>
-  <% if (buatqrisPayLink) { %>
-    <p><a href="<%= buatqrisPayLink %>" target="_blank" rel="noopener noreferrer">Buka halaman pembayaran di tab baru</a></p>
-  <% } else if (!buatqrisImage) { %>
+  <% if (payment.id) { %>
+    <div class="qris-actions"
+         data-qris-actions
+         data-payment-link="<%= 'http://jyyrsh.my.id/payment/' + encodeURIComponent(String(payment.id || '')) %>"
+         data-qris-image="<%= buatqrisImage || '' %>">
+      <button class="button button-secondary"
+              type="button"
+              data-qris-action="copy"
+              aria-label="Salin link pembayaran"
+              <%= payment.id ? '' : 'disabled' %>>
+        <%- icon('copy', 'icon qris-action-icon') %>
+        <span>Salin</span>
+      </button>
+      <button class="button button-secondary"
+              type="button"
+              data-qris-action="share"
+              aria-label="Bagikan link pembayaran"
+              <%= payment.id ? '' : 'disabled' %>>
+        <%- icon('share', 'icon qris-action-icon') %>
+        <span>Bagikan</span>
+      </button>
+      <button class="button button-secondary"
+              type="button"
+              data-qris-action="save"
+              aria-label="Download QRIS"
+              title="Download QRIS"
+              <%= buatqrisImage ? '' : 'disabled' %>>
+        <%- icon('download', 'icon qris-action-icon') %>
+        <span>Save</span>
+      </button>
+    </div>
+  <% } %>
+  <% if (!buatqrisImage && !buatqrisPayLink) { %>
     <p class="muted">Tautan dan gambar QRIS belum tersedia. Muat ulang halaman untuk memeriksa kembali.</p>
   <% } %>
 
@@ -44,7 +74,7 @@
   <% if (canSimulateSandbox) { %>
     <div class="sandbox-simulation" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)">
       <h3>Pengujian Owner</h3>
-      <p class="muted">Tidak perlu membayar sungguhan. Simulasi berlaku hanya untuk pesanan Sandbox ini dan tidak memengaruhi stok atau omzet asli.</p>
+
       <button class="button button-secondary button-block" type="button" data-sandbox-simulate>
         Simulasikan pembayaran berhasil
       </button>
@@ -53,12 +83,169 @@
   <% } %>
 </div>
 <% } %>
+<div class="panel"><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Mode pembayaran</span><b><%= paymentMode==='SANDBOX' ? 'Sandbox (simulasi)' : 'Live' %></b></div><% if(paymentMode==='SANDBOX' && sandboxResult){ %><div class="summary-row"><span>Hasil webhook Sandbox</span><b><%= sandboxResult==='PAID' ? 'Berhasil diterima (simulasi)' : labelStatus(sandboxResult) %></b></div><% } %><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted" data-payment-status-note>Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div>
 </section>
 
 <script nonce="<%= cspNonce %>">
 (()=>{
   const badge=document.querySelector('.badge');
-  const note=document.querySelector('.panel .muted');
+  const note=document.querySelector('[data-payment-status-note]');
+
+  const qrisActions=document.querySelector('[data-qris-actions]');
+
+  if(qrisActions){
+    const notify=(type,message)=>{
+      window.JYYRToast?.[type]?.(message);
+    };
+
+    async function copyPaymentLink(value){
+      if(navigator.clipboard?.writeText){
+        try{
+          await navigator.clipboard.writeText(value);
+          return;
+        }catch{
+          // Lanjut ke fallback untuk browser yang menolak Clipboard API.
+        }
+      }
+
+      const field=document.createElement('textarea');
+      field.value=value;
+      field.setAttribute('readonly','');
+      field.style.position='fixed';
+      field.style.opacity='0';
+      field.style.pointerEvents='none';
+      document.body.appendChild(field);
+      field.select();
+
+      let copied=false;
+      try{
+        copied=document.execCommand('copy');
+      }finally{
+        field.remove();
+      }
+
+      if(!copied){
+        throw new Error('Browser tidak dapat menyalin link pembayaran.');
+      }
+    }
+
+    async function downloadQrisImage(url){
+      const response=await fetch(url,{
+        mode:'cors',
+        credentials:'omit'
+      });
+
+      if(!response.ok){
+        throw new Error('Gambar QRIS gagal diunduh dari server.');
+      }
+
+      const blob=await response.blob();
+
+      if(blob.type && !blob.type.toLowerCase().startsWith('image/')){
+        throw new Error('Respons server bukan gambar QRIS.');
+      }
+
+      const mime=(blob.type || 'image/png')
+        .toLowerCase()
+        .split(';')[0];
+
+      const extension={
+        'image/png':'png',
+        'image/jpeg':'jpg',
+        'image/webp':'webp',
+        'image/gif':'gif',
+        'image/svg+xml':'svg'
+      }[mime] || 'png';
+
+      const objectUrl=URL.createObjectURL(blob);
+      const downloadLink=document.createElement('a');
+      downloadLink.href=objectUrl;
+      downloadLink.download='qris-pembayaran.'+extension;
+      downloadLink.hidden=true;
+      document.body.appendChild(downloadLink);
+
+      try{
+        downloadLink.click();
+      }finally{
+        downloadLink.remove();
+        window.setTimeout(
+          ()=>URL.revokeObjectURL(objectUrl),
+          1000
+        );
+      }
+    }
+
+    qrisActions.addEventListener('click',async event=>{
+      const button=event.target.closest('[data-qris-action]');
+
+      if(!button || button.disabled || !qrisActions.contains(button)){
+        return;
+      }
+
+      const action=button.dataset.qrisAction;
+      const paymentLink=qrisActions.dataset.paymentLink || '';
+      const qrisImage=qrisActions.dataset.qrisImage || '';
+
+      button.disabled=true;
+      button.setAttribute('aria-busy','true');
+
+      try{
+        if(action==='copy'){
+          if(!paymentLink){
+            throw new Error('Link pembayaran belum tersedia.');
+          }
+
+          await copyPaymentLink(paymentLink);
+          notify('success','Link pembayaran berhasil disalin.');
+        }else if(action==='share'){
+          if(!paymentLink){
+            throw new Error('Link pembayaran belum tersedia.');
+          }
+
+          if(navigator.share){
+            await navigator.share({
+              title:"Jyy'R Store - Pembayaran",
+              url:paymentLink
+            });
+
+            notify('success','Link pembayaran berhasil dibagikan.');
+          }else{
+            await copyPaymentLink(paymentLink);
+            notify(
+              'info',
+              'Berbagi langsung tidak tersedia. Link pembayaran disalin.'
+            );
+          }
+        }else if(action==='save'){
+          if(!qrisImage){
+            throw new Error('Gambar QRIS belum tersedia.');
+          }
+
+          await downloadQrisImage(qrisImage);
+          notify('success','Unduhan QRIS dimulai.');
+        }
+      }catch(error){
+        if(action==='share' && error?.name==='AbortError'){
+          return;
+        }
+
+        if(action==='save'){
+          notify(
+            'error',
+            'QRIS tidak dapat diunduh langsung. Periksa koneksi atau tekan lama gambar QRIS untuk menyimpannya.'
+          );
+        }else{
+          notify(
+            'error',
+            error?.message || 'Aksi pembayaran gagal.'
+          );
+        }
+      }finally{
+        button.disabled=false;
+        button.removeAttribute('aria-busy');
+      }
+    });
+  }
 
   const terminal=new Set([
     'PAID',
@@ -76,8 +263,7 @@
 
   let currentStatus=String(initialStatus||'').toUpperCase();
   let stopped=false;
-  let attempts=0;
-  let delay=3000;
+  let delay=10000;
   let timer=null;
   let controller=null;
 
@@ -113,17 +299,11 @@
     if(
       stopped ||
       document.hidden ||
-      terminal.has(currentStatus) ||
-      attempts>=80
+      terminal.has(currentStatus)
     ){
-      if(attempts>=80 && !terminal.has(currentStatus) && note){
-        note.textContent='Pembaruan otomatis dihentikan setelah batas waktu. Muat ulang halaman untuk memeriksa kembali.';
-      }
-
       return;
     }
 
-    attempts++;
     controller=new AbortController();
 
     try{
@@ -146,7 +326,7 @@
           return;
         }
 
-        delay=Math.min(Math.round(delay*1.5),15000);
+        delay=Math.min(Math.round(delay*1.5),30000);
         schedule();
         return;
       }
@@ -184,14 +364,14 @@
           note.textContent='Status pembayaran diperbarui otomatis.';
         }
 
-        delay=3000;
+        delay=10000;
       }
 
       schedule();
     }catch(error){
       if(error?.name==='AbortError')return;
 
-      delay=Math.min(Math.round(delay*1.5),15000);
+      delay=Math.min(Math.round(delay*1.5),30000);
       schedule();
     }finally{
       controller=null;
@@ -210,7 +390,7 @@
     }
 
     if(!stopped && !terminal.has(currentStatus)){
-      delay=3000;
+      delay=10000;
       tick();
     }
   });

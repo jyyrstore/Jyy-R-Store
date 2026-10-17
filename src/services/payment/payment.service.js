@@ -769,6 +769,15 @@ async function reconcileBuatQrisStatus(id, userId) {
        and lower(provider) = 'buatqris'
        and case
          when pg_input_is_valid(
+           raw_reference->>'_buatqrisStatusRetryAfter',
+           'timestamp with time zone'
+         )
+         then (raw_reference->>'_buatqrisStatusRetryAfter')::timestamptz
+                <= clock_timestamp()
+         else true
+       end
+       and case
+         when pg_input_is_valid(
            raw_reference->>'_buatqrisStatusCheckedAt',
            'timestamp with time zone'
          )
@@ -800,6 +809,29 @@ async function reconcileBuatQrisStatus(id, userId) {
 
   try {
     const remote = await selectedProvider.checkStatus(payment.reference);
+
+    // Provider merespons; hapus jeda rate-limit sebelumnya.
+    try {
+      await query(
+        `update payments
+            set raw_reference =
+              coalesce(raw_reference, '{}'::jsonb)
+                - '_buatqrisStatusRateLimitCount'
+                - '_buatqrisStatusRetryAfter'
+          where id = $1
+            and user_id = $2
+            and status = 'PENDING'
+            and lower(provider) = 'buatqris'`,
+        [id, userId]
+      );
+    } catch (cleanupError) {
+      log('warn', 'buatqris_status_backoff_cleanup_failed', {
+        paymentId: String(id),
+        code: String(
+          cleanupError?.code || 'BACKOFF_CLEANUP_FAILED'
+        ).slice(0, 80)
+      });
+    }
 
     // ID yang diperiksa harus persis sama dengan referensi tersimpan.
     if (String(remote.transaction_id || '') !== String(payment.reference)) {
@@ -913,6 +945,50 @@ async function reconcileBuatQrisStatus(id, userId) {
 
     return latestPayment();
   } catch (error) {
+    if (error?.code === 'BUATQRIS_STATUS_RATE_LIMITED') {
+      const previousCount = Number(
+        savedRaw._buatqrisStatusRateLimitCount
+      );
+
+      const nextCount =
+        Number.isSafeInteger(previousCount) && previousCount >= 0
+          ? Math.min(previousCount + 1, 5)
+          : 1;
+
+      const retrySeconds = Math.min(
+        300,
+        30 * (2 ** (nextCount - 1))
+      );
+
+      try {
+        await query(
+          `update payments
+              set raw_reference =
+                coalesce(raw_reference, '{}'::jsonb) ||
+                jsonb_build_object(
+                  '_buatqrisStatusRateLimitCount', $3::integer,
+                  '_buatqrisStatusRetryAfter',
+                    (
+                      clock_timestamp() +
+                      make_interval(secs => $4::double precision)
+                    )::text
+                )
+            where id = $1
+              and user_id = $2
+              and status = 'PENDING'
+              and lower(provider) = 'buatqris'`,
+          [id, userId, nextCount, retrySeconds]
+        );
+      } catch (backoffError) {
+        log('warn', 'buatqris_status_backoff_persist_failed', {
+          paymentId: String(id),
+          code: String(
+            backoffError?.code || 'BACKOFF_PERSIST_FAILED'
+          ).slice(0, 80)
+        });
+      }
+    }
+
     log('warn', 'buatqris_status_reconciliation_failed', {
       paymentId: String(payment.id),
       reference: String(payment.reference),

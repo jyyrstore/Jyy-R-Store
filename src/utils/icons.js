@@ -114,6 +114,7 @@ instagram: '<g stroke="none" transform="scale(0.375)"><defs><radialGradient id="
 };
 // Semantic icon aliases — keep canonical SVG bodies centralized.
 icons.gear = icons.settings;
+icons.share = '<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 13.5 6.6 4m0-11-6.6 4"/></g>';
 icons['nav-dashboards'] = '<g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 9v12"/><path d="M15 9v5"/></g>';
 function icon(name, cls='icon', label='') { const body = icons[name] || icons.info; const aria = label ? ` role="img" aria-label="${String(label).replace(/"/g,'&quot;')}"` : ' aria-hidden="true"'; return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"${aria}>${body}</svg>`; }
 module.exports = { icon, icons };

@@ -3444,3 +3444,301 @@ a.profile-security-card:focus-visible{
   outline-offset:3px;
 }
 /* JYYR SECURITY CARD LINK END */
+
+/* JYYR PAYMENT STATUS PAGE LAYOUT */
+body[data-view="pages/payment"] .page-shell.narrow {
+  max-width: 780px;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .page-header {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 12px 18px;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .page-header > div {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .page-header h1 {
+  margin: 0 0 8px;
+  font-size: clamp(22px, 2.4vw, 26px);
+  line-height: 1.18;
+  letter-spacing: -.035em;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .page-header code {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--deep);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .page-header .badge {
+  flex: 0 0 auto;
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .panel {
+  min-width: 0;
+  padding: 22px;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .panel + .panel {
+  margin-top: 16px;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .summary-row {
+  align-items: flex-start;
+  gap: 18px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .summary-row:first-child {
+  padding-top: 0;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .summary-row:last-of-type {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .summary-row > span {
+  flex: 0 0 42%;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .summary-row > b {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .summary-row ~ p.muted {
+  margin: 16px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .panel h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .panel p {
+  line-height: 1.65;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .panel a {
+  color: var(--primary-2);
+  font-weight: 700;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .panel img[alt="QRIS pembayaran"] {
+  padding: 8px;
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .sandbox-simulation h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow
+.sandbox-simulation [data-sandbox-simulate-feedback] {
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .qris-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0 8px;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button {
+  min-width: 0;
+  padding: 0 8px;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .qris-action-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 860px) {
+  body[data-view="pages/payment"] .page-shell.narrow {
+    padding-bottom: calc(
+      var(--nav) + 36px + env(safe-area-inset-bottom, 0px)
+    );
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow > .page-header {
+    align-items: flex-start;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow > .panel {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 600px) {
+  body[data-view="pages/payment"] .page-shell.narrow > .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow > .page-header h1 {
+    font-size: 22px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow > .page-header .badge {
+    align-self: flex-start;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow > .panel {
+    padding: 16px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row {
+    gap: 10px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row > span {
+    flex-basis: 40%;
+    font-size: 12px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row > b {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 380px) {
+  body[data-view="pages/payment"] .page-shell.narrow .qris-actions {
+    gap: 5px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button {
+    padding: 0 4px;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow .qris-action-icon {
+    width: 15px;
+    height: 15px;
+    flex-basis: 15px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow > .panel {
+    padding: 14px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row {
+    gap: 8px;
+  }
+
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row > span,
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row > b {
+    font-size: 12px;
+  }
+}
+
+/* JYYR QRIS CARD TEXT ALIGNMENT */
+body[data-view="pages/payment"] .page-shell.narrow .panel > h2,
+body[data-view="pages/payment"] .page-shell.narrow .panel > h2 + p {
+  text-align: center;
+}
+
+/* JYYR PAYMENT FOOTER SPACING */
+body[data-view="pages/payment"] .page-shell.narrow {
+  padding-bottom: 14px;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .panel:last-of-type {
+  margin-bottom: 0;
+}
+
+/* JYYR SANDBOX PAYMENT TEXT ALIGNMENT */
+body[data-view="pages/payment"] [data-payment-status-note] {
+  text-align: center;
+}
+
+body[data-view="pages/payment"] .sandbox-simulation {
+  text-align: center;
+}
+
+/* JYYR PAYMENT HEADER INLINE STATUS */
+body[data-view="pages/payment"] .page-header {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+body[data-view="pages/payment"] .page-header > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+body[data-view="pages/payment"] .page-header > .badge {
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+
+/* JYYR PAYMENT HEADER ALIGNMENT OVERRIDE V2 */
+body[data-view="pages/payment"] .page-shell.narrow > .page-header {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .page-header > div {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .page-header > .badge {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin: 4px 0 0 auto;
+}
