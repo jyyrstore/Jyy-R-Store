@@ -1706,7 +1706,17 @@
           }
         );
 
-        if(r.payment?.paymentUrl){
+        const createdPayment=r.payment?.payment;
+
+        if(
+          String(createdPayment?.provider || '').toLowerCase()==='buatqris' &&
+          createdPayment?.id
+        ){
+          // Biarkan halaman JYYR memantau status pembayaran.
+          location.href=
+            '/payment/'+
+            encodeURIComponent(createdPayment.id);
+        }else if(r.payment?.paymentUrl){
           location.href=r.payment.paymentUrl;
         }else{
           location.href=
