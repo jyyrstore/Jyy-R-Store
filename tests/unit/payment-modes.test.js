@@ -77,7 +77,7 @@ test('Owner Sandbox simulation uses the authenticated server-side payment flow',
   const page=read('views/pages/payment.ejs');
 
   assert.ok(routes.includes(
-    "apiRouter.post('/payment/:id/simulate',requireAuth,sensitiveRateLimit,asyncHandler(api.paymentController.simulateSandbox));"
+    "apiRouter.post('/payment/:id/simulate',requireAuth,sensitiveRateLimit(),asyncHandler(api.paymentController.simulateSandbox));"
   ));
   assert.ok(api.includes('simulateSandbox:async(req,res)=>'));
   assert.ok(api.includes("req.profile?.role!=='OWNER'"));
