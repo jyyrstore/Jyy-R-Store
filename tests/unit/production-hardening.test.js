@@ -725,7 +725,12 @@ test('gateway payment keeps a fallback expiry when provider omits expiry',()=>{
 
   assert.match(
     source,
-    /new Date\(Date\.now\(\)\+30\*60\*1000\)\.toISOString\(\)/
+    /paymentConfig\.paymentExpiryFallbackMinutes\(providerName\)/
+  );
+
+  assert.match(
+    source,
+    /Date\.now\(\)\+fallbackExpiryMinutes\*60\*1000/
   );
 
   assert.match(
@@ -750,6 +755,10 @@ test('gateway payment creates a local payment placeholder before provider call',
   assert.match(
     source,
     /now\(\)\+interval '30 minutes'/
+  );
+  assert.match(
+    source,
+    /when lower\(\$3\)='buatqris'[\s\S]*?then now\(\)\+interval '60 minutes'/
   );
   assert.match(
     source,
@@ -778,6 +787,10 @@ test('gateway expiration recovers orders without payment rows',()=>{
   assert.match(
     source,
     /orphanOrdersExpired/
+  );
+  assert.match(
+    source,
+    /case when lower\(provider\)='buatqris' then created_at \+ interval '60 minutes' else created_at \+ interval '30 minutes' end/i
   );
 });
 

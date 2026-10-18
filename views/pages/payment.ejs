@@ -2,6 +2,10 @@
 <% const sandboxResult=String(payment.raw_reference?._sandboxResult||'').toUpperCase(); %>
 <% const paymentDisplayStatus=paymentMode==='SANDBOX' && sandboxResult ? sandboxResult : payment.status; %>
 <% const paymentDisplayLabel=paymentMode==='SANDBOX' && sandboxResult ? (sandboxResult==='PAID' ? 'Berhasil (simulasi)' : labelStatus(sandboxResult)) : labelStatus(payment.status); %>
+<% const isBuatQris=String(payment.provider||'').toLowerCase()==='buatqris'; %>
+<% const paymentBaseAmount=Number(payment.amount ?? 0); %>
+<% const paymentTotalAmount=isBuatQris ? Number(payment.raw_reference?.totalAmount ?? payment.raw_reference?.total_amount ?? payment.amount ?? 0) : Number(payment.amount ?? 0); %>
+<% const paymentServiceFee=isBuatQris ? Math.max(0, paymentTotalAmount-paymentBaseAmount) : 0; %>
 <section class="page-shell narrow"><div class="page-header"><div><h1><%- icon('qris', 'icon payment-status-qris', 'QRIS') %></h1></div><span
   class="badge badge-<%= String(paymentDisplayStatus||'').toLowerCase() %>"
   data-label-pending="<%= labelStatus('PENDING') %>"
@@ -27,13 +31,13 @@
   <%- icon('hourglass', 'icon qris-expiry-hourglass') %>
 </div>
 <% } %>
-<div class="panel">
+<div class="panel qris-payment-card">
   <h2>QRIS ALL PAYMENT</h2><span class="payment-title-divider" aria-hidden="true"></span>
   <% if (buatqrisImage) { %>
-    <p>SCAN QRIS DI BAWAH UNTUK MENYELESAIKAN PEMBAYARAN</p>
+    <p class="qris-instruction">SCAN QRIS UNTUK MENYELESAIKAN<br>PEMBAYARAN</p>
     <img src="<%= buatqrisImage %>" alt="QRIS pembayaran" width="260" height="260"
          style="display:block;max-width:100%;height:auto;margin:1rem auto">
-    <p class="qris-amount"><strong>IDR <%= Number(payment.raw_reference?.totalAmount ?? payment.raw_reference?.total_amount ?? payment.amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></p>
+    <p class="qris-amount"><strong>IDR <%= Number(paymentTotalAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong></p>
   <% } else { %>
     <p>Gunakan halaman pembayaran BuatQris untuk menyelesaikan transaksi.</p>
   <% } %>
@@ -42,7 +46,7 @@
          data-qris-actions
          data-payment-link="<%= 'http://jyyrsh.my.id/payment/' + encodeURIComponent(String(payment.id || '')) %>"
          data-qris-image="<%= buatqrisImage || '' %>">
-      <button class="button button-secondary"
+      <button class="button button-primary"
               type="button"
               data-qris-action="copy"
               aria-label="Salin link pembayaran"
@@ -50,7 +54,7 @@
         <%- icon('copy', 'icon qris-action-icon') %>
         <span>Salin</span>
       </button>
-      <button class="button button-secondary"
+      <button class="button button-primary"
               type="button"
               data-qris-action="share"
               aria-label="Bagikan link pembayaran"
@@ -58,7 +62,7 @@
         <%- icon('share', 'icon qris-action-icon') %>
         <span>Bagikan</span>
       </button>
-      <button class="button button-secondary"
+      <button class="button button-primary"
               type="button"
               data-qris-action="save"
               aria-label="Download QRIS"
@@ -97,7 +101,7 @@
 </div>
 
 <% } %>
-<div class="panel"><h2>Rincian Pesanan</h2><span class="payment-title-divider" aria-hidden="true"></span><div class="summary-row"><span>Penyedia pembayaran</span><b><%= payment.provider %></b></div><div class="summary-row"><span>Mode pembayaran</span><b><%= paymentMode==='SANDBOX' ? 'Sandbox (simulasi)' : 'Live' %></b></div><% if(paymentMode==='SANDBOX' && sandboxResult){ %><div class="summary-row"><span>Hasil webhook Sandbox</span><b><%= sandboxResult==='PAID' ? 'Berhasil diterima (simulasi)' : labelStatus(sandboxResult) %></b></div><% } %><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><% if (String(payment.provider || '').toLowerCase() !== 'buatqris') { %><div class="summary-row"><span>Nominal</span><b><%= formatIDR(payment.amount) %></b></div><% } %><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted" data-payment-status-note>Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div>
+<div class="panel"><h2>Rincian Pesanan</h2><span class="payment-title-divider" aria-hidden="true"></span><div class="summary-row"><span>Penyedia pembayaran</span><b>JYYR-STORE</b></div><div class="summary-row"><span>Nominal Produk</span><b><%= formatIDR(payment.amount) %></b></div><div class="summary-row"><span>Nominal Transaksi</span><b><%= formatIDR(paymentTotalAmount) %></b></div><div class="summary-row"><span>Fee Layanan</span><b><%= formatIDR(paymentServiceFee) %></b></div><div class="summary-row"><span>Mode pembayaran</span><b><%= paymentMode==='SANDBOX' ? 'Sandbox (simulasi)' : 'Live' %></b></div><% if(paymentMode==='SANDBOX' && sandboxResult){ %><div class="summary-row"><span>Hasil webhook Sandbox</span><b><%= sandboxResult==='PAID' ? 'Berhasil diterima (simulasi)' : labelStatus(sandboxResult) %></b></div><% } %><div class="summary-row"><span>Referensi</span><b><%= payment.reference || '—' %></b></div><div class="summary-row"><span>Dibuat</span><b><%= formatDate(payment.created_at) %></b></div><p class="muted" data-payment-status-note>Status final akan diperbarui oleh backend setelah callback/webhook provider tervalidasi.</p></div>
 <div class="panel">
   <h2>Payment</h2>
   <span class="payment-title-divider" aria-hidden="true"></span>

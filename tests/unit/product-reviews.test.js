@@ -103,6 +103,16 @@ test('product reviews repository enforces verified purchases and one review per 
     source,
     /updated_at=now\(\)/
   );
+
+  assert.match(
+    source,
+    /normalizedComment=String\(comment\|\|''\)\.trim\(\)\|\|\s*'Tidak Ada Komentar Untuk Pesanan Ini'/
+  );
+
+  assert.match(
+    source,
+    /normalizedComment\.length>100/
+  );
 });
 
 test('product review API is authenticated and validated',()=>{
@@ -130,7 +140,7 @@ test('product review API is authenticated and validated',()=>{
 
   assert.match(
     source,
-    /comment:z\.string\(\)\.trim\(\)\.min\(1\)\.max\(2000\)/
+    /comment:z\.string\(\)\.trim\(\)\.max\(100\)\.optional\(\)\.transform\(comment=>comment\|\|'Tidak Ada Komentar Untuk Pesanan Ini'\)/
   );
 });
 

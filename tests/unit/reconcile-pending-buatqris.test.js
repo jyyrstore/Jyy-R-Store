@@ -45,10 +45,10 @@ test('candidate query preserves the provider reference filter and batch limit', 
   assert.match(reconcile, /limit \$1/);
 });
 
-test('expiry calculation falls back safely when provider expiry is invalid or absent', () => {
+test('BuatQris fallback uses one hour when provider expiry is invalid or absent', () => {
   assert.match(
     reconcile,
-    /else null[\s\S]*?expires_at,[\s\S]*?created_at \+ interval '30 minutes'/
+    /else null[\s\S]*?expires_at,[\s\S]*?created_at \+ interval '60 minutes'/
   );
 });
 

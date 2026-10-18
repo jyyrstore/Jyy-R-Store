@@ -2934,11 +2934,14 @@
         )?.value || 0
       );
 
-      const comment=String(
-        form.querySelector(
-          'textarea[name="comment"]'
-        )?.value || ''
-      ).trim();
+      const comment=(
+        String(
+          form.querySelector(
+            'textarea[name="comment"]'
+          )?.value || ''
+        ).trim() ||
+        'Tidak Ada Komentar Untuk Pesanan Ini'
+      );
 
       const productId=String(
         form.dataset.productId||''
@@ -2951,13 +2954,6 @@
       if(!rating||rating<1||rating>5){
         toast.error(
           'Pilih rating bintang 1 sampai 5.'
-        );
-        return;
-      }
-
-      if(!comment){
-        toast.error(
-          'Komentar ulasan wajib diisi.'
         );
         return;
       }
@@ -3118,10 +3114,36 @@
     }
 
     const item=items[0];
+    const orderTimestamp=[
+      order.created_at,
+      order.paid_at
+    ].find(value=>(
+      value &&
+      Number.isFinite(new Date(value).getTime())
+    ));
+    const orderDate=orderTimestamp
+      ? new Date(orderTimestamp)
+      : null;
+    const orderDateLabel=orderDate
+      ? new Intl.DateTimeFormat('id-ID',{
+          day:'2-digit',
+          month:'short',
+          year:'numeric',
+          timeZone:'Asia/Jakarta'
+        }).format(orderDate)
+      : 'Tanggal tidak tersedia';
+    const orderTimeLabel=orderDate
+      ? new Intl.DateTimeFormat('en-GB',{
+          hour:'2-digit',
+          minute:'2-digit',
+          hourCycle:'h23',
+          timeZone:'Asia/Jakarta'
+        }).format(orderDate)+' WIB'
+      : 'Waktu tidak tersedia';
 
-    open(`
+    window.JYYRModal.open(`
       <form
-        class="stack-form"
+        class="stack-form payment-review-prompt"
         data-payment-review-prompt-form
         data-order-id="${esc(order.id)}"
       >
@@ -3135,13 +3157,19 @@
           Bagaimana pengalaman kamu?
         </p>
 
-        <div class="list-card">
-          <div>
-            <strong>${esc(item.product_name||'Produk')}</strong>
-            <span>
-              ${Number(item.quantity||1)} ×
+        <div class="list-card payment-review-order-summary">
+          <div class="payment-review-order-product">
+            <div class="payment-review-product-title">
+              <strong>${esc(item.product_name||'Produk')}</strong>
+              <small>${Number(item.quantity||1)} ×</small>
+            </div>
+            <strong class="payment-review-product-price">
               ${money(item.unit_price||0)}
-            </span>
+            </strong>
+          </div>
+          <div class="payment-review-order-date">
+            <strong>${esc(orderDateLabel)}</strong>
+            <small>${esc(orderTimeLabel)}</small>
           </div>
         </div>
 
@@ -3179,9 +3207,8 @@
           <textarea
             name="comment"
             rows="4"
-            maxlength="2000"
-            placeholder="Ceritakan pengalaman kamu setelah membeli produk ini..."
-            required
+            maxlength="100"
+            placeholder="Ceritakan pengalaman setelah membeli produk ini..."
           ></textarea>
         </label>
 
@@ -3203,13 +3230,12 @@
           </button>
         </div>
       </form>
-    `,()=>{
-      syncProductReviewRating(
-        document.querySelector(
-          '[data-payment-review-prompt-form]'
-        )
-      );
-    });
+    `, 'payment-review-modal');
+    syncProductReviewRating(
+      document.querySelector(
+        '[data-payment-review-prompt-form]'
+      )
+    );
   }
 
   document.addEventListener(
@@ -3263,11 +3289,14 @@
         )?.value||0
       );
 
-      const comment=String(
-        form.querySelector(
-          'textarea[name="comment"]'
-        )?.value||''
-      ).trim();
+      const comment=(
+        String(
+          form.querySelector(
+            'textarea[name="comment"]'
+          )?.value || ''
+        ).trim() ||
+        'Tidak Ada Komentar Untuk Pesanan Ini'
+      );
 
       const submit=form.querySelector(
         'button[type="submit"]'
@@ -3283,13 +3312,6 @@
       if(!rating||rating<1||rating>5){
         toast.error(
           'Pilih rating bintang 1 sampai 5.'
-        );
-        return;
-      }
-
-      if(!comment){
-        toast.error(
-          'Komentar ulasan wajib diisi.'
         );
         return;
       }
@@ -3373,6 +3395,91 @@
     }
 
     openPaymentReviewPrompt(order);
+  }
+
+  /* shared-card-textarea-auto-resize */
+  const resizeStandardCardTextarea=textarea=>{
+    if(!(textarea instanceof HTMLTextAreaElement))return;
+
+    if(!textarea.matches(
+      '.field textarea,.product-review-write textarea'
+    ))return;
+
+    const styles=window.getComputedStyle(textarea);
+    const fontSize=parseFloat(styles.fontSize)||13;
+    const parsedLineHeight=parseFloat(styles.lineHeight);
+    const lineHeight=
+      Number.isFinite(parsedLineHeight)&&parsedLineHeight>0
+        ? parsedLineHeight
+        : fontSize*1.4;
+
+    const paddingTop=parseFloat(styles.paddingTop)||0;
+    const paddingBottom=parseFloat(styles.paddingBottom)||0;
+    const borderTop=parseFloat(styles.borderTopWidth)||0;
+    const borderBottom=parseFloat(styles.borderBottomWidth)||0;
+    const verticalSpace=
+      paddingTop+paddingBottom+borderTop+borderBottom;
+    const oneLineHeight=lineHeight+verticalSpace;
+    const maxHeight=lineHeight*3+verticalSpace;
+    const borderHeight=borderTop+borderBottom;
+
+    textarea.style.boxSizing='border-box';
+    textarea.style.resize='none';
+    textarea.style.minHeight=`${oneLineHeight}px`;
+    textarea.style.maxHeight=`${maxHeight}px`;
+    textarea.style.height=`${oneLineHeight}px`;
+
+    const contentHeight=textarea.scrollHeight+borderHeight;
+    const boundedHeight=Math.min(
+      Math.max(contentHeight,oneLineHeight),
+      maxHeight
+    );
+
+    textarea.style.height=`${boundedHeight}px`;
+    textarea.style.overflowY=
+      contentHeight>maxHeight?'auto':'hidden';
+  };
+
+  const resizeStandardCardTextareas=root=>{
+    if(root instanceof HTMLTextAreaElement){
+      resizeStandardCardTextarea(root);
+      return;
+    }
+
+    if(typeof root.querySelectorAll!=='function')return;
+
+    root.querySelectorAll('textarea').forEach(
+      resizeStandardCardTextarea
+    );
+  };
+
+  resizeStandardCardTextareas(document);
+
+  document.addEventListener('input',event=>{
+    if(event.target instanceof HTMLTextAreaElement){
+      resizeStandardCardTextarea(event.target);
+    }
+  });
+
+  window.addEventListener('resize',()=>{
+    resizeStandardCardTextareas(document);
+  });
+
+  if(typeof MutationObserver==='function'){
+    const textareaObserver=new MutationObserver(records=>{
+      records.forEach(record=>{
+        record.addedNodes.forEach(node=>{
+          if(node instanceof Element){
+            resizeStandardCardTextareas(node);
+          }
+        });
+      });
+    });
+
+    textareaObserver.observe(
+      document.body||document.documentElement,
+      {childList:true,subtree:true}
+    );
   }
 
   initPostPaymentReviewPrompt();

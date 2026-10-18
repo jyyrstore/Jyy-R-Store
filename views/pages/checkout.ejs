@@ -89,7 +89,6 @@
 
       <hr>
 
-      <div class="eyebrow">Pembayaran</div>
 
 
       <fieldset class="payment-group">
@@ -162,9 +161,8 @@
 
       <hr>
 
-      <div class="summary-row total">
-        <span>Total</span>
-        <strong><%= formatIDR(preview.total) %></strong>
+      <div class="summary-row total checkout-total">
+        <strong>IDR <%= Number(preview.total ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></strong>
       </div>
 
       <button

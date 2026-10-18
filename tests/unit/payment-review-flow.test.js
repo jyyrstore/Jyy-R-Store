@@ -56,6 +56,42 @@ test('post-payment review prompt exists',()=>{
   );
 });
 
+test('rating comments are optional and blank comments use fallback',()=>{
+  const pages=read('public/js/pages.js');
+
+  assert.equal(
+    (pages.match(/Tidak Ada Komentar Untuk Pesanan Ini/g)||[]).length,
+    2
+  );
+
+  assert.match(
+    pages,
+    /name="comment"\s+rows="4"\s+maxlength="100"\s+placeholder="Ceritakan pengalaman setelah membeli produk ini\.\.\."/
+  );
+
+  assert.match(
+    pages,
+    /placeholder="Ceritakan pengalaman setelah membeli produk ini\.\.\."\s*><\/textarea>/
+  );
+
+  assert.doesNotMatch(
+    pages,
+    /placeholder="Ceritakan pengalaman setelah membeli produk ini\.\.\."\s+required/
+  );
+
+  const detail=read('views/pages/order-detail.ejs');
+
+  assert.match(
+    detail,
+    /name="comment"\s+rows="4"\s+maxlength="100"\s+placeholder="Tulis pengalaman Anda setelah membeli produk ini\.\.\."/
+  );
+
+  assert.match(
+    detail,
+    /aria-label="Komentar ulasan"\s*><%=/
+  );
+});
+
 test('payment success pages expose the order id to review prompt',()=>{
   const orders=read(
     'views/pages/orders.ejs'

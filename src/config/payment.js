@@ -17,8 +17,8 @@ async function readJson(response){
  * BuatQris returns expired_at as a Jakarta-local timestamp without a
  * timezone suffix (for example, "2026-10-16 15:39:51").
  * Normalize it here to ISO UTC. Preserve explicit Z/offset timestamps.
- * Invalid or unsupported values return null so payment.service.js can
- * apply its existing 30-minute safety fallback.
+ * Invalid or unsupported values return null so the payment service can
+ * apply a provider-specific fallback: 60 minutes for BuatQris, 30 otherwise.
  */
 function normalizeBuatQrisExpiry(value) {
   if (value == null) return null;
@@ -713,6 +713,12 @@ class BuatQrisProvider {
  * qris_method identifies the QRIS instrument, not the payment environment.
  * Only an explicit "test" marker conflicts with a stored Live payment.
  */
+function paymentExpiryFallbackMinutes(providerName) {
+  return String(providerName || 'generic-json').trim().toLowerCase() === 'buatqris'
+    ? 60
+    : 30;
+}
+
 function qrisMethodConflictsWithTestMode(qrisMethod, storedIsTest) {
   return String(qrisMethod ?? '').trim().toLowerCase() === 'test' &&
     storedIsTest === false;
@@ -781,5 +787,6 @@ module.exports = {
   XenditProvider,
   BuatQrisProvider,
   resolvedPaymentUrl,
+  paymentExpiryFallbackMinutes,
   qrisMethodConflictsWithTestMode
 };

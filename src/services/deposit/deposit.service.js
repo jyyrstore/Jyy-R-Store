@@ -20,6 +20,11 @@ function scopedIdempotencyKey(scope,userId,key){
 async function create(userId,{amount,idempotencyKey,returnUrl}){
   if(!Number.isInteger(amount)||amount<1000) throw badRequest('INVALID_DEPOSIT','Minimum deposit adalah Rp 1.000.');
 
+  const fallbackExpiryMinutes=
+    paymentConfig.paymentExpiryFallbackMinutes(
+      loadEnv().PAYMENT_PROVIDER
+    );
+
   const scopedKey=scopedIdempotencyKey('dep',userId,idempotencyKey);
   const existing=scopedKey
     ? (await query(
@@ -38,7 +43,7 @@ async function create(userId,{amount,idempotencyKey,returnUrl}){
         provider:loadEnv().PAYMENT_PROVIDER||'generic-json',
         status:'PENDING',
         idempotency_key:scopedKey||null,
-        expires_at:new Date(Date.now()+30*60*1000)
+        expires_at:new Date(Date.now()+fallbackExpiryMinutes*60*1000)
       },client);
       return {deposit,createProviderPayment:async()=>{}};
     });
@@ -55,6 +60,11 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
   if(!Number.isInteger(amount)||amount<1000){
     throw badRequest('INVALID_DEPOSIT','Minimum deposit adalah Rp 1.000.');
   }
+
+  const fallbackExpiryMinutes=
+    paymentConfig.paymentExpiryFallbackMinutes(
+      loadEnv().PAYMENT_PROVIDER
+    );
 
   const requestKey=String(idempotencyKey||crypto.randomUUID());
   const paymentKey=scopedIdempotencyKey('pdep',userId,requestKey);
@@ -140,7 +150,7 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
       };
     }
 
-    const expiresAt=new Date(Date.now()+30*60*1000).toISOString();
+    const expiresAt=new Date(Date.now()+fallbackExpiryMinutes*60*1000).toISOString();
 
     /*
      * Commit payment placeholder DAN tautan deposit sebelum memanggil
@@ -267,7 +277,7 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
     providerPayment.expiresAt&&
     Number.isFinite(Date.parse(String(providerPayment.expiresAt)))
       ? new Date(providerPayment.expiresAt).toISOString()
-      : new Date(Date.now()+30*60*1000).toISOString();
+      : new Date(Date.now()+fallbackExpiryMinutes*60*1000).toISOString();
 
   /*
    * Persist hasil ke placeholder yang sama. Urutan lock payment lalu deposit

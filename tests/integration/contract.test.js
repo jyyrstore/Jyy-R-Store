@@ -127,6 +127,8 @@ test('deposit placeholder is created before external provider call',()=>{
   assert.match(s,/select \* from deposits where id=\$1 and user_id=\$2 for update/);
   assert.match(s,/PAYMENT_PROVISIONING_IN_PROGRESS/);
   assert.match(s,/PROVIDER_RESULT_UNKNOWN/);
+  assert.match(s,/paymentExpiryFallbackMinutes/);
+  assert.match(s,/fallbackExpiryMinutes\*60\*1000/);
 });
 
 
@@ -757,7 +759,7 @@ test('scheduled expiry route is protected and configured for GitHub Actions Cron
   assert.match(server,/app\.use\('\/api\/cron',\s*cronRouter\)/);
   assert.match(routes,/cronRouter\.get\('\/expire',cron\.requireCronSecret/);
   assert.match(cron,/CRON_SECRET/);
-  assert.match(workflow,/cron:\s*'\*\/5 \* \* \* \*'/);
+  assert.match(workflow,/cron:\s*'3-59\/5 \* \* \* \*'/);
   assert.match(workflow,/secrets\.CRON_SECRET/);
   assert.match(workflow,/APP_URL:\s*\$\{\{\s*secrets\.APP_URL\s*\}\}/);
 assert.match(workflow,/\$\{APP_URL%\/\}\/api\/cron\/expire/);
@@ -873,18 +875,18 @@ test('BuatQris route is isolated and mounted before JSON parsing',()=>{
   test('BuatQris checks expiry before retrying a placeholder', () => {
     assert.match(
       paymentSource,
-      /coalesce\(\s*expires_at,\s*created_at \+ interval '30 minutes'\s*\) <= clock_timestamp\(\)/
+      /coalesce\(\s*expires_at,\s*created_at \+ interval '60 minutes'\s*\) <= clock_timestamp\(\)/
     );
     assert.match(paymentSource, /provisioningReason:'PAYMENT_EXPIRED'/);
     assert.match(
       paymentSource,
-      /expires_at=clock_timestamp\(\)\+interval '30 minutes'/
+      /expires_at=clock_timestamp\(\)\+interval '60 minutes'/
     );
   });
 
   test('expiration job checks current expiry while locking payment', () => {
     const fallbackChecks = expirySource.match(
-      /coalesce\(expires_at, created_at \+ interval '30 minutes'\) < clock_timestamp\(\)/g
+      /coalesce\(expires_at, case when lower\(provider\)='buatqris' then created_at \+ interval '60 minutes' else created_at \+ interval '30 minutes' end\) < clock_timestamp\(\)/g
     ) || [];
     assert.ok(
       fallbackChecks.length >= 2,
@@ -893,15 +895,15 @@ test('BuatQris route is isolated and mounted before JSON parsing',()=>{
     assert.match(expirySource, /for update/);
   });
 
-  test('BuatQris treats NULL expiry consistently with the 30-minute fallback', () => {
+  test('BuatQris treats NULL expiry consistently with the 60-minute fallback', () => {
     assert.match(
       paymentSource,
-      /coalesce\(\s*expires_at,\s*created_at \+ interval '30 minutes'/
+      /coalesce\(\s*expires_at,\s*created_at \+ interval '60 minutes'/
     );
     assert.match(paymentSource, /expires_at is null/);
     assert.match(
       paymentSource,
-      /set expires_at=created_at \+ interval '30 minutes'/
+      /set expires_at=created_at \+ interval '60 minutes'/
     );
     assert.match(
       paymentSource,

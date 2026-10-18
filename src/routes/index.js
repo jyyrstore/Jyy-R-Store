@@ -102,7 +102,7 @@ const ownerMaintenanceSchema=z.object({
 
 const productReviewSchema=z.object({
   rating:z.coerce.number().int().min(1).max(5),
-  comment:z.string().trim().min(1).max(2000)
+  comment:z.string().trim().max(100).optional().transform(comment=>comment||'Tidak Ada Komentar Untuk Pesanan Ini')
 });
 
 

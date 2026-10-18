@@ -1,6 +1,15 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { BuatQrisProvider } = require('../../src/config/payment');
+const {
+  BuatQrisProvider,
+  paymentExpiryFallbackMinutes
+} = require('../../src/config/payment');
+
+test('BuatQris local fallback matches the provider one-hour lifetime', () => {
+  assert.equal(paymentExpiryFallbackMinutes('buatqris'), 60);
+  assert.equal(paymentExpiryFallbackMinutes('BUATQRIS'), 60);
+  assert.equal(paymentExpiryFallbackMinutes('xendit'), 30);
+});
 
 async function createPaymentWithExpiry(expiredAt) {
   const originalFetch = global.fetch;

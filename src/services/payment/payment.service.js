@@ -198,7 +198,7 @@ async function createForOrder(userId,order,returnUrl,options={}){
                (
                  coalesce(
                    expires_at,
-                   created_at + interval '30 minutes'
+                   created_at + interval '60 minutes'
                  ) <= clock_timestamp()
                ) as expired,
                (
@@ -206,7 +206,7 @@ async function createForOrder(userId,order,returnUrl,options={}){
                ) as missing_expiry,
                coalesce(
                  expires_at,
-                 created_at + interval '30 minutes'
+                 created_at + interval '60 minutes'
                ) as effective_expires_at
              from payments
              where id=$1`,
@@ -217,7 +217,7 @@ async function createForOrder(userId,order,returnUrl,options={}){
       if(providerName==='buatqris' && expiryCheck?.missing_expiry){
         await client.query(
           `update payments
-           set expires_at=created_at + interval '30 minutes',
+           set expires_at=created_at + interval '60 minutes',
                updated_at=clock_timestamp()
            where id=$1
              and expires_at is null`,
@@ -277,7 +277,7 @@ async function createForOrder(userId,order,returnUrl,options={}){
        */
       if(providerName==='buatqris' && retryKnownNotSent){
         const claimed=await client.query(
-          "update payments set raw_reference=coalesce(raw_reference,'{}'::jsonb)||$2::jsonb,expires_at=clock_timestamp()+interval '30 minutes',updated_at=clock_timestamp() where id=$1 and status='PENDING' and coalesce(expires_at,created_at+interval '30 minutes')>clock_timestamp() returning id",
+          "update payments set raw_reference=coalesce(raw_reference,'{}'::jsonb)||$2::jsonb,expires_at=clock_timestamp()+interval '60 minutes',updated_at=clock_timestamp() where id=$1 and status='PENDING' and coalesce(expires_at,created_at+interval '60 minutes')>clock_timestamp() returning id",
           [
             existing.id,
             JSON.stringify({
@@ -335,7 +335,11 @@ async function createForOrder(userId,order,returnUrl,options={}){
           'PENDING',
           $5,
           $6,
-          now()+interval '30 minutes'
+          case
+            when lower($3)='buatqris'
+              then now()+interval '60 minutes'
+            else now()+interval '30 minutes'
+          end
         )
         returning *`,
         [
@@ -448,11 +452,13 @@ async function createForOrder(userId,order,returnUrl,options={}){
    * Provider expiry is preferred, but never allow NULL to remove the
    * local safety expiry that protects reserved_stock.
    */
+  const fallbackExpiryMinutes=
+    paymentConfig.paymentExpiryFallbackMinutes(providerName);
   const expiresAt=
     result.expiresAt &&
     Number.isFinite(Date.parse(String(result.expiresAt)))
       ? result.expiresAt
-      : new Date(Date.now()+30*60*1000).toISOString();
+      : new Date(Date.now()+fallbackExpiryMinutes*60*1000).toISOString();
 
   const saved=await withTransaction(async(client)=>{
     const current=(
@@ -1031,7 +1037,7 @@ async function reconcilePendingBuatQris({limit = 50} = {}) {
              else null
            end,
            expires_at,
-           created_at + interval '30 minutes'
+           created_at + interval '60 minutes'
          ) as reconciliation_expires_at,
          case
            when pg_input_is_valid(

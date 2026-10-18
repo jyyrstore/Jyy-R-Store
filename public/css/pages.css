@@ -206,7 +206,7 @@
 
 .auth-login-form .field input:focus{
   border-color:var(--primary-2);
-  box-shadow:0 0 0 3px rgba(167,139,250,.10);
+  box-shadow:inset 0 0 0 3px rgba(167,139,250,.10);
 }
 
 .auth-login-meta{
@@ -1654,7 +1654,7 @@ button[aria-busy="true"]{
 .owner-users-filter-field input:focus,
 .owner-users-filter-field .jyyr-select-trigger:focus-visible{
   border-color:var(--primary-2);
-  box-shadow:0 0 0 3px rgba(167,139,250,.10);
+  box-shadow:inset 0 0 0 3px rgba(167,139,250,.10);
 }
 
 .owner-users-filter-submit,
@@ -2511,9 +2511,11 @@ button[aria-busy="true"]{
   resize:none;
   box-sizing:border-box;
   padding:10px 11px;
+  line-height:1.4;
   border:0;
   border-radius:10px;
   background:transparent;
+  color:var(--text);
   box-shadow:none;
 }
 
@@ -3262,6 +3264,7 @@ a.delivery-card:focus-visible{
 
 /* HISTORY ORDER STATUS ALIGNMENT */
 body[data-view="pages/history"] [data-tab="orders"] .list-card .align-right > .badge{font-size:10px;padding:3px 5px;transform:translateX(3px);}
+body[data-view="pages/orders"] .list-card .align-right > .badge{transform:translateX(3px);}
 
 /* HISTORY BALANCE TRANSACTION LAYOUT */
 .history-mutation-card{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto auto;align-items:center;column-gap:10px;row-gap:5px;padding:12px}
@@ -3578,6 +3581,45 @@ body[data-view="pages/payment"] .page-shell.narrow .panel .qris-amount {
   font-variant-numeric: tabular-nums;
 }
 
+/* JYYR QRIS geometric corner accents (all payment modes) */
+body[data-view="pages/payment"] .page-shell.narrow > .qris-payment-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 28px 0 28px 0;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .qris-payment-card::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 30px;
+  left: 0;
+  width: 31%;
+  height: 45%;
+  background: #51A1F1;
+  clip-path: polygon(0 0, 100% 47%, 100% 55%, 0 100%);
+  pointer-events: none;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .qris-payment-card::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  right: 0;
+  bottom: 0;
+  width: 31%;
+  height: 33%;
+  background: #3478D4;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+
+body[data-view="pages/payment"] .page-shell.narrow > .qris-payment-card > * {
+  position: relative;
+  z-index: 1;
+}
+
 /* QRIS logo used as the payment page heading */
 body[data-view="pages/payment"] .page-shell.narrow .page-header h1 .payment-status-qris {
   display: block;
@@ -3660,7 +3702,16 @@ body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button {
   gap: 6px;
   font-size: 12px;
   white-space: nowrap;
+  background: var(--surface);
+  border-color: #9CA3AF;
+  color: var(--text);
 }
+
+body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button:active:not(:disabled) {
+  color: #3478D4;
+  border-color: #3478D4;
+}
+
 
 body[data-view="pages/payment"] .page-shell.narrow .qris-action-icon {
   width: 16px;
@@ -3758,6 +3809,11 @@ body[data-view="pages/payment"] .page-shell.narrow .panel > h2,
 body[data-view="pages/payment"] .page-shell.narrow .panel > h2 + p,
 body[data-view="pages/payment"] .page-shell.narrow .panel > .payment-title-divider ~ p {
   text-align: center;
+}
+
+/* JYYR QRIS instruction emphasis */
+body[data-view="pages/payment"] .page-shell.narrow .qris-instruction {
+  font-weight: 600;
 }
 
 /* JYYR PAYMENT FOOTER SPACING */

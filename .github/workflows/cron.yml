@@ -2,7 +2,7 @@ name: cron
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '3-59/5 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -26,6 +26,9 @@ jobs:
 
           curl --fail --silent --show-error \
             --max-time 30 \
+            --retry 2 \
+            --retry-all-errors \
+            --retry-delay 2 \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Accept: application/json" \
             "${APP_URL%/}/api/cron/expire"

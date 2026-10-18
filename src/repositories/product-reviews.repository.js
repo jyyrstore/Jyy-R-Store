@@ -24,12 +24,13 @@ function normalizeInput({rating,comment}={}){
     );
   }
 
-  const normalizedComment=String(comment||'').trim();
+  const normalizedComment=String(comment||'').trim()||
+    'Tidak Ada Komentar Untuk Pesanan Ini';
 
-  if(!normalizedComment||normalizedComment.length>2000){
+  if(normalizedComment.length>100){
     throw badRequest(
       'INVALID_REVIEW_COMMENT',
-      'Komentar ulasan wajib diisi dan maksimal 2000 karakter.'
+      'Komentar ulasan maksimal 100 karakter.'
     );
   }
 
