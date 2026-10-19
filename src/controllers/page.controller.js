@@ -1079,7 +1079,7 @@ function ownerPage(section){
 
       else if(section==='reports'){ data.analytics=await analytics.period(req.query.period||'30d',req.query.from,req.query.to); }
       else if(section==='top-orders'){ data.items=(await analytics.period(req.query.period||'30d',req.query.from,req.query.to)).top; }
-      else if(section==='security'||section==='login-history'){
+      else if(section==='login-history'){
         const pager=ownerPager(req);
 
         data.logins=(

@@ -1623,6 +1623,7 @@ button[aria-busy="true"]{
   font-weight:800;
   letter-spacing:.08em;
   text-transform:uppercase;
+  text-align:center;
 }
 
 .owner-users-filter-field input,
@@ -1773,17 +1774,18 @@ button[aria-busy="true"]{
   }
 
   .owner-users-filter{
-    grid-template-columns:minmax(0,1fr);
+    grid-template-columns:repeat(2,minmax(0,1fr));
     gap:10px;
   }
 
   .owner-users-search{
-    grid-column:auto;
+    grid-column:1/-1;
   }
 
   .owner-users-filter-submit,
   .owner-users-filter-reset{
     width:100%;
+    grid-column:1/-1;
   }
 
   .owner-users-table{

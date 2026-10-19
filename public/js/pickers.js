@@ -737,10 +737,20 @@
         const raw=
           input.dataset.jyyrValue||'';
 
-        input.value=
-          input.dataset.jyyrPickerMode==='datetime'
-            ? formatDateTime(raw)
-            : formatDate(raw);
+        input.value=raw
+          ? (
+              input.dataset.jyyrPickerMode==='datetime'
+                ? formatDateTime(raw)
+                : formatDate(raw)
+            )
+          : (
+              input.placeholder||
+              (
+                input.dataset.jyyrPickerMode==='datetime'
+                  ? formatDateTime(raw)
+                  : formatDate(raw)
+              )
+            );
 
         input.dataset.jyyrReady='1';
 
