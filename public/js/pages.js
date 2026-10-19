@@ -511,7 +511,7 @@
   async function optimizeThumbnailFile(file){
     if(
       !file ||
-      !/^image\/(?:jpeg|png)$/i.test(file.type||'') ||
+      !/^image\/(?:jpeg|png|webp)$/i.test(file.type||'') ||
       typeof createImageBitmap!=='function'
     )return file;
 

@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="csrf-token" content="<%= csrfToken || '' %>">
   <meta name="theme-color" content="#191827">
+  <% if (view === 'pages/home') { %>
+  <meta name="description" content="Jyyr Store menyediakan produk digital dan layanan online dengan proses pemesanan yang aman dan praktis.">
+  <% } %>
   <title><%= title || appName %> · <%= appName %></title>
   <link rel="icon" href="<%= staticAsset('/favicon/favicon.svg') %>" type="image/svg+xml">
   <link rel="stylesheet" href="<%= staticAsset('/css/reset.css') %>">
