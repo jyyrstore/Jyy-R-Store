@@ -45,7 +45,7 @@ test('Sandbox order does not reserve stock',()=>{
 
 test('Sandbox callback gives Owner test access without real stock or revenue side effects',()=>{
   const service=read('src/services/payment/payment.service.js');
-  const page=read('views/pages/payment.ejs');
+  const page=(read('views/pages/payment.ejs') + read('views/partials/payment-details.ejs'));
   const analytics=read('src/repositories/analytics.repository.js');
   const start=service.indexOf("if(providerName==='buatqris' && parsed.isTest){");
   const end=service.indexOf("    const current=String(payment.status||'PENDING').toUpperCase();",start);

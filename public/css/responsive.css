@@ -154,6 +154,26 @@
   white-space:nowrap;
 }
 .owner-page .owner-revenue-orders-panel .chart-wrap{position:relative;min-height:260px}
+/* OWNER REVENUE ORDERS FIXED DESKTOP HEIGHT */
+@media(min-width:861px){
+  .owner-page .owner-revenue-orders-panel{
+    display:flex;
+    flex-direction:column;
+    align-self:start;
+    box-sizing:border-box;
+    height:360px;
+    min-height:0;
+    max-height:360px;
+  }
+  .owner-page .owner-revenue-orders-panel .chart-wrap{
+    flex:1 1 0;
+    height:0;
+    min-height:0;
+  }
+  .owner-page .owner-revenue-orders-panel .chart-wrap canvas{
+    min-height:0;
+  }
+}
 @media(max-width:700px){
   .owner-page .owner-revenue-orders-header{
     grid-template-columns:minmax(0,1fr);
@@ -214,6 +234,63 @@
 .owner-page .owner-users-table-panel .table-scroll .table-actions{display:flex;justify-content:center;align-items:center;gap:6px;width:auto}
 .owner-page .owner-users-table-panel .table-scroll .table-actions .button{width:auto;min-width:0;max-width:100%;flex:0 0 auto}
 .owner-roles-table-panel{padding-top:12px}.owner-roles-table-panel>h2{text-align:center;margin:0 0 14px}
+/* OWNER ROLES TABLE: FIXED THREE COLUMNS */
+.owner-page .owner-roles-table-panel .table-scroll{
+  overflow-x:hidden;
+  overflow-y:visible;
+  min-width:0;
+  max-width:100%;
+  width:100%;
+}
+.owner-page .owner-roles-table-panel .table-scroll table{
+  display:table;
+  min-width:0!important;
+  width:100%!important;
+  max-width:100%!important;
+  table-layout:fixed;
+  border-collapse:collapse;
+}
+.owner-page .owner-roles-table-panel .table-scroll thead{
+  display:table-header-group;
+  position:static;
+  left:auto;
+  top:auto;
+  width:auto;
+  max-width:none;
+}
+.owner-page .owner-roles-table-panel .table-scroll tbody{
+  display:table-row-group;
+  width:auto;
+  max-width:none;
+}
+.owner-page .owner-roles-table-panel .table-scroll tr{
+  display:table-row;
+  width:auto;
+  max-width:none;
+  margin:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  padding:0;
+}
+.owner-page .owner-roles-table-panel .table-scroll th,
+.owner-page .owner-roles-table-panel .table-scroll td{
+  display:table-cell;
+  width:33.333%;
+  min-width:0;
+  max-width:none;
+  padding:8px 6px;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  vertical-align:top;
+  border:1px solid var(--border);
+  text-align:center;
+}
+.owner-page .owner-roles-table-panel .table-scroll td::before{
+  display:none;
+  content:none;
+}
 .owner-information-table-panel>h2{text-align:center}
 .owner-notifications-history-table-panel .table-scroll table{border-collapse:collapse}
 .owner-notifications-history-table-panel .table-scroll th,.owner-notifications-history-table-panel .table-scroll td{border:1px solid var(--border);text-align:center;vertical-align:middle}
@@ -276,14 +353,14 @@
 .owner-notifications-history-table-panel>h2{text-align:center}
 .owner-notifications-history-table-panel .table-scroll td::before{display:none;content:none}
 /* Owner Activity + Login History: horizontal table on mobile */
-.owner-audit-table-panel .table-scroll{overflow-x:auto;overflow-y:hidden;min-width:0;max-width:100%;width:100%;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
-.owner-audit-table-panel .table-scroll table{display:table;min-width:760px!important;width:100%!important;max-width:none!important;table-layout:auto!important;border-collapse:collapse}
-.owner-audit-table-panel .table-scroll thead{display:table-header-group;position:static;left:auto;top:auto;width:auto;max-width:none}
-.owner-audit-table-panel .table-scroll tbody{display:table-row-group;width:auto;max-width:none}
-.owner-audit-table-panel .table-scroll tr{display:table-row;width:auto;max-width:none;margin:0;border:0;border-radius:0;background:transparent;padding:0}
-.owner-audit-table-panel .table-scroll th,
-.owner-audit-table-panel .table-scroll td{display:table-cell;width:auto;max-width:none;min-width:0;padding:10px 12px;white-space:nowrap;overflow-wrap:normal;word-break:normal}
-.owner-audit-table-panel .table-scroll td::before{display:none;content:none}
+.owner-audit-table-panel:not(.owner-roles-table-panel) .table-scroll{overflow-x:auto;overflow-y:hidden;min-width:0;max-width:100%;width:100%;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.owner-audit-table-panel:not(.owner-roles-table-panel) .table-scroll table{display:table;min-width:760px!important;width:100%!important;max-width:none!important;table-layout:auto!important;border-collapse:collapse}
+.owner-audit-table-panel:not(.owner-roles-table-panel) .table-scroll thead{display:table-header-group;position:static;left:auto;top:auto;width:auto;max-width:none}
+.owner-audit-table-panel:not(.owner-roles-table-panel) .table-scroll tbody{display:table-row-group;width:auto;max-width:none}
+.owner-audit-table-panel:not(.owner-roles-table-panel) .table-scroll tr{display:table-row;width:auto;max-width:none;margin:0;border:0;border-radius:0;background:transparent;padding:0}
+.owner-audit-table-panel:not(.owner-roles-table-panel) .table-scroll th,
+.owner-audit-table-panel:not(.owner-roles-table-panel) .table-scroll td{display:table-cell;width:auto;max-width:none;min-width:0;padding:10px 12px;white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.owner-audit-table-panel:not(.owner-roles-table-panel) .table-scroll td::before{display:none;content:none}
 /* Owner Security: retain horizontal table layout on mobile */
 :is(.owner-login-history-table-panel,.owner-top-orders-table-panel) .table-scroll{overflow-x:auto;overflow-y:hidden;min-width:0;max-width:100%;width:100%;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
 :is(.owner-login-history-table-panel,.owner-top-orders-table-panel) .table-scroll table{display:table;min-width:760px!important;width:100%!important;max-width:none!important;table-layout:auto!important;border-collapse:collapse}

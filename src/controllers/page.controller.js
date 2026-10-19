@@ -49,9 +49,10 @@ function configurationPage(req,res) {
 async function home(req,res,next){
   if(!isConfigured()) return configurationPage(req,res);
   try {
-    const [cat,latest,service,ann] = await Promise.all([
-      categories.list(true), products.catalog({limit:8,sort:'newest'}), services.list(true), infoRepo.listPublic()
+    const [latest,service,ann] = await Promise.all([
+      products.catalog({limit:8,sort:'newest'}), services.list(true), infoRepo.listPublic()
     ]);
+    const cat=latest.categories;
     latest.items=latest.items.map(p=>({...p,thumbnail_url:p.thumbnail_path?storage.publicUrl(loadEnv().PUBLIC_ASSET_BUCKET,p.thumbnail_path):null}));
     res.render('app', base(req,{view:'pages/home',categories:cat,products:latest.items,services:service.slice(0,6),announcements:ann.slice(0,5)}));
   } catch(e){ next(e); }
@@ -396,16 +397,17 @@ async function orderDetail(req,res,next){
       })
     );
 
-    const viewOrder={
-      ...order,
-      items
-    };
-
+    const payment=await require('../repositories/payments.repository').findLatestForOrderForUser(
+      orderId,
+      req.user.id
+    );
+    const viewOrder={...order,items};
     res.render(
       'app',
       base(req,{
         view:'pages/order-detail',
-        order:viewOrder
+        order:viewOrder,
+        payment
       })
     );
   }catch(e){

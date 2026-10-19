@@ -1894,6 +1894,10 @@ button[aria-busy="true"]{
   margin-top: 0;
 }
 
+.order-download-panel > .section + .section {
+  margin-top: 14px;
+}
+
 .order-download-panel .section-header {
   margin-bottom: 10px;
 }
@@ -3266,7 +3270,9 @@ a.delivery-card:focus-visible{
 
 /* HISTORY ORDER STATUS ALIGNMENT */
 body[data-view="pages/history"] [data-tab="orders"] .list-card .align-right > .badge{font-size:10px;padding:3px 5px;transform:translateX(3px);}
-body[data-view="pages/orders"] .list-card .align-right > .badge{transform:translateX(3px);}
+body[data-view="pages/orders"] .list-card > div:first-child{flex:1 1 auto;min-width:0}
+body[data-view="pages/orders"] .list-card > .align-right{flex:0 0 auto}
+body[data-view="pages/orders"] .list-card .align-right > .badge{transform:translateX(3px);white-space:nowrap;overflow-wrap:normal;word-break:normal}
 
 /* HISTORY BALANCE TRANSACTION LAYOUT */
 .history-mutation-card{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto auto;align-items:center;column-gap:10px;row-gap:5px;padding:12px}
@@ -3451,7 +3457,29 @@ a.profile-security-card:focus-visible{
 /* JYYR SECURITY CARD LINK END */
 
 /* JYYR PAYMENT STATUS PAGE LAYOUT */
-body[data-view="pages/payment"] .page-shell.narrow {
+.payment-details-shell {
+  margin: 14px auto;
+}
+
+.payment-details-shell + .order-product-review {
+  margin-top: 0;
+}
+
+.page-shell[data-payment-review-order-detail] .summary-card {
+  gap: 14px;
+}
+
+@media (max-width: 860px) {
+  .page-shell[data-payment-review-order-detail] .two-column {
+    row-gap: 16px;
+  }
+
+  .page-shell[data-payment-review-order-detail] .summary-card {
+    padding-top: 16px;
+  }
+}
+
+body[data-view="pages/payment"] .page-shell.narrow, .payment-details-shell {
   max-width: 780px;
 }
 
@@ -3494,7 +3522,7 @@ body[data-view="pages/payment"] .page-shell.narrow > .page-header .badge {
   text-align: center;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow > .panel {
+body[data-view="pages/payment"] .page-shell.narrow > .panel, .payment-details-panel {
   min-width: 0;
   padding: 22px;
 }
@@ -3503,30 +3531,30 @@ body[data-view="pages/payment"] .page-shell.narrow > .panel + .panel {
   margin-top: 16px;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow .summary-row {
+body[data-view="pages/payment"] .page-shell.narrow .summary-row, .payment-details-panel .summary-row {
   align-items: flex-start;
   gap: 18px;
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
 }
 
-body[data-view="pages/payment"] .page-shell.narrow .summary-row:first-child {
+body[data-view="pages/payment"] .page-shell.narrow .summary-row:first-child, .payment-details-panel .summary-row:first-child {
   padding-top: 0;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow .summary-row:last-of-type {
+body[data-view="pages/payment"] .page-shell.narrow .summary-row:last-of-type, .payment-details-panel .summary-row:last-of-type {
   padding-bottom: 0;
   border-bottom: 0;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow .summary-row > span {
+body[data-view="pages/payment"] .page-shell.narrow .summary-row > span, .payment-details-panel .summary-row > span {
   flex: 0 0 42%;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.55;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow .summary-row > b {
+body[data-view="pages/payment"] .page-shell.narrow .summary-row > b, .payment-details-panel .summary-row > b {
   flex: 1 1 0;
   min-width: 0;
   color: var(--text);
@@ -3536,7 +3564,7 @@ body[data-view="pages/payment"] .page-shell.narrow .summary-row > b {
   overflow-wrap: anywhere;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow .summary-row ~ p.muted {
+body[data-view="pages/payment"] .page-shell.narrow .summary-row ~ p.muted, .payment-details-panel .summary-row ~ p.muted {
   margin: 16px 0 0;
   padding-top: 12px;
   border-top: 1px solid var(--border);
@@ -3544,17 +3572,17 @@ body[data-view="pages/payment"] .page-shell.narrow .summary-row ~ p.muted {
   line-height: 1.65;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow > .panel h2 {
+body[data-view="pages/payment"] .page-shell.narrow > .panel h2, .payment-details-panel h2 {
   margin: 0 0 12px;
   font-size: 18px;
   line-height: 1.3;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow > .panel p {
+body[data-view="pages/payment"] .page-shell.narrow > .panel p, .payment-details-panel p {
   line-height: 1.65;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow > .panel a {
+body[data-view="pages/payment"] .page-shell.narrow > .panel a, .payment-details-panel a {
   color: var(--primary-2);
   font-weight: 700;
   text-underline-offset: 3px;
@@ -3671,7 +3699,7 @@ body[data-view="pages/payment"] .page-shell.narrow > .qris-expiry-indicator.is-e
   animation-play-state: paused;
 }
 
-body[data-view="pages/payment"] .page-shell.narrow > .panel .payment-title-divider {
+body[data-view="pages/payment"] .page-shell.narrow > .panel .payment-title-divider, .payment-details-panel .payment-title-divider {
   display: block;
   width: 50%;
   height: 1px;
@@ -3737,7 +3765,7 @@ body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button:disable
     align-items: flex-start;
   }
 
-  body[data-view="pages/payment"] .page-shell.narrow > .panel {
+  body[data-view="pages/payment"] .page-shell.narrow > .panel, .payment-details-panel {
     padding: 18px;
   }
 }
@@ -3757,20 +3785,20 @@ body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button:disable
     align-self: flex-start;
   }
 
-  body[data-view="pages/payment"] .page-shell.narrow > .panel {
+  body[data-view="pages/payment"] .page-shell.narrow > .panel, .payment-details-panel {
     padding: 16px;
   }
 
-  body[data-view="pages/payment"] .page-shell.narrow .summary-row {
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row, .payment-details-panel .summary-row {
     gap: 10px;
   }
 
-  body[data-view="pages/payment"] .page-shell.narrow .summary-row > span {
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row > span, .payment-details-panel .summary-row > span {
     flex-basis: 40%;
     font-size: 12px;
   }
 
-  body[data-view="pages/payment"] .page-shell.narrow .summary-row > b {
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row > b, .payment-details-panel .summary-row > b {
     font-size: 13px;
   }
 }
@@ -3792,16 +3820,16 @@ body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button:disable
     flex-basis: 15px;
   }
 
-  body[data-view="pages/payment"] .page-shell.narrow > .panel {
+  body[data-view="pages/payment"] .page-shell.narrow > .panel, .payment-details-panel {
     padding: 14px;
   }
 
-  body[data-view="pages/payment"] .page-shell.narrow .summary-row {
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row, .payment-details-panel .summary-row {
     gap: 8px;
   }
 
   body[data-view="pages/payment"] .page-shell.narrow .summary-row > span,
-  body[data-view="pages/payment"] .page-shell.narrow .summary-row > b {
+  body[data-view="pages/payment"] .page-shell.narrow .summary-row > b, .payment-details-panel .summary-row > span, .payment-details-panel .summary-row > b {
     font-size: 12px;
   }
 }
@@ -3809,7 +3837,7 @@ body[data-view="pages/payment"] .page-shell.narrow .qris-actions .button:disable
 /* JYYR QRIS CARD TEXT ALIGNMENT */
 body[data-view="pages/payment"] .page-shell.narrow .panel > h2,
 body[data-view="pages/payment"] .page-shell.narrow .panel > h2 + p,
-body[data-view="pages/payment"] .page-shell.narrow .panel > .payment-title-divider ~ p {
+body[data-view="pages/payment"] .page-shell.narrow .panel > .payment-title-divider ~ p, .payment-details-panel > h2, .payment-details-panel > h2 + p, .payment-details-panel > .payment-title-divider ~ p {
   text-align: center;
 }
 

@@ -1,0 +1,66 @@
+<%
+const paymentMode = String(
+  payment.raw_reference?.paymentMode ||
+  (payment.raw_reference?.isTest === true ? 'SANDBOX' : 'LIVE')
+).toUpperCase();
+const sandboxResult = String(
+  payment.raw_reference?._sandboxResult || ''
+).toUpperCase();
+const isBuatQris = String(payment.provider || '').toLowerCase() === 'buatqris';
+const paymentBaseAmount = Number(payment.amount ?? 0);
+const paymentTotalAmount = isBuatQris
+  ? Number(
+      payment.raw_reference?.totalAmount ??
+      payment.raw_reference?.total_amount ??
+      payment.amount ??
+      0
+    )
+  : Number(payment.amount ?? 0);
+const paymentServiceFee = isBuatQris
+  ? Math.max(0, paymentTotalAmount - paymentBaseAmount)
+  : 0;
+%>
+<div class="panel payment-details-panel">
+  <h2><%= heading %></h2>
+  <span class="payment-title-divider" aria-hidden="true"></span>
+  <div class="summary-row">
+    <span>Penyedia pembayaran</span>
+    <b>JYYR-STORE</b>
+  </div>
+  <div class="summary-row">
+    <span>Nominal Produk</span>
+    <b><%= formatIDR(payment.amount) %></b>
+  </div>
+  <div class="summary-row">
+    <span>Nominal Transaksi</span>
+    <b><%= formatIDR(paymentTotalAmount) %></b>
+  </div>
+  <div class="summary-row">
+    <span>Fee Layanan</span>
+    <b><%= formatIDR(paymentServiceFee) %></b>
+  </div>
+  <div class="summary-row">
+    <span>Mode pembayaran</span>
+    <b><%= paymentMode === 'SANDBOX' ? 'Sandbox (simulasi)' : 'Live' %></b>
+  </div>
+  <% if (paymentMode === 'SANDBOX' && sandboxResult) { %>
+    <div class="summary-row">
+      <span>Hasil webhook Sandbox</span>
+      <b><%= sandboxResult === 'PAID'
+        ? 'Berhasil diterima (simulasi)'
+        : labelStatus(sandboxResult) %></b>
+    </div>
+  <% } %>
+  <div class="summary-row">
+    <span>Referensi</span>
+    <b><%= payment.reference || '—' %></b>
+  </div>
+  <div class="summary-row">
+    <span>Dibuat</span>
+    <b><%= formatDate(payment.created_at) %></b>
+  </div>
+  <p class="muted" data-payment-status-note>
+    Status final akan diperbarui oleh backend setelah callback/webhook
+    provider tervalidasi.
+  </p>
+</div>

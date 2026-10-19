@@ -93,7 +93,80 @@
   >Terapkan</button>
 </div></div>
           <div class="panel"><div class="section-header"><div><h2>Deposit & Pengguna Baru</h2><p class="muted">Deposit sukses dan pertumbuhan user.</p></div></div><div class="chart-wrap"><canvas id="owner-growth-chart" height="260"></canvas></div></div>
-          <div class="panel"><h2>Status Pesanan</h2><div class="status-bars"><% (analytics.status||[]).forEach(s=>{ const max=Math.max(...(analytics.status||[]).map(x=>Number(x.count)||0),1); %><div><div class="bar-value"><%= s.count %></div><div class="bar"><span style="height:<%= Math.min(100,Number(s.count)/max*100) %>%"></span></div><div class="bar-label"><span><%= s.status %></span></div></div><% }) %></div></div>
+          <%
+            const orderStatusDefinitions = [
+              { key: 'PENDING', label: 'Menunggu' },
+              { key: 'PAID', label: 'Berhasil' },
+              { key: 'PROCESSING', label: 'Diproses' },
+              { key: 'COMPLETED', label: 'Selesai' },
+              { key: 'FAILED', label: 'Gagal' },
+              { key: 'CANCELLED', label: 'Dibatalkan' },
+              { key: 'EXPIRED', label: 'Kedaluwarsa' },
+              { key: 'REFUNDED', label: 'Dikembalikan' }
+            ];
+            const orderStatusCounts = new Map(
+              (analytics.status || []).map(item => [
+                String(item.status || '').toUpperCase(),
+                Math.max(0, Number(item.count) || 0)
+              ])
+            );
+            const orderStatusTotal = orderStatusDefinitions.reduce(
+              (total, item) => total + (orderStatusCounts.get(item.key) || 0),
+              0
+            );
+            const orderStatusMax = Math.max(
+              ...orderStatusDefinitions.map(
+                item => orderStatusCounts.get(item.key) || 0
+              ),
+              1
+            );
+          %>
+          <div class="panel owner-order-status-panel">
+            <div class="section-header owner-order-status-header">
+              <div>
+                <h2>Status Pesanan</h2>
+                <p class="muted">Distribusi pesanan pada periode analytics yang dipilih.</p>
+              </div>
+              <div class="owner-order-status-total">
+                <strong data-order-status-total><%= orderStatusTotal.toLocaleString('id-ID') %></strong>
+                <span>Total pesanan</span>
+              </div>
+            </div>
+            <div
+              class="status-bars"
+              id="owner-order-status-bars"
+              role="list"
+              aria-label="Distribusi status pesanan"
+            >
+              <% orderStatusDefinitions.forEach(item => {
+                const count = orderStatusCounts.get(item.key) || 0;
+                const percentage = orderStatusTotal
+                  ? Math.round(count / orderStatusTotal * 100)
+                  : 0;
+                const barHeight = count
+                  ? Math.max(3, count / orderStatusMax * 100)
+                  : 0;
+              %>
+                <div
+                  class="status-bars-item status-bars-item--<%= item.key.toLowerCase() %> <%= count ? '' : 'is-zero' %>"
+                  role="listitem"
+                  data-order-status="<%= item.key %>"
+                >
+                  <div class="bar-value">
+                    <strong data-order-status-count><%= count.toLocaleString('id-ID') %></strong>
+                    <small data-order-status-percent><%= percentage %>%</small>
+                  </div>
+                  <div class="bar" aria-hidden="true">
+                    <span data-order-status-bar style="height:<%= barHeight %>%"></span>
+                  </div>
+                  <div class="bar-label"><span><%= item.label %></span></div>
+                </div>
+              <% }) %>
+            </div>
+            <p class="owner-order-status-empty" data-order-status-empty <%= orderStatusTotal ? 'hidden' : '' %>>
+              Belum ada pesanan pada periode ini.
+            </p>
+          </div>
         </div>
       <% } else if(ownerSection==='products'){ %>
         <div class="toolbar panel">
@@ -743,7 +816,46 @@
 
 <% if(ownerSection==='dashboard' || ownerSection==='reports'){ %>
 <script nonce="<%= cspNonce %>">
-document.addEventListener('DOMContentLoaded',()=>{let charts={};const daily0=<%- JSON.stringify((analytics&&analytics.daily)||[]) %>;const render=(daily,status)=>{if(!window.Chart)return;const mk=(id,type,data,chartOptions={})=>{const c=document.getElementById(id);if(!c)return;if(charts[id])charts[id].destroy();charts[id]=new Chart(c,{type,data,options:{responsive:true,maintainAspectRatio:false,...chartOptions}})};mk('owner-chart','line',{labels:daily.map(x=>x.day),datasets:[{label:'Pendapatan',yAxisID:'yRevenue',data:daily.map(x=>Number(x.revenue))},{label:'Pesanan',yAxisID:'yOrders',data:daily.map(x=>Number(x.orders))}]},{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>ctx.dataset.yAxisID==='yRevenue'?`Pendapatan: ${new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(ctx.parsed.y)}`:`Pesanan: ${new Intl.NumberFormat('id-ID').format(ctx.parsed.y)}`}}},scales:{yRevenue:{type:'linear',position:'left',beginAtZero:true,ticks:{callback:value=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',notation:'compact',maximumFractionDigits:1}).format(value)}},yOrders:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{precision:0,callback:value=>new Intl.NumberFormat('id-ID').format(value)}}}});mk('owner-growth-chart','line',{labels:daily.map(x=>x.day),datasets:[{label:'Deposit',data:daily.map(x=>Number(x.deposit||0))},{label:'New Users',data:daily.map(x=>Number(x.new_users||0))}]});mk('report-chart','bar',{labels:daily.map(x=>x.day),datasets:[{label:'Revenue',data:daily.map(x=>Number(x.revenue))},{label:'Deposit',data:daily.map(x=>Number(x.deposit||0))}]});};render(daily0,<%- JSON.stringify((analytics&&analytics.status)||[]) %>);const period=document.querySelector('[data-owner-period]');const custom=document.querySelector('[data-analytics-custom]');const from=document.querySelector('[data-analytics-from]');const to=document.querySelector('[data-analytics-to]');const apply=async()=>{const p=period?.value||'30d';const url=new URL('/api/owner/analytics',location.origin);url.searchParams.set('period',p);if(p==='custom'){if(!from?.value||!to?.value)return window.JYYRToast?.error('Pilih rentang tanggal analytics.');url.searchParams.set('from',from.value+'T00:00:00');url.searchParams.set('to',to.value+'T23:59:59')}try{const r=await window.JYYRApi.request(url.pathname+url.search);render(r.daily||[],r.status||[])}catch(err){window.JYYRToast?.error(err.message)}};period?.addEventListener('change',()=>{if(custom)custom.hidden=period.value!=='custom';if(period.value!=='custom')apply()});document.querySelector('[data-analytics-apply]')?.addEventListener('click',apply)});
+document.addEventListener('DOMContentLoaded',()=>{let charts={};const daily0=<%- JSON.stringify((analytics&&analytics.daily)||[]) %>;const render=(daily,status)=>{
+const statusBars=document.getElementById('owner-order-status-bars');
+if(statusBars){
+  const counts=Object.create(null);
+  (status||[]).forEach(item=>{
+    const key=String(item.status||'').toUpperCase();
+    counts[key]=Math.max(0,Number(item.count)||0);
+  });
+
+  const keys=Object.keys(counts);
+  let total=0;
+  let max=1;
+  keys.forEach(key=>{
+    total+=counts[key];
+    max=Math.max(max,counts[key]);
+  });
+
+  const formatter=new Intl.NumberFormat('id-ID');
+  statusBars.querySelectorAll('[data-order-status]').forEach(item=>{
+    const key=String(item.dataset.orderStatus||'').toUpperCase();
+    const count=Number(counts[key])||0;
+    const percentage=total?Math.round(count/total*100):0;
+    const countLabel=item.querySelector('[data-order-status-count]');
+    const percentLabel=item.querySelector('[data-order-status-percent]');
+    const bar=item.querySelector('[data-order-status-bar]');
+
+    if(countLabel)countLabel.textContent=formatter.format(count);
+    if(percentLabel)percentLabel.textContent=String(percentage)+'%';
+    if(bar)bar.style.height=(count?Math.max(3,count/max*100):0)+'%';
+    item.classList.toggle('is-zero',count===0);
+  });
+
+  const totalLabel=document.querySelector('[data-order-status-total]');
+  if(totalLabel)totalLabel.textContent=formatter.format(total);
+
+  const emptyLabel=document.querySelector('[data-order-status-empty]');
+  if(emptyLabel)emptyLabel.hidden=total>0;
+}
+if(!window.Chart)return;
+const mk=(id,type,data,chartOptions={})=>{const c=document.getElementById(id);if(!c)return;if(charts[id])charts[id].destroy();charts[id]=new Chart(c,{type,data,options:{responsive:true,maintainAspectRatio:false,...chartOptions}})};mk('owner-chart','line',{labels:daily.map(x=>x.day),datasets:[{label:'Pendapatan',yAxisID:'yRevenue',data:daily.map(x=>Number(x.revenue))},{label:'Pesanan',yAxisID:'yOrders',data:daily.map(x=>Number(x.orders))}]},{plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>ctx.dataset.yAxisID==='yRevenue'?`Pendapatan: ${new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(ctx.parsed.y)}`:`Pesanan: ${new Intl.NumberFormat('id-ID').format(ctx.parsed.y)}`}}},scales:{yRevenue:{type:'linear',position:'left',beginAtZero:true,ticks:{callback:value=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',notation:'compact',maximumFractionDigits:1}).format(value)}},yOrders:{type:'linear',position:'right',beginAtZero:true,grid:{drawOnChartArea:false},ticks:{precision:0,callback:value=>new Intl.NumberFormat('id-ID').format(value)}}}});mk('owner-growth-chart','line',{labels:daily.map(x=>x.day),datasets:[{label:'Deposit',data:daily.map(x=>Number(x.deposit||0))},{label:'New Users',data:daily.map(x=>Number(x.new_users||0))}]});mk('report-chart','bar',{labels:daily.map(x=>x.day),datasets:[{label:'Revenue',data:daily.map(x=>Number(x.revenue))},{label:'Deposit',data:daily.map(x=>Number(x.deposit||0))}]});};render(daily0,<%- JSON.stringify((analytics&&analytics.status)||[]) %>);const period=document.querySelector('[data-owner-period]');const custom=document.querySelector('[data-analytics-custom]');const from=document.querySelector('[data-analytics-from]');const to=document.querySelector('[data-analytics-to]');const apply=async()=>{const p=period?.value||'30d';const url=new URL('/api/owner/analytics',location.origin);url.searchParams.set('period',p);if(p==='custom'){if(!from?.value||!to?.value)return window.JYYRToast?.error('Pilih rentang tanggal analytics.');url.searchParams.set('from',from.value+'T00:00:00');url.searchParams.set('to',to.value+'T23:59:59')}try{const r=await window.JYYRApi.request(url.pathname+url.search);render(r.daily||[],r.status||[])}catch(err){window.JYYRToast?.error(err.message)}};period?.addEventListener('change',()=>{if(custom)custom.hidden=period.value!=='custom';if(period.value!=='custom')apply()});document.querySelector('[data-analytics-apply]')?.addEventListener('click',apply)});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <% } %>

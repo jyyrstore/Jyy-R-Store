@@ -508,8 +508,73 @@
     return tusLoaderPromise;
   }
 
+  async function optimizeThumbnailFile(file){
+    if(
+      !file ||
+      !/^image\/(?:jpeg|png)$/i.test(file.type||'') ||
+      typeof createImageBitmap!=='function'
+    )return file;
+
+    let bitmap=null;
+
+    try{
+      bitmap=await createImageBitmap(file);
+
+      if(!bitmap.width||!bitmap.height)return file;
+
+      const scale=Math.min(
+        1,
+        1200/bitmap.width,
+        900/bitmap.height
+      );
+
+      const width=Math.max(1,Math.round(bitmap.width*scale));
+      const height=Math.max(1,Math.round(bitmap.height*scale));
+      const canvas=document.createElement('canvas');
+
+      canvas.width=width;
+      canvas.height=height;
+
+      const context=canvas.getContext('2d');
+      if(!context)return file;
+
+      context.drawImage(bitmap,0,0,width,height);
+
+      const blob=await new Promise(resolve=>{
+        canvas.toBlob(resolve,'image/webp',0.82);
+      });
+
+      if(!blob||blob.type!=='image/webp'||blob.size>=file.size){
+        return file;
+      }
+
+      const baseName=String(file.name||'thumbnail')
+        .replace(/\.[^.]+$/,'')||'thumbnail';
+
+      return new File(
+        [blob],
+        `${baseName}.webp`,
+        {
+          type:'image/webp',
+          lastModified:Date.now()
+        }
+      );
+    }catch{
+      return file;
+    }finally{
+      bitmap?.close?.();
+    }
+  }
+
   async function uploadOwnerFile(productId,file,{contentType='THUMBNAIL',progressEl=null,statusEl=null,meta={}}={}){
     if(!file)return null;
+
+    if(contentType==='THUMBNAIL'){
+      if(statusEl){
+        statusEl.textContent='Mengoptimalkan thumbnail…';
+      }
+      file=await optimizeThumbnailFile(file);
+    }
 
     const init=await api.request(
       '/api/owner/products/'+encodeURIComponent(productId)+'/upload-init',
