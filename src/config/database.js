@@ -64,7 +64,7 @@ function createPool(env) {
     idleTimeoutMillis: isVercelRuntime() ? 5000 : 30000,
     connectionTimeoutMillis: 5000,
     keepAlive: true,
-    ssl: env.NODE_ENV === 'production'
+    ssl: env.NODE_ENV === 'production' || Boolean(env.DATABASE_SSL_CA)
       ? {
           rejectUnauthorized: true,
           ...(env.DATABASE_SSL_CA

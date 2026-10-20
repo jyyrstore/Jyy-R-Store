@@ -324,7 +324,7 @@
                       <button class="button button-success button-small" data-owner-publish="<%= row.id %>">Publikasikan</button>
                     <% } %>
                     <button class="button button-secondary button-small" data-owner-duplicate="<%= row.id %>">Duplikat</button>
-                    <button class="button button-danger button-small" data-owner-delete-product="<%= row.id %>"><%- icon('trash-can') %>Hapus</button>
+                    <button class="button button-danger button-small" data-owner-delete-product="<%= row.id %>" data-owner-delete-status="<%= row.status %>"><%- icon('trash-can') %><%= row.status==='ARCHIVED'?'Hapus Permanen':'Hapus' %></button>
                   </div>
                 </article>
               <% }) %>

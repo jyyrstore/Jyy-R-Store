@@ -162,6 +162,80 @@ async function findById(id){ return (await query('select p.*,c.name category_nam
 async function create(data,client){ const c=client||require('../config/database').db(); return (await c.query('insert into products(category_id,name,slug,description,price,stock,thumbnail_path,status) values($1,$2,$3,$4,$5,$6,$7,$8) returning *',[data.category_id||null,data.name,data.slug,data.description||'',data.price,data.stock,data.thumbnail_path||null,data.status||'DRAFT'])).rows[0]; }
 async function update(id,data,client){ const c=client||require('../config/database').db(); const allowed=['category_id','name','slug','description','price','stock','thumbnail_path','status']; const keys=allowed.filter(k=>Object.prototype.hasOwnProperty.call(data,k)); if(!keys.length) return findById(id); const sql=`update products set ${keys.map((k,i)=>`${k}=$${i+2}`).join(',')},updated_at=now() where id=$1 returning *`; return (await c.query(sql,[id,...keys.map(k=>data[k])])).rows[0]; }
 async function remove(id){ return (await query("update products set status='ARCHIVED',updated_at=now() where id=$1 returning *",[id])).rows[0]; }
+async function deletePermanently(id){
+  return withTransaction(async(client)=>{
+    const current=(await client.query(
+      'select * from products where id=$1 for update',
+      [id]
+    )).rows[0];
+
+    if(!current)return null;
+
+    if(current.status!=='ARCHIVED'){
+      throw Object.assign(
+        new Error('Produk harus diarsipkan sebelum dihapus permanen.'),
+        {
+          status:409,
+          code:'PRODUCT_NOT_ARCHIVED',
+          expose:true
+        }
+      );
+    }
+
+    const refs=(await client.query(
+      `select
+         exists(
+           select 1 from order_items where product_id=$1
+         ) as has_order_items,
+         exists(
+           select 1 from entitlements where product_id=$1
+         ) as has_entitlements,
+         exists(
+           select 1
+           from download_logs dl
+           join product_contents pc on pc.id=dl.content_id
+           where pc.product_id=$1
+         ) as has_download_logs`,
+      [id]
+    )).rows[0];
+
+    if(
+      refs.has_order_items ||
+      refs.has_entitlements ||
+      refs.has_download_logs
+    ){
+      throw Object.assign(
+        new Error(
+          'Produk memiliki riwayat transaksi atau unduhan dan tidak dapat dihapus permanen agar data transaksi tetap aman.'
+        ),
+        {
+          status:409,
+          code:'PRODUCT_HAS_HISTORY',
+          expose:true
+        }
+      );
+    }
+
+    const contents=(await client.query(
+      'select distinct storage_path from product_contents where product_id=$1 and storage_path is not null',
+      [id]
+    )).rows;
+
+    await client.query(
+      'delete from cart_items where product_id=$1',
+      [id]
+    );
+
+    const deleted=(await client.query(
+      "delete from products where id=$1 and status='ARCHIVED' returning *",
+      [id]
+    )).rows[0];
+
+    if(!deleted)return null;
+
+    return {product:deleted,contents};
+  });
+}
 async function unpublish(id){ return update(id,{status:'DRAFT'}); }
 async function duplicate(id){
   // JYYR_STORAGE_DUPLICATE_V2
@@ -389,6 +463,6 @@ async function countAdmin({
   );
 }
 
-module.exports={list,adminList,count,findBySlug,findById,create,update,remove,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event,
+module.exports={list,adminList,count,findBySlug,findById,create,update,remove,deletePermanently,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event,
   countAdmin
 };

@@ -741,7 +741,7 @@ function resolvedPaymentUrl(payment, externalUrl) {
     hasQr &&
     payment?.id
   ) {
-    return `/payment/${encodeURIComponent(payment.id)}`;
+    return `/payment/${encodeURIComponent(payment.public_id || payment.id)}`;
   }
 
   return null;

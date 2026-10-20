@@ -1,4 +1,4 @@
-<% const contentTypeLabels = { FILE: 'File', IMAGE: 'Gambar', VIDEO: 'Video', AUDIO: 'Audio', TEXT: 'Teks', LINK: 'Tautan' }; const accessTypeLabels = { PURCHASED: 'Setelah pembelian', PUBLIC: 'Publik', PREVIEW: 'Pratinjau' }; %> <% const paymentDetailsMarkup = payment ? include('../partials/payment-details', { payment, heading: 'Rincian Pembayaran' }) : ''; %>
+<% const contentTypeLabels = { FILE: 'File', IMAGE: 'Gambar', VIDEO: 'Video', AUDIO: 'Audio', TEXT: 'Teks', LINK: 'Tautan' }; const accessTypeLabels = { PURCHASED: 'Setelah pembelian', PUBLIC: 'Publik', PREVIEW: 'Pratinjau' }; %> <% const paymentDetailsMarkup = payment ? include('../partials/payment-details', { payment, heading: 'Rincian Pembayaran', orderNumber: order.order_number }) : ''; %>
 <section class="page-shell" data-payment-review-order-detail="<%= req.query.review ? order.id : '' %>"> <div class="page-header order-detail-page-header">
   <div class="order-detail-heading-grid">
     <div class="order-detail-heading-cell">

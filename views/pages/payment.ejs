@@ -44,7 +44,7 @@
   <% if (payment.id) { %>
     <div class="qris-actions"
          data-qris-actions
-         data-payment-link="<%= 'http://jyyrsh.my.id/payment/' + encodeURIComponent(String(payment.id || '')) %>"
+         data-payment-link="<%= 'http://jyyrsh.my.id/payment/' + encodeURIComponent(String(payment.public_id || payment.id || '')) %>"
          data-qris-image="<%= buatqrisImage || '' %>">
       <button class="button button-primary"
               type="button"

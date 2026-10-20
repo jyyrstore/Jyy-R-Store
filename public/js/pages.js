@@ -1780,7 +1780,7 @@
           // Biarkan halaman JYYR memantau status pembayaran.
           location.href=
             '/payment/'+
-            encodeURIComponent(createdPayment.id);
+            encodeURIComponent(createdPayment.public_id || createdPayment.id);
         }else if(r.payment?.paymentUrl){
           location.href=r.payment.paymentUrl;
         }else{
@@ -2041,7 +2041,38 @@
     const publish=e.target.closest('[data-owner-publish]');if(publish){if(!(await window.JYYRModal.confirm('Publish produk ini?')))return;try{await ownerAction('/api/owner/products/'+publish.dataset.ownerPublish+'/publish',{},'POST','Produk dipublish.');location.reload()}catch(err){toast.error(err.message)}}
     const unpublish=e.target.closest('[data-owner-unpublish]');if(unpublish){if(!(await window.JYYRModal.confirm('Unpublish produk ini?')))return;try{await ownerAction('/api/owner/products/'+unpublish.dataset.ownerUnpublish+'/unpublish',{},'POST','Produk di-unpublish.');location.reload()}catch(err){toast.error(err.message)}}
     const dup=e.target.closest('[data-owner-duplicate]');if(dup){if(!(await window.JYYRModal.confirm('Duplikat produk ini?')))return;try{await ownerAction('/api/owner/products/'+dup.dataset.ownerDuplicate+'/duplicate',{},'POST','Produk diduplikasi.');location.reload()}catch(err){toast.error(err.message)}}
-    const delp=e.target.closest('[data-owner-delete-product]');if(delp){if(!(await window.JYYRModal.confirm('Arsipkan produk ini? Data transaksi tidak dihapus.')))return;try{await ownerAction('/api/owner/products/'+delp.dataset.ownerDeleteProduct+'/delete',{},'DELETE','Produk diarsipkan.');location.reload()}catch(err){toast.error(err.message)}}
+    const delp=e.target.closest('[data-owner-delete-product]');
+    if(delp){
+      const id=encodeURIComponent(delp.dataset.ownerDeleteProduct);
+      const isArchived=delp.dataset.ownerDeleteStatus==='ARCHIVED';
+      const confirmMessage=isArchived
+        ? 'Hapus produk ini sepenuhnya? Produk dengan riwayat transaksi atau unduhan tidak dapat dihapus.'
+        : 'Hapus produk ini ke arsip? Data transaksi tidak dihapus.';
+
+      if(!(await window.JYYRModal.confirm(confirmMessage)))return;
+
+      try{
+        if(isArchived){
+          await ownerAction(
+            '/api/owner/products/'+id+'/delete',
+            {},
+            'DELETE',
+            'Produk dihapus sepenuhnya.'
+          );
+        }else{
+          await ownerAction(
+            '/api/owner/products/'+id+'/archive',
+            {},
+            'POST',
+            'Produk diarsipkan.'
+          );
+        }
+
+        location.reload();
+      }catch(err){
+        toast.error(err.message);
+      }
+    }
     const user=e.target.closest('[data-owner-user]');if(user){const id=user.dataset.ownerUser,status=user.dataset.ownerStatus,role=user.dataset.ownerRole;open(`<div class="stack-form"><h2>Kelola ${esc(user.dataset.ownerUsername)}</h2><p class="muted">Status: ${esc(status)} · Role: ${esc(role)}</p><div class="button-grid"><button class="button button-secondary" data-user-ban="${id}">Ban</button><button class="button button-secondary" data-user-unban="${id}">Unban</button><button class="button button-secondary" data-user-suspend="${id}">Suspend</button><button class="button button-secondary" data-user-unsuspend="${id}">Unsuspend</button><button class="button button-secondary" data-user-reset="${id}">Reset Sessions</button><button class="button button-danger" data-user-delete="${id}">${window.JYYRIcon?.('trash-can')||''}Delete (Anonymize)</button></div><label class="field"><span>Role</span>${pickerSelect({
       name:'owner_role',
       value:role,

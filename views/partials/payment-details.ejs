@@ -52,8 +52,8 @@ const paymentServiceFee = isBuatQris
     </div>
   <% } %>
   <div class="summary-row">
-    <span>Referensi</span>
-    <b><%= payment.reference || '—' %></b>
+    <span><%= typeof orderNumber !== 'undefined' && orderNumber ? 'Pesanan' : 'Referensi' %></span>
+    <b><%= (typeof orderNumber !== 'undefined' && orderNumber) || payment.reference || '—' %></b>
   </div>
   <div class="summary-row">
     <span>Dibuat</span>

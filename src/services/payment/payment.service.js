@@ -14,6 +14,19 @@ const { sendOrderPaidEmail }=require('../email/order-notification.service');
 
 const PAYMENT_CREATABLE_ORDER_STATUSES=new Set(['PENDING']);
 
+const PAYMENT_PUBLIC_ID_ALPHABET='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+function generatePublicPaymentId(){
+  const value=Array.from(
+    {length:8},
+    ()=>PAYMENT_PUBLIC_ID_ALPHABET[
+      crypto.randomInt(0,PAYMENT_PUBLIC_ID_ALPHABET.length)
+    ]
+  ).join('');
+
+  return `JYYR-PAYY-${value.slice(0,4)}-${value.slice(4)}`;
+}
+
 const PAYMENT_TRANSITIONS={
   PENDING:new Set(['PENDING','PAID','FAILED','EXPIRED','CANCELLED']),
   PAID:new Set(['PAID']),
@@ -313,8 +326,12 @@ async function createForOrder(userId,order,returnUrl,options={}){
       };
     }
 
-    const placeholder=(
-      await client.query(
+    let placeholder=null;
+
+    for(let attempt=0;attempt<5;attempt++){
+      const publicId=generatePublicPaymentId();
+
+      const inserted=await client.query(
         `insert into payments(
           order_id,
           user_id,
@@ -324,7 +341,8 @@ async function createForOrder(userId,order,returnUrl,options={}){
           status,
           raw_reference,
           idempotency_key,
-          expires_at
+          expires_at,
+          public_id
         )
         values(
           $1,
@@ -339,8 +357,10 @@ async function createForOrder(userId,order,returnUrl,options={}){
             when lower($3)='buatqris'
               then now()+interval '60 minutes'
             else now()+interval '30 minutes'
-          end
+          end,
+          $7
         )
+        on conflict (public_id) do nothing
         returning *`,
         [
           locked.id,
@@ -352,10 +372,23 @@ async function createForOrder(userId,order,returnUrl,options={}){
             paymentMode,
             isTest:testMode
           },
-          idempotencyKey
+          idempotencyKey,
+          publicId
         ]
-      )
-    ).rows[0];
+      );
+
+      if(inserted.rows[0]){
+        placeholder=inserted.rows[0];
+        break;
+      }
+    }
+
+    if(!placeholder){
+      throw Object.assign(
+        new Error('Tidak dapat membuat ID pembayaran publik yang unik.'),
+        {code:'PAYMENT_PUBLIC_ID_COLLISION'}
+      );
+    }
 
     existing=placeholder;
 
@@ -521,7 +554,14 @@ async function createForOrder(userId,order,returnUrl,options={}){
 }
 
 async function getStatus(id,userId){
-  const p=await require('../../repositories/payments.repository').findById(id);
+  const paymentsRepo=require('../../repositories/payments.repository');
+  const requestedId=String(id||'').trim();
+  const publicIdPattern=/^JYYR-PAYY-[A-Z0-9]{4}-[A-Z0-9]{4}$/i;
+
+  const p=publicIdPattern.test(requestedId)
+    ? await paymentsRepo.findByPublicId(requestedId.toUpperCase())
+    : await paymentsRepo.findById(requestedId);
+
   if(!p||p.user_id!==userId)throw notFound('Payment not found.');
   return p;
 }
