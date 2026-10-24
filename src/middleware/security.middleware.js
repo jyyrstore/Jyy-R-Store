@@ -43,6 +43,12 @@ async function getSharedLimiter(kind,windowMs,max){
     !env.UPSTASH_REDIS_REST_URL ||
     !env.UPSTASH_REDIS_REST_TOKEN
   ){
+    if(env.NODE_ENV==='production'&&kind==='sensitive'){
+      throw new Error(
+        'Distributed rate limiting is required for sensitive production routes.'
+      );
+    }
+
     return null;
   }
 

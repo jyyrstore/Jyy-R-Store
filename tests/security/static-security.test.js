@@ -120,4 +120,5 @@ test('distributed rate limiting fails closed when configured service is unavaila
 
   assert.match(security,/RATE_LIMIT_UNAVAILABLE/);
   assert.match(security,/return res\.status\(503\)\.json/);
+  assert.match(security,/env\.NODE_ENV\s*===\s*['"]production['"]\s*&&\s*kind\s*===\s*['"]sensitive['"]/);
 });
