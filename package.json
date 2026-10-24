@@ -28,7 +28,7 @@
     "body-parser": "^2.4.0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.116.0",
+    "@supabase/supabase-js": "2.118.0",
     "@upstash/ratelimit": "2.1.0",
     "@upstash/redis": "1.38.4",
     "compression": "1.8.2",
