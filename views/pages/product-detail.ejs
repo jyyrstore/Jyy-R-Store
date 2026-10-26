@@ -4,6 +4,16 @@
 
   <div class="product-detail">
     <div class="detail-media">
+      <button
+        type="button"
+        class="icon-button detail-share-button"
+        data-product-share
+        data-share-title="<%= product.name %>"
+        aria-label="Bagikan produk"
+        title="Bagikan produk"
+      >
+        <%- icon('share') %>
+      </button>
       <div class="detail-image-frame">
         <% if(product.thumbnail_url || product.thumbnail_path){ %>
           <img
@@ -23,6 +33,26 @@
             <span>Gambar tidak tersedia</span>
           </div>
         <% } %>
+      </div>
+    </div>
+    <div class="detail-product-stats" aria-label="Statistik produk">
+      <div class="detail-product-stat">
+        <span class="detail-product-stat-value">
+          <%- icon('category-management') %>
+          <span><%= product.category_name || 'Produk' %></span>
+        </span>
+      </div>
+      <div class="detail-product-stat">
+        <span class="detail-product-stat-value">
+          <%- icon('eye') %>
+          <span><%= new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(product.view_count || 0)).replace(/\s/g, '') %> Dilihat</span>
+        </span>
+      </div>
+      <div class="detail-product-stat">
+        <span class="detail-product-stat-value">
+          <%- icon('tag-sale-price') %>
+          <span><%= new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(product.purchase_count || 0)).replace(/\s/g, '') %> Terjual</span>
+        </span>
       </div>
     </div>
     <div class="detail-copy">

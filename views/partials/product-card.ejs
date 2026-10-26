@@ -1,50 +1,60 @@
 <% const stock = Number(product.stock) || 0; %>
 <article class="product-card" data-product-card data-product-id="<%= product.id %>">
-  <a href="/product/<%= product.slug %>" class="product-thumb-wrap">
-    <% if (product.thumbnail_url || product.thumbnail_path) { %><img loading="lazy" class="product-thumb" src="<%= product.thumbnail_url || assetUrl(publicAssetBucket, product.thumbnail_path) %>" alt="<%= product.name %>" data-image-fallback><div class="image-fallback" hidden><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } else { %><div class="image-fallback"><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } %>
-    <span class="product-category-badge"><%= product.category_name || 'Produk' %></span>
-    <span
-      class="product-stock product-stock--<%= stock >= 500 ? 'green' : stock >= 250 ? 'blue' : stock > 0 ? 'orange' : 'sold-out' %> product-stock--cover"
-      aria-label="<%= stock > 0 ? stock + ' produk tersedia' : 'Produk habis' %>"
-      title="<%= stock > 0 ? stock + ' produk tersedia' : 'Produk habis' %>"
+  <div class="product-thumb-wrap">
+    <a
+      href="/product/<%= product.slug %>"
+      class="product-cover-link"
+      aria-label="Lihat produk <%= product.name %>"
     >
-      <span class="product-stock-dot" aria-hidden="true">•</span>
-      <%= stock > 0 ? stock : 'Habis' %>
-    </span>
+      <% if (product.thumbnail_url || product.thumbnail_path) { %><img loading="lazy" class="product-thumb" src="<%= product.thumbnail_url || assetUrl(publicAssetBucket, product.thumbnail_path) %>" alt="<%= product.name %>" data-image-fallback><div class="image-fallback" hidden><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } else { %><div class="image-fallback"><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } %>
+      <span class="product-category-badge"><%= product.category_name || 'Produk' %></span>
+      <span
+        class="product-stock product-stock--<%= stock >= 500 ? 'green' : stock >= 250 ? 'blue' : stock > 0 ? 'orange' : 'sold-out' %> product-stock--cover"
+        aria-label="<%= stock > 0 ? stock + ' produk tersedia' : 'Produk habis' %>"
+        title="<%= stock > 0 ? stock + ' produk tersedia' : 'Produk habis' %>"
+      >
+        <span class="product-stock-dot" aria-hidden="true">•</span>
+        <%= stock > 0 ? stock : 'Habis' %>
+      </span>
+    </a>
 
-    <span class="product-title product-title--cover">
-      <%= product.name %>
-    </span>
-  </a>
+    <a
+      href="/product/<%= product.slug %>"
+      class="product-title product-title--cover"
+    ><%= product.name %></a>
+    <% if (currentUser && product.stock>0) { %>
+      <button
+        type="button"
+        class="product-cover-cart"
+        data-add-cart="<%= product.id %>"
+        aria-label="Tambah <%= product.name %> ke keranjang"
+        title="Tambah ke keranjang"
+      >
+        <%- icon('cart') %>
+      </button>
+    <% } %>
+  </div>
   <div class="product-body">
 
     <div class="product-price"><%= formatIDR(product.price) %></div>
 
     <div class="product-actions">
-      <a
-        class="product-detail-link"
-        href="/product/<%= product.slug %>"
-      >
-        Detail
-      </a>
-
-      <% if (currentUser && product.stock>0) { %>
-        <div class="product-action-row">
-          <button
-            class="button button-secondary button-small"
-            data-add-cart="<%= product.id %>"
-          >
-            Keranjang
-          </button>
-
+      <div class="product-action-row">
+        <a
+          class="product-detail-link"
+          href="/product/<%= product.slug %>"
+        >
+          Detail
+        </a>
+        <% if (currentUser && product.stock>0) { %>
           <button
             class="button button-primary button-small"
             data-buy-now="<%= product.id %>"
           >
             Beli
           </button>
-        </div>
-      <% } %>
+        <% } %>
+      </div>
     </div>
   </div>
 </article>

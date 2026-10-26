@@ -3696,6 +3696,42 @@ document.addEventListener('input', event => {
   input.setSelectionRange(nextCaret, nextCaret);
 });
 
+/* PRODUCT DETAIL SHARE */
+document.addEventListener('click', async event => {
+  const button = event.target instanceof Element
+    ? event.target.closest('[data-product-share]')
+    : null;
+
+  if (!button || button.disabled) return;
+
+  event.preventDefault();
+
+  const url = window.location.href;
+  const title = button.getAttribute('data-share-title') || document.title;
+  const shareData = {
+    title,
+    text: `Lihat ${title} di Jyyr Store.`,
+    url
+  };
+
+  try {
+    if (typeof navigator.share === 'function') {
+      await navigator.share(shareData);
+      return;
+    }
+
+    if (typeof navigator.clipboard?.writeText !== 'function') {
+      throw new Error('Share and clipboard are unavailable');
+    }
+
+    await navigator.clipboard.writeText(url);
+    window.JYYRToast?.success('Tautan produk berhasil disalin.');
+  } catch (error) {
+    if (error?.name === 'AbortError') return;
+    window.JYYRToast?.error('Gagal membagikan produk. Silakan coba lagi.');
+  }
+});
+
 /* JYYR HISTORY REFERENCE COPY */
 document.addEventListener('click', async event => {
   const button = event.target instanceof Element

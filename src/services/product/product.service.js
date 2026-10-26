@@ -67,8 +67,8 @@ async function detailBySlug(slugValue,userId){
   if(!product||product.status!=='PUBLISHED')
     throw notFound('Product not found.');
 
-  if(userId)
-    await products.event(product.id,userId,'VIEW');
+  await products.event(product.id,userId,'VIEW');
+  product.view_count=Number(product.view_count||0)+1;
 
   return product;
 }
