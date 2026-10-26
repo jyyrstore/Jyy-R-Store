@@ -241,6 +241,10 @@
   gap:8px;
 }
 
+.notifications-page > .page-header {
+  margin-bottom: 10px;
+}
+
 .notifications-page .header-actions [data-notification-select-mode]{
   margin-right:auto;
 }

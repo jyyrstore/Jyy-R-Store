@@ -1,24 +1,31 @@
 <% const contentTypeLabels = { FILE: 'File', IMAGE: 'Gambar', VIDEO: 'Video', AUDIO: 'Audio', TEXT: 'Teks', LINK: 'Tautan' }; const accessTypeLabels = { PURCHASED: 'Setelah pembelian', PUBLIC: 'Publik', PREVIEW: 'Pratinjau' }; %> <% const paymentDetailsMarkup = payment ? include('../partials/payment-details', { payment, heading: 'Rincian Pembayaran', orderNumber: order.order_number }) : ''; %>
-<section class="page-shell" data-payment-review-order-detail="<%= req.query.review ? order.id : '' %>"> <div class="page-header order-detail-page-header">
-  <div class="order-detail-heading-grid">
-    <div class="order-detail-heading-cell">
-      <div class="eyebrow">Pesanan</div>
-      <h1><%= order.order_number %></h1>
-    </div>
-    <div class="order-detail-heading-cell order-detail-status-cell">
-      <div class="order-detail-status-heading">
+<section class="page-shell" data-payment-review-order-detail="<%= req.query.review ? order.id : '' %>"> <div class="two-column"> <div class="order-download-panel"> <div class="panel order-detail-table-card">
+<div class="section-header order-detail-table-heading">
+  <div>
+    <h2>Produk Digital</h2>
+    <span class="badge badge-<%= String(order.status||'').toLowerCase() %>"><%= labelStatus(order.status) %></span>
+  </div>
+  <span class="payment-title-divider" aria-hidden="true"></span>
+</div>
+<div class="order-detail-table-summary">
+  <div class="summary-row order-detail-table-row">
+    <span>Pesanan</span>
+    <b># <%= order.order_number %></b>
+  </div>
 
-        <span class="badge badge-<%= String(order.status||'').toLowerCase() %>"><%= labelStatus(order.status) %></span>
-      </div>
-      <p>Dibuat <%= formatDate(order.created_at) %></p>
-    </div>
+  <div class="summary-row order-detail-table-row">
+    <span>Dibuat</span>
+    <b><%= formatDate(order.created_at) %></b>
   </div>
 </div>
-<div class="two-column"> <div class="order-download-panel"> <div class="section-header"> <div> <div class="eyebrow accent">Produk Digital</div> <h2>Isi produk</h2> </div> <span class="muted"> <%= order.items.reduce((total,item)=>total + (item.contents||[]).length,0) %> item </span> </div>
 
+
+
+<% order.items.forEach(item=>{ %> <div class="section-header order-detail-table-product-row"> <span><%= item.product_name %></span> <b><%= item.quantity %> × <%= formatIDR(item.unit_price) %></b> </div> <div class="section-header order-detail-table-download-row"><span>Download Produk</span><b><%= (item.contents||[]).length %> item</b></div> <% }) %>
+</div>
 <% let paymentDetailsShown = false; %>
-<% order.items.forEach(item=>{ %> <div class="section"> <div class="section-header"> <h3><%= item.product_name %></h3> <span class="muted"> <%= item.quantity %> × <%= formatIDR(item.unit_price) %> </span> </div> <div class="section-header"><h2>Download Produk</h2><span class="muted"><%= (item.contents||[]).length %> item</span></div><div class="content-list"> <% if((item.contents||[]).length===0){ %><%- include('../partials/empty',{title:'Belum ada isi produk',description:'Belum ada isi produk yang ditambahkan untuk produk ini.'}) %><% } %> <% (item.contents||[]).forEach(c=>{ %> <article class="content-card"> <div class="content-main"><div class="content-main-heading"><div class="content-icon"><%- icon(c.type==='VIDEO'?'play':c.type==='AUDIO'?'music':c.type==='IMAGE'?'image':c.type==='LINK'?'external':c.type==='TEXT'?'note':'package') %></div><div class="content-heading order-item-content-heading"> <strong><%= c.title %></strong> <span><%= contentTypeLabels[c.type] || 'Konten' %> · <%= accessTypeLabels[c.access_type] || 'Akses terbatas' %></span> </div> </div>
-<% if(c.description){ %> <p class="content-description"><%= c.description %></p> <% } %> <% if(c.type==='TEXT' && c.allowed){ %> <div class="content-text"><%= c.text_content || '' %></div> <% } else if(c.type==='TEXT'){ %> <div class="content-lock-note"> Konten tersedia setelah pembayaran terverifikasi. </div> <% } %> <% if(c.type==='FILE'){ %> <div class="file-meta content-extra-meta"> <span><%= c.mime_type || 'File' %></span> <span><%= c.file_size ? (Number(c.file_size)/1024/1024).toFixed(2)+' MB' : '—' %></span> </div> <% } %> </div> <div class="content-side"> <span class="badge"> <%= c.allowed ? (c.is_preview ? 'Pratinjau' : 'Tersedia') : 'Terkunci' %> </span> <div class="content-side-actions"> <% if(c.type==='LINK' && c.url && c.allowed){ %> <button class="button button-primary button-small" type="button" data-download-content="<%= c.id %>" > Buka </button> <% } %> <% if(c.preview_url && ['IMAGE','VIDEO','AUDIO'].includes(c.type)){ %> <button class="button button-secondary button-small" type="button" data-open-content-url="<%= c.preview_url %>"> Pratinjau </button> <% } %> <% if(c.allowed && ['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)){ %> <button class="button button-primary button-small" type="button" data-download-content="<%= c.id %>"> Akses </button> <% } %> </div> <% if(!c.allowed && c.type!=='TEXT' && !(c.type==='LINK' && c.url)){ %> <span class="muted small content-side-note">Pembelian diperlukan</span> <% } %> </div> </article> <% }) %> </div>
+<% order.items.forEach(item=>{ %> <div class="section"> <div class="content-list order-detail-table-content-list"> <% if((item.contents||[]).length===0){ %><%- include('../partials/empty',{title:'Belum ada isi produk',description:'Belum ada isi produk yang ditambahkan untuk produk ini.'}) %><% } %> <% (item.contents||[]).forEach(c=>{ %> <article class="content-card"> <div class="content-main"><div class="content-main-heading"><div class="content-icon"><%- icon(c.type==='VIDEO'?'play':c.type==='AUDIO'?'music':c.type==='IMAGE'?'image':c.type==='LINK'?'external':c.type==='TEXT'?'note':'package') %></div><div class="content-heading order-item-content-heading"> <strong><%= c.title %></strong> <span><%= contentTypeLabels[c.type] || 'Konten' %> · <%= accessTypeLabels[c.access_type] || 'Akses terbatas' %></span> </div> </div>
+<% if(c.description){ %> <p class="content-description"><%= c.description %></p> <% } %> <% if(c.type==='TEXT' && c.allowed){ %> <div class="content-text"><%= c.text_content || '' %></div> <% } else if(c.type==='TEXT'){ %> <div class="content-lock-note"> Konten tersedia setelah pembayaran terverifikasi. </div> <% } %> <% if(c.type==='FILE'){ %> <div class="file-meta content-extra-meta"> <span><%= c.mime_type || 'File' %></span> <span><%= c.file_size ? (Number(c.file_size)/1024/1024).toFixed(2)+' MB' : '—' %></span> </div> <% } %> </div> <div class="content-side"> <span class="badge"> <%= c.allowed ? (c.is_preview ? 'Pratinjau' : 'Tersedia') : 'Terkunci' %> </span> <% if(!c.allowed && c.type!=='TEXT' && !(c.type==='LINK' && c.url)){ %> <span class="muted small content-side-note">Pembelian diperlukan</span> <% } %> </div> <div class="content-side-actions"> <% if(c.type==='LINK' && c.url && c.allowed){ %> <button class="button button-primary button-small" type="button" data-download-content="<%= c.id %>" > Buka </button> <% } %> <% if(c.preview_url && ['IMAGE','VIDEO','AUDIO'].includes(c.type)){ %> <button class="button button-secondary button-small" type="button" data-open-content-url="<%= c.preview_url %>"> Pratinjau </button> <% } %> <% if(c.allowed && ['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)){ %> <button class="button button-primary button-small" type="button" data-download-content="<%= c.id %>"> Akses </button> <% } %> </div> </article> <% }) %> </div>
 
 <% if(paymentDetailsMarkup && !paymentDetailsShown && (item.canReview || item.viewerReview)){ %>
   <div class="payment-details-shell">

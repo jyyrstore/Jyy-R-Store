@@ -739,18 +739,18 @@
   width:100%;
   min-width:0;
   min-height:0;
-  padding:0;
+  padding:14px;
   box-sizing:border-box;
-  background:transparent;
-  border:0;
-  border-radius:0;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:15px 0 15px 0;
   overflow:visible;
-  transition:none;
+  transition:border-color .15s ease,box-shadow .15s ease;
 }
 
 .content-card:hover{
-  border-color:transparent;
-  box-shadow:none;
+  border-color:var(--border-strong);
+  box-shadow:var(--shadow-sm);
 }
 
 .content-main-heading{
@@ -920,20 +920,30 @@
 }
 
 .content-side-actions{
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  flex-wrap:wrap;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  align-items:stretch;
+  justify-items:stretch;
   gap:6px;
   max-width:100%;
+  width:100%;
+  grid-column:1 / -1;
+}
+
+.content-side-actions:not(:has(.button)){
+  display:none;
 }
 
 .content-side-actions .button{
-  width:auto;
-  min-width:52px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  min-width:0;
   height:32px;
   min-height:32px;
   padding:0 10px;
+  box-sizing:border-box;
   border-radius:8px;
   font-size:11px;
   font-weight:700;
@@ -961,7 +971,7 @@
     grid-template-columns:minmax(0,1fr) auto;
     gap:10px;
     min-height:0;
-    padding:0;
+    padding:12px;
     transform:none;
   }
 
@@ -1047,19 +1057,25 @@
   }
 
   .content-side-actions{
-    display:flex;
-    align-items:center;
-    justify-content:flex-end;
-    flex-wrap:wrap;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    align-items:stretch;
+    justify-items:stretch;
     gap:6px;
     max-width:100%;
+    width:100%;
   }
 
   .content-side-actions .button{
-    min-width:48px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    min-width:0;
     height:31px;
     min-height:31px;
     padding:0 9px;
+    box-sizing:border-box;
     font-size:10.5px;
   }
 
@@ -1482,7 +1498,7 @@
 }
 
 .order-product-review{
-  margin-top:14px;
+  margin-top:10px;
 }
 
 .product-review-panel-title,
@@ -2081,11 +2097,4 @@
     white-space:nowrap;
     letter-spacing:-.035em;
   }
-}
-
-
-/* JYYR ORDER DETAIL CONTENT ACTION ALIGNMENT */
-.page-shell[data-payment-review-order-detail] .content-side-actions {
-  justify-content: flex-end;
-  width: 100%;
 }
