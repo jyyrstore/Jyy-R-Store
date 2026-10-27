@@ -504,6 +504,33 @@ test('variant saves are no-op when unchanged and preserve fixed cart items',()=>
   assert.ok(admin.includes("sum(greatest(pv.stock-pv.reserved_stock,0))"),'Owner stock must use available active-variant stock.');
   assert.ok(admin.includes('as stock')&&admin.includes('else p.stock'),'FIXED stock contract must be preserved.');
 });
+test('customer stock display excludes pending reservations for fixed products',()=>{
+  const products=fs.readFileSync(
+    path.join(root,'src/repositories/products.repository.js'),
+    'utf8'
+  );
+  const cart=fs.readFileSync(
+    path.join(root,'src/repositories/cart.repository.js'),
+    'utf8'
+  );
+  const productService=fs.readFileSync(
+    path.join(root,'src/services/product/product.service.js'),
+    'utf8'
+  );
+
+  assert.ok(
+    products.includes('else greatest(p.stock-p.reserved_stock,0) end as stock'),
+    'Public catalog stock must exclude reserved FIXED stock.'
+  );
+  assert.ok(
+    cart.includes('else greatest(p.stock-p.reserved_stock,0) end'),
+    'Cart display stock must exclude reserved FIXED stock.'
+  );
+  assert.ok(
+    productService.includes('product.stock=Math.max(0,Number(product.stock||0)-Number(product.reserved_stock||0));'),
+    'Product detail stock must exclude reserved FIXED stock.'
+  );
+});
 test('service metadata migration exists',()=>assert.ok(fs.existsSync(path.join(root,'database/migrations/029_service_metadata.sql'))));
 test('views do not read process.env directly',()=>{for(const f of fs.readdirSync(path.join(root,'views'),{recursive:true}).filter(x=>x.endsWith('.ejs'))){const s=fs.readFileSync(path.join(root,'views',f),'utf8');assert.doesNotMatch(s,/process\.env\./,f)}});
 

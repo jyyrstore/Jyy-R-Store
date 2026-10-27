@@ -84,7 +84,7 @@ async function list(opts={}){
   const f=filters(opts);
   const limit=safeIntRange(opts.limit,20,1,100);
   const offset=safeIntRange(opts.offset,0,0,1000000);
-  const sql=`select p.*,case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end as price,case when p.pricing_mode='VARIANT' then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else p.stock end as stock,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
+  const sql=`select p.*,case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end as price,case when p.pricing_mode='VARIANT' then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else greatest(p.stock-p.reserved_stock,0) end as stock,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
   return (await query(sql,f.args)).rows;
 }
 async function adminList({

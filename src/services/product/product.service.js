@@ -73,6 +73,8 @@ async function detailBySlug(slugValue,userId){
   if(product.pricing_mode==='VARIANT'){
     product.price=product.variants.length?Math.min(...product.variants.map(v=>Number(v.price))):Number(product.price||0);
     product.stock=product.variants.reduce((sum,v)=>sum+Math.max(0,Number(v.stock)-Number(v.reserved_stock||0)),0);
+  }else{
+    product.stock=Math.max(0,Number(product.stock||0)-Number(product.reserved_stock||0));
   }
 
   return product;

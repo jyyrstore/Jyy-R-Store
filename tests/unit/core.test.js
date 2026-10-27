@@ -5,6 +5,35 @@ const {hmac}=require('../../src/utils/crypto');
 const {pageParams}=require('../../src/utils/pagination');
 const {icon}=require('../../src/utils/icons');
 const {safeSameOriginUrl}=require('../../src/utils/url');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'../..');
+
+
+test('balance checkout respects fixed stock reservations',()=>{
+  const {hasAvailableStock}=require('../../src/services/order/order.service');
+
+  // Stok total 10, empat unit sudah direservasi: hanya enam yang tersedia.
+  assert.equal(hasAvailableStock({stock:10,reserved_stock:4,quantity:7}),false);
+  assert.equal(hasAvailableStock({stock:10,reserved_stock:4,quantity:6}),true);
+  assert.equal(hasAvailableStock({stock:5,reserved_stock:5,quantity:1}),false);
+  assert.equal(hasAvailableStock({stock:5,reserved_stock:0,quantity:5}),true);
+
+  const source=fs.readFileSync(
+    path.join(root,'src/services/order/order.service.js'),
+    'utf8'
+  );
+  const start=source.indexOf('async function createWalletOrder(');
+  const end=source.indexOf('\nasync function createGatewayOrder(',start);
+
+  assert.ok(start>=0&&end>start,'Wallet checkout function is absent.');
+  const walletCheckout=source.slice(start,end);
+  assert.match(
+    walletCheckout,
+    /!directBuyNow\s*&&\s*!hasAvailableStock\(item\)/,
+    'Saldo checkout must reject quantities above available stock.'
+  );
+});
 
 
 test('webhook parser prefers provider event ID',()=>{

@@ -95,6 +95,10 @@ async function preview(userId,{buyNowProductId=null,buyNowVariantId=null}={}){
   return {items,subtotal:total,total,recipientContact:recipient?{email:recipient.email,countryCode:recipient.countryCode,countryName:recipient.countryName,dialCode:recipient.dialCode,phone:recipient.phone}:null,directBuyNow:false,buyNowProductId:null,buyNowVariantId:null,buyNowSlug:null};
 }
 
+function hasAvailableStock(item){
+  return Number(item.stock)-Number(item.reserved_stock||0)>=Number(item.quantity);
+}
+
 async function createWalletOrder(
   userId,
   idempotencyKey,
@@ -234,7 +238,7 @@ async function createWalletOrder(
 
       if(
         !directBuyNow &&
-        (item.variant_id ? Number(item.stock)-Number(item.reserved_stock||0)<Number(item.quantity) : Number(item.quantity)>Number(item.stock))
+        !hasAvailableStock(item)
       ){
         throw badRequest(
           'INSUFFICIENT_STOCK',
@@ -694,4 +698,4 @@ async function ownerUpdateStatus(ownerId,orderId,status){
 }
 
 async function getUserOrders(userId,opts){ return require('../../repositories/orders.repository').listForUser(userId,opts); }
-module.exports={preview,createWalletOrder,createGatewayOrder,getUserOrders,ownerUpdateStatus};
+module.exports={preview,createWalletOrder,createGatewayOrder,getUserOrders,ownerUpdateStatus,hasAvailableStock};
