@@ -341,6 +341,23 @@
    OWNER PRODUCT EDITOR UX V2
    ========================================================= */
 
+.owner-product-editor-page{
+  width:min(100%,980px);
+  margin:0 auto;
+}
+
+.owner-product-editor-page .product-modal-head{
+  padding-right:0;
+}
+
+.owner-product-editor-page .product-modal-actions{
+  position:static;
+  margin:0;
+  padding:14px 0 0;
+  border-top:1px solid var(--border);
+  background:transparent;
+}
+
 .owner-content-manager{
   gap:18px;
 }

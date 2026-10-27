@@ -1,14 +1,32 @@
-<script nonce="<%= cspNonce %>">window.__OWNER_CATEGORIES=<%- JSON.stringify(typeof categories !== "undefined" ? categories : []) %>;</script>
+<script nonce="<%= cspNonce %>">window.__OWNER_CATEGORIES=<%- JSON.stringify(typeof categories !== "undefined" ? categories : []) %>;window.__OWNER_PRODUCT_EDITOR=<%- JSON.stringify(typeof ownerProduct !== "undefined" && ownerProduct ? {id:ownerProduct.id,name:ownerProduct.name,status:ownerProduct.status,hasThumbnail:!!ownerProduct.thumbnail_path} : null).replace(/</g,'\\u003c') %>;</script>
 <section class="page-shell owner-page">
   <div class="owner-content">
       <div class="page-header">
-        <div><div class="eyebrow">Owner</div><h1><%= ownerSection==='dashboard'?'Ringkasan':ownerSection.replace(/(^|-)/g,m=>m.toUpperCase()).replace(/-/g,' ') %></h1><p>Semua aksi sensitif tetap diverifikasi server-side dan dicatat ke activity log.</p></div>
+        <div><div class="eyebrow">Owner</div><h1><%= ({create_produk:'Buat Produk',edit_produk:'Edit Produk',content_produk:'Content Produk'})[ownerSection] || (ownerSection==='dashboard'?'Ringkasan':ownerSection.replace(/(^|-)/g,m=>m.toUpperCase()).replace(/-/g,' ')) %></h1><p>Semua aksi sensitif tetap diverifikasi server-side dan dicatat ke activity log.</p></div>
         <% if(['products','categories','services','faq','information','notifications'].includes(ownerSection)){ %>
           <button class="button button-primary" data-owner-create="<%= ownerSection %>"><%- icon('circle-plus') %> Tambah</button>
         <% } %>
       </div>
 
-      <% if(ownerSection==='dashboard'){ %>
+      <% if(['create_produk','edit_produk','content_produk'].includes(ownerSection)){ %>
+        <div class="owner-product-editor-page" data-owner-product-page="<%= ownerSection %>">
+          <% if(ownerSection==='create_produk'){ %>
+            <button
+              type="button"
+              hidden
+              data-owner-product-editor-launch
+              data-owner-create="products"
+            ></button>
+          <% } else if(ownerSection==='edit_produk' && ownerProduct){ %>
+            <button
+              type="button"
+              hidden
+              data-owner-product-editor-launch
+              data-owner-edit-product='<%- JSON.stringify({...ownerProduct,thumbnail_url:ownerProduct.thumbnail_path?assetUrl(publicAssetBucket,ownerProduct.thumbnail_path):null}).replace(/'/g,"&#39;") %>'
+            ></button>
+          <% } %>
+        </div>
+      <% } else if(ownerSection==='dashboard'){ %>
         <section class="owner-dashboard-stat-panel">
           <h2 class="owner-dashboard-stat-title">Rincian Bisnis</h2>
           <div class="stat-grid owner-dashboard-stat-grid">

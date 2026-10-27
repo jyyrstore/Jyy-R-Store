@@ -891,6 +891,28 @@ function ownerPage(section){
         data.categories=await categories.list(false);
       }
 
+      else if(section==='create_produk'){
+        data.categories=await categories.list(false);
+      }
+      else if(section==='edit_produk'||section==='content_produk'){
+        const productId=String(req.query.id||'').trim();
+
+        if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId)){
+          return res.redirect('/owner/products');
+        }
+
+        const repo=require('../repositories/products.repository');
+        data.ownerProduct=await repo.findById(productId);
+
+        if(!data.ownerProduct){
+          return res.redirect('/owner/products');
+        }
+
+        if(section==='edit_produk'){
+          data.ownerProduct.variants=await repo.listVariants(productId);
+          data.categories=await categories.list(false);
+        }
+      }
       else if(section==='categories'){ data.items=await categories.list(false); }
       else if(section==='orders'){
         const repo=require('../repositories/orders.repository');

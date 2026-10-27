@@ -602,7 +602,25 @@ test('Messages search and composer legacy rules stay removed',()=>{
 
 
 test('owner extended sections are routed',()=>{for(const r of ['roles','messages','storage','login-history','system','top-orders']) assert.ok(page.includes(`'${r}'`),r)});
-test('explicit owner URL routes exist',()=>{assert.match(route,/owner\.get\('\/products\/create'/);assert.match(route,/ownerApi\.get\('\/top-orders'/)});
+test('explicit owner URL routes exist',()=>{
+  assert.match(route,/owner\.get\('\/products\/create'/);
+
+  for(const section of ['create_produk','edit_produk','content_produk']){
+    assert.ok(
+      route.includes(`owner.get('/products/${section}',asyncHandler(page.ownerPage('${section}')));`),
+      section
+    );
+  }
+
+  assert.match(route,/ownerApi\.get\('\/top-orders'/);
+
+  const ownerView=fs.readFileSync(path.join(root,'views/owner/index.ejs'),'utf8');
+  const browser=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
+
+  assert.ok(ownerView.includes('data-owner-product-page='));
+  assert.ok(browser.includes('/owner/products/edit_produk?id='));
+  assert.ok(browser.includes('/owner/products/content_produk?id='));
+});
 test('owner order fulfillment status API is routed',()=>{assert.match(route,/ownerApi\.post\('\/orders\/:id\/status'/);assert.match(fs.readFileSync(path.join(root,'src/services/order/order.service.js'),'utf8'),/ownerUpdateStatus/)});
 test('Owner product variants use structured inputs instead of JSON text',()=>{
   const pages=fs.readFileSync(

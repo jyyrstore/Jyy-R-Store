@@ -267,7 +267,10 @@ for(const s of ownerSections){ owner.get('/'+s,asyncHandler(page.ownerPage(s)));
 owner.get('/security',(req,res)=>res.redirect('/owner/login-history'));
 owner.get('/messages/:id',asyncHandler(page.ownerMessageDetail));
 owner.get('/tickets/:id',asyncHandler(page.ownerTicketDetail));
-owner.get('/products/create',(req,res)=>res.redirect('/owner/products?create=1'));
+owner.get('/products/create_produk',asyncHandler(page.ownerPage('create_produk')));
+owner.get('/products/edit_produk',asyncHandler(page.ownerPage('edit_produk')));
+owner.get('/products/content_produk',asyncHandler(page.ownerPage('content_produk')));
+owner.get('/products/create',(req,res)=>res.redirect('/owner/products/create_produk'));
 owner.get('/',asyncHandler(page.ownerPage('dashboard')));
 pageRouter.use('/owner',owner);
 

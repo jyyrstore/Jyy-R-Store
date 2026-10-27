@@ -901,7 +901,17 @@
     return completed;
   }
 
-  function open(html,onReady){window.JYYRModal.open(html);onReady?.();}
+  function open(html,onReady){
+    const pageHost=document.querySelector('[data-owner-product-page]');
+
+    if(pageHost){
+      pageHost.innerHTML=String(html).replace(/data-modal-close/g,'data-owner-editor-back');
+    }else{
+      window.JYYRModal.open(html);
+    }
+
+    onReady?.();
+  }
 
 
   function ownerContentTypeLabel(type){
@@ -1547,6 +1557,13 @@
   });
 
   document.addEventListener('click',async e=>{
+    const editorBack=e.target.closest('[data-owner-editor-back]');
+    if(editorBack){
+      e.preventDefault();
+      location.href='/owner/products';
+      return;
+    }
+
     const addVariant=e.target.closest('[data-product-variant-add]');
     if(addVariant){
       const list=addVariant
@@ -2140,7 +2157,7 @@
     const download=e.target.closest('[data-download-content]');if(download){download.disabled=true;try{const r=await api.request('/api/download/'+download.dataset.downloadContent);if(r.url)window.open(r.url,'_blank','noopener');else if(r.content?.type==='TEXT')toast.success('Content teks tersedia di halaman.');else toast.error('Secure URL tidak tersedia.')}catch(err){toast.error(err.message)}finally{download.disabled=false}}
     const service=e.target.closest('[data-service-order]');if(service){open(`<form data-service-order-form class="stack-form"><h2>Pesan ${esc(service.dataset.serviceName)}</h2><p class="muted">Harga ${money(service.dataset.servicePrice)} akan dipotong dari saldo setelah konfirmasi.</p><input type="hidden" name="serviceId" value="${esc(service.dataset.serviceOrder)}"><label class="field"><span>Username (opsional)</span><input name="username"></label><label class="field"><span>URL (opsional)</span><input name="url" type="url"></label><label class="field"><span>Quantity</span><input name="quantity" type="number" min="1" value="1"></label><label class="field"><span>Target (opsional)</span><input name="target"></label><label class="field"><span>Notes</span><textarea name="notes"></textarea></label>${formButtons('Konfirmasi Service')}</form>`)}
 
-    const dep2=e.target.closest('[data-owner-create]');if(dep2){const section=dep2.dataset.ownerCreate;const forms={
+    const dep2=e.target.closest('[data-owner-create]');if(dep2){const section=dep2.dataset.ownerCreate;if(section==='products'&&location.pathname==='/owner/products'){location.href='/owner/products/create_produk';return;}const forms={
       categories:`<form data-owner-category-form class="stack-form"><h2>Tambah Kategori</h2><label class="field"><span>Nama</span><input name="name" required maxlength="80"></label><label class="field"><span>Slug (opsional)</span><input name="slug" maxlength="100"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" checked></label>${formButtons()}</form>`,
       products:`<form data-owner-product-form class="product-form-modal">
   <div class="product-modal-head">
@@ -2278,6 +2295,11 @@
       let d;
       try{d=JSON.parse(ep.dataset.ownerEditProduct)}catch{return}
 
+      if(location.pathname==='/owner/products'&&!ep.hasAttribute('data-owner-product-editor-launch')){
+        location.href='/owner/products/edit_produk?id='+encodeURIComponent(d.id);
+        return;
+      }
+
       open(`
         <form data-owner-product-edit class="product-form-modal">
 
@@ -2404,7 +2426,20 @@
       `);
     }
 
-    const content=e.target.closest('[data-owner-content]');if(content){await openOwnerContentManager(content.dataset.ownerContent,content.dataset.ownerProductName||'Produk',content.dataset.ownerProductStatus||'DRAFT',content.dataset.ownerHasThumbnail==='1');}
+    const content=e.target.closest('[data-owner-content]');
+    if(content){
+      if(location.pathname==='/owner/products'){
+        location.href='/owner/products/content_produk?id='+encodeURIComponent(content.dataset.ownerContent);
+        return;
+      }
+
+      await openOwnerContentManager(
+        content.dataset.ownerContent,
+        content.dataset.ownerProductName||'Produk',
+        content.dataset.ownerProductStatus||'DRAFT',
+        content.dataset.ownerHasThumbnail==='1'
+      );
+    }
 
     const contentDelete=e.target.closest('[data-owner-content-delete]');if(contentDelete){if(!(await window.JYYRModal.confirm('Hapus content ini?')))return;try{await ownerAction('/api/owner/products/'+encodeURIComponent(contentDelete.dataset.ownerContentProduct)+'/content/'+encodeURIComponent(contentDelete.dataset.ownerContentDelete),{},'DELETE','Content dihapus.');await openOwnerContentManager(contentDelete.dataset.ownerContentProduct,contentDelete.dataset.ownerContentName||'Produk',contentDelete.dataset.ownerContentStatus||'DRAFT',contentDelete.dataset.ownerContentHasThumbnail==='1')}catch(err){toast.error(err.message)}}
     const publish=e.target.closest('[data-owner-publish]');if(publish){if(!(await window.JYYRModal.confirm('Publish produk ini?')))return;try{await ownerAction('/api/owner/products/'+publish.dataset.ownerPublish+'/publish',{},'POST','Produk dipublish.');location.reload()}catch(err){toast.error(err.message)}}
@@ -2471,7 +2506,21 @@
     const rb=e.target.closest('[data-owner-refund-order]');if(rb){open(`<form data-refund-form class="stack-form"><h2>Refund Order</h2><input type="hidden" name="order_id" value="${esc(rb.dataset.ownerRefundOrder)}"><label class="field"><span>Alasan</span><textarea name="reason" minlength="5" required></textarea></label>${formButtons('Process Refund')}</form>`)}
   });
 
-  if(location.pathname==='/owner/products' && new URLSearchParams(location.search).get('create')==='1') setTimeout(()=>document.querySelector('[data-owner-create="products"]')?.click(),0);
+  if(location.pathname==='/owner/products' && new URLSearchParams(location.search).get('create')==='1') location.replace('/owner/products/create_produk');
+
+  if(['/owner/products/create_produk','/owner/products/edit_produk'].includes(location.pathname)){
+    setTimeout(()=>document.querySelector('[data-owner-product-editor-launch]')?.click(),0);
+  }
+
+  if(location.pathname==='/owner/products/content_produk' && window.__OWNER_PRODUCT_EDITOR){
+    const product=window.__OWNER_PRODUCT_EDITOR;
+    void openOwnerContentManager(
+      product.id,
+      product.name||'Produk',
+      product.status||'DRAFT',
+      product.hasThumbnail===true
+    );
+  }
 
   document.addEventListener('submit',async e=>{
     const auth=e.target.closest('[data-auth-form]'); if(auth){e.preventDefault();const type=auth.dataset.authForm;const body=Object.fromEntries(new FormData(auth));const path=type==='login'?'/api/auth/login':type==='register'?'/api/auth/register':type==='forgot'?'/api/auth/forgot-password':'/api/auth/reset-password';const btn=auth.querySelector('button[type="submit"],input[type="submit"]')||auth.querySelector('button');if(btn)btn.disabled=true;try{const r=await api.request(path,{method:'POST',body});if(type==='login')location.href=auth.dataset.next||'/dashboard';else if(type==='register')location.href='/auth/login?success='+encodeURIComponent('Registrasi berhasil. Periksa email jika verifikasi diperlukan.');else if(type==='reset')location.href='/auth/login?success='+encodeURIComponent('Password berhasil diperbarui. Silakan masuk kembali.');else toast.success(type==='forgot'?'Jika email terdaftar, instruksi reset password akan dikirim.':(r.message||'Request diterima.'))}catch(err){toast.error(err.message)}finally{if(btn)btn.disabled=false}}
@@ -2686,6 +2735,11 @@
           thumbnailReady=true;
         }
 
+        if(location.pathname==='/owner/products/create_produk'){
+          location.href='/owner/products/content_produk?id='+encodeURIComponent(created.id);
+          return;
+        }
+
         window.JYYRModal.close();
 
         await openOwnerContentManager(
@@ -2701,7 +2755,7 @@
       }
     }
 
-    const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.pricing_mode=String(fd.pricing_mode||'FIXED').toUpperCase();let variants=[];if(fd.pricing_mode==='VARIANT'){try{variants=readProductVariants(pem)}catch(err){toast.error(err.message);return}fd.price=Math.min(...variants.map(v=>v.price));fd.stock=variants.reduce((n,v)=>n+v.stock,0)}fd.price=Number(fd.price);fd.stock=Number(fd.stock);try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');await ownerAction('/api/owner/products/'+id+'/variants',{variants:fd.pricing_mode==='VARIANT'?variants:[]},'PUT','Variasi produk disimpan.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
+    const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.pricing_mode=String(fd.pricing_mode||'FIXED').toUpperCase();let variants=[];if(fd.pricing_mode==='VARIANT'){try{variants=readProductVariants(pem)}catch(err){toast.error(err.message);return}fd.price=Math.min(...variants.map(v=>v.price));fd.stock=variants.reduce((n,v)=>n+v.stock,0)}fd.price=Number(fd.price);fd.stock=Number(fd.stock);try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');await ownerAction('/api/owner/products/'+id+'/variants',{variants:fd.pricing_mode==='VARIANT'?variants:[]},'PUT','Variasi produk disimpan.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}if(location.pathname==='/owner/products/edit_produk'){location.href='/owner/products';return;}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
     const cfm=e.target.closest('[data-owner-content-form]');
     if(cfm){
       e.preventDefault();
