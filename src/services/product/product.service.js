@@ -69,6 +69,11 @@ async function detailBySlug(slugValue,userId){
 
   await products.event(product.id,userId,'VIEW');
   product.view_count=Number(product.view_count||0)+1;
+  product.variants=await products.listVariants(product.id);
+  if(product.pricing_mode==='VARIANT'){
+    product.price=product.variants.length?Math.min(...product.variants.map(v=>Number(v.price))):Number(product.price||0);
+    product.stock=product.variants.reduce((sum,v)=>sum+Math.max(0,Number(v.stock)-Number(v.reserved_stock||0)),0);
+  }
 
   return product;
 }
@@ -86,6 +91,9 @@ async function uniqueSlug(value,excludeId=null){
 
 async function create(data){
   if(data.price<0||data.stock<0) throw badRequest('INVALID_PRODUCT','Harga/stock tidak valid.');
+  const pricingMode=String(data.pricing_mode||'FIXED').toUpperCase();
+  if(!['FIXED','VARIANT'].includes(pricingMode)) throw badRequest('INVALID_PRICING_MODE','Mode harga tidak valid.');
+  data={...data,pricing_mode:pricingMode};
   let candidate=await uniqueSlug(data.slug||data.name);
 
   for(let attempt=0;attempt<5;attempt++){
@@ -103,6 +111,13 @@ async function create(data){
 async function update(id,data){
   const current=await products.findById(id);
   if(!current) throw notFound('Product not found.');
+
+  if(Object.prototype.hasOwnProperty.call(data,'pricing_mode')){
+    const mode=String(data.pricing_mode||'FIXED').toUpperCase();
+    if(!['FIXED','VARIANT'].includes(mode)) throw badRequest('INVALID_PRICING_MODE','Mode harga tidak valid.');
+    if(mode!==current.pricing_mode && (Number(current.reserved_stock||0)>0 || await products.hasReservedVariants(id))) throw badRequest('PRODUCT_VARIANT_RESERVED','Mode harga tidak dapat diubah selama ada stok yang direservasi oleh pembayaran pending.');
+    data={...data,pricing_mode:mode};
+  }
 
   if(Object.prototype.hasOwnProperty.call(data,'stock')){
     const nextStock=Number(data.stock);
@@ -137,4 +152,12 @@ async function update(id,data){
   throw badRequest('PRODUCT_SLUG_CONFLICT','Slug produk sedang dipakai. Coba lagi.');
 }
 
-module.exports={catalog,detailBySlug,create,update,categories};
+async function saveVariants(id,variants){
+  const current=await products.findById(id);
+  if(!current) throw notFound('Product not found.');
+  if(current.pricing_mode==='VARIANT'&&(!Array.isArray(variants)||variants.length===0)) throw badRequest('PRODUCT_VARIANT_REQUIRED','Produk VARIANT harus memiliki minimal satu variasi aktif.');
+  if(current.pricing_mode!=='VARIANT'&&Array.isArray(variants)&&variants.length) throw badRequest('PRODUCT_NOT_VARIANT','Ubah mode harga menjadi VARIANT terlebih dahulu.');
+  return products.saveVariants(id,variants||[]);
+}
+
+module.exports={catalog,detailBySlug,create,update,saveVariants,categories};

@@ -33,7 +33,7 @@ async function listForUser(userId,{limit=50,offset=0}={}){
    and lower(p.provider)='buatqris'
  order by p.created_at desc, p.id desc
  limit 1) as pending_payment_provider,
-       coalesce(json_agg(json_build_object('product_id',oi.product_id,'product_name',oi.product_name,'quantity',oi.quantity,'line_total',oi.line_total)) filter(where oi.id is not null),'[]') items
+       coalesce(json_agg(json_build_object('product_id',oi.product_id,'product_name',oi.product_name,'variant_label',oi.variant_label,'variant_amount',oi.variant_amount,'unit_price',oi.unit_price,'quantity',oi.quantity,'line_total',oi.line_total)) filter(where oi.id is not null),'[]') items
        from orders o
        left join order_items oi on oi.order_id=o.id
        where o.user_id=$1
@@ -63,6 +63,8 @@ async function findForUser(id,userId){
         'id',oi.id,
         'product_id',oi.product_id,
         'product_name',coalesce(oi.product_name,p.name),
+        'variant_label',oi.variant_label,
+        'variant_amount',oi.variant_amount,
         'quantity',oi.quantity,
         'unit_price',oi.unit_price,
         'line_total',oi.line_total

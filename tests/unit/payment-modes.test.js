@@ -38,7 +38,13 @@ test('Sandbox order does not reserve stock',()=>{
   const expiry=read('src/jobs/payment-expiration.job.js');
   assert.match(order,/paymentMode='LIVE'/);
   assert.match(order,/'SANDBOX'\s*:\s*'GATEWAY'/);
-  assert.match(order,/if\(!isSandbox\)\s*\{\s*await client\.query\(/);
+  const reserveStart=order.indexOf('if(!isSandbox){');
+  const reserveEnd=order.indexOf('\n      }',reserveStart);
+  assert.ok(reserveStart>=0&&reserveEnd>reserveStart,'Inventory reservation block is absent.');
+  const reserveBlock=order.slice(reserveStart,reserveEnd+8);
+  assert.match(reserveBlock,/if\(item\.variant_id\)/);
+  assert.match(reserveBlock,/update product_variants set reserved_stock=reserved_stock\+\$2/);
+  assert.match(reserveBlock,/update products set reserved_stock=reserved_stock\+\$2 where id=\$1/);
   assert.match(expiry,/order\.payment_method!=='SANDBOX'/);
   assert.match(expiry,/o\.payment_method in \('GATEWAY','SANDBOX'\)/);
 });

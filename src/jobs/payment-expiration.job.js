@@ -45,15 +45,13 @@ async function run(){
           );
           if(order.payment_method!=='SANDBOX'){
             const items=(await client.query(
-              'select product_id,quantity from order_items where order_id=$1',
+              'select product_id,variant_id,quantity from order_items where order_id=$1',
               [order.id]
             )).rows;
 
             for(const item of items){
-              await client.query(
-                'update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',
-                [item.product_id,item.quantity]
-              );
+              if(item.variant_id) await client.query('update product_variants set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[item.variant_id,item.quantity]);
+              else await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[item.product_id,item.quantity]);
             }
           }
         }
@@ -116,16 +114,14 @@ async function run(){
       if(order.payment_method!=='SANDBOX'){
         const items=(
           await client.query(
-            'select product_id,quantity from order_items where order_id=$1',
+            'select product_id,variant_id,quantity from order_items where order_id=$1',
             [order.id]
           )
         ).rows;
 
         for(const item of items){
-          await client.query(
-            'update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',
-            [item.product_id,item.quantity]
-          );
+          if(item.variant_id) await client.query('update product_variants set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[item.variant_id,item.quantity]);
+          else await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[item.product_id,item.quantity]);
         }
       }
 

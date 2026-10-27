@@ -101,7 +101,8 @@ const cartController={
    await cart.add(
      req.user.id,
      req.body.productId,
-     Number(req.body.quantity||1)
+     Number(req.body.quantity||1),
+     req.body.variantId||null
    ),
    201
  ),
@@ -134,10 +135,11 @@ const cartController={
    )
 };
 const orderController={
- preview:async(req,res)=>ok(res,await orders.preview(req.user.id)),
+ preview:async(req,res)=>ok(res,await orders.preview(req.user.id,{buyNowProductId:req.query.buyNowProductId||null,buyNowVariantId:req.query.buyNowVariantId||null})),
  create:async(req,res)=>{
    const method=String(req.body.paymentMethod||'BALANCE').toUpperCase();
    const buyNowProductId=req.body.buyNowProductId||null;
+   const buyNowVariantId=req.body.buyNowVariantId||null;
 
    if(method==='BALANCE'){
      return ok(
@@ -145,7 +147,7 @@ const orderController={
        await orders.createWalletOrder(
          req.user.id,
          req.body.idempotencyKey||crypto.randomUUID(),
-         {buyNowProductId}
+         {buyNowProductId,buyNowVariantId}
        ),
        201
      );
@@ -207,6 +209,7 @@ const orderController={
        idempotencyKey:req.body.idempotencyKey||crypto.randomUUID(),
        returnUrl,
        buyNowProductId,
+       buyNowVariantId,
        paymentMode
      }
    );
@@ -460,6 +463,7 @@ const ownerController={
  products:async(req,res)=>ok(res,await require('../repositories/products.repository').adminList({search:req.query.search,status:req.query.status||'',sort:req.query.sort||'newest',limit:req.query.limit||100,offset:req.query.offset||0})),
  productCreate:async(req,res)=>{const payload={...req.body,status:'DRAFT'};const p=await product.create(payload);await recordOwnerAudit(req,{action:'CREATE_PRODUCT',entityType:'product',entityId:p.id,metadata:{name:p.name,status:'DRAFT'}});return ok(res,p,201)},
  productUpdate:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});const payload={...req.body};delete payload.status;delete payload.thumbnail_path;const p=await product.update(req.params.id,payload);await recordOwnerAudit(req,{action:'EDIT_PRODUCT',entityType:'product',entityId:p.id});return ok(res,p)},
+ productVariantsSave:async(req,res)=>{const variants=await product.saveVariants(req.params.id,req.body.variants);await recordOwnerAudit(req,{action:'SAVE_PRODUCT_VARIANTS',entityType:'product',entityId:req.params.id,metadata:{variantCount:variants.length}});return ok(res,{variants})},
  productArchive:async(req,res)=>{
    const repo=require('../repositories/products.repository');
    const p=await repo.remove(req.params.id);
@@ -499,7 +503,7 @@ const ownerController={
 
    return ok(res,p);
  },
- productPublish:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat dipublish.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});if(!current.thumbnail_path)throw Object.assign(new Error('Tambahkan thumbnail sebelum publish produk.'),{status:400,code:'PRODUCT_THUMBNAIL_REQUIRED',expose:true});const contents=await repo.contents(req.params.id);if(!contents.length)throw Object.assign(new Error('Tambahkan minimal satu content sebelum publish produk.'),{status:400,code:'PRODUCT_CONTENT_REQUIRED',expose:true});const invalid=contents.find(c=>(['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)&&!c.storage_path)||(c.type==='TEXT'&&!String(c.text_content||'').trim())||(c.type==='LINK'&&!String(c.url||'').trim()));if(invalid)throw Object.assign(new Error('Ada content yang belum lengkap. Pastikan file, text, atau URL sudah benar.'),{status:400,code:'PRODUCT_CONTENT_INVALID',expose:true});const p=await product.update(req.params.id,{status:'PUBLISHED'});await recordOwnerAudit(req,{action:'PUBLISH_PRODUCT',entityType:'product',entityId:p.id,metadata:{contentCount:contents.length}});return ok(res,p)},
+ productPublish:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat dipublish.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});if(!current.thumbnail_path)throw Object.assign(new Error('Tambahkan thumbnail sebelum publish produk.'),{status:400,code:'PRODUCT_THUMBNAIL_REQUIRED',expose:true});const contents=await repo.contents(req.params.id);if(!contents.length)throw Object.assign(new Error('Tambahkan minimal satu content sebelum publish produk.'),{status:400,code:'PRODUCT_CONTENT_REQUIRED',expose:true});const invalid=contents.find(c=>(['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)&&!c.storage_path)||(c.type==='TEXT'&&!String(c.text_content||'').trim())||(c.type==='LINK'&&!String(c.url||'').trim()));if(invalid)throw Object.assign(new Error('Ada content yang belum lengkap. Pastikan file, text, atau URL sudah benar.'),{status:400,code:'PRODUCT_CONTENT_INVALID',expose:true});if(current.pricing_mode==='VARIANT'&&!(await repo.listVariants(req.params.id)).length)throw Object.assign(new Error('Tambahkan minimal satu variasi aktif sebelum publish produk.'),{status:400,code:'PRODUCT_VARIANT_REQUIRED',expose:true});const p=await product.update(req.params.id,{status:'PUBLISHED'});await recordOwnerAudit(req,{action:'PUBLISH_PRODUCT',entityType:'product',entityId:p.id,metadata:{contentCount:contents.length}});return ok(res,p)},
  productContent:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat diubah.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});const accessType=
   String(req.body.access_type||'PURCHASED').toUpperCase();
 

@@ -57,15 +57,33 @@
     </div>
     <div class="detail-copy">
       <div class="detail-stock-summary" aria-label="Stok produk">
-        <strong><%= Number(product.stock) || 0 %></strong>
-        <span class="<%= Number(product.stock) > 0 ? 'is-available' : 'is-unavailable' %>"><%= Number(product.stock) > 0 ? 'Tersedia' : 'Habis' %></span>
+        <strong data-product-stock-count><%= Number(product.stock) || 0 %></strong>
+        <span data-product-stock-state class="<%= Number(product.stock) > 0 ? 'is-available' : 'is-unavailable' %>"><%= Number(product.stock) > 0 ? 'Tersedia' : 'Habis' %></span>
       </div>
 
       <div class="detail-category-card"><%= product.category_name || 'Produk' %></div>
 
+      <% if(product.pricing_mode==='VARIANT'){ %>
+        <div class="field" data-product-variant-field>
+          <span>Pilih Nominal</span>
+          <div class="jyyr-select" data-jyyr-select data-product-variant-picker>
+            <input type="hidden" name="variant_id" value="" data-jyyr-select-value data-product-variant-select>
+            <button class="jyyr-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" data-jyyr-select-trigger>
+              <span data-jyyr-select-label>Pilih nominal produk</span>
+              <span class="jyyr-select-chevron" aria-hidden="true"></span>
+            </button>
+            <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
+              <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="" data-label="Pilih nominal produk">Pilih nominal produk</button>
+              <% (product.variants||[]).forEach(v=>{ const available=Math.max(0,Number(v.stock)-Number(v.reserved_stock||0)); if(available>0){ const variantLabel=String(v.label)+' — '+formatIDR(v.price); %>
+                <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="<%= v.id %>" data-label="<%= variantLabel %>" data-price="<%= v.price %>" data-stock="<%= available %>"><%= variantLabel %></button>
+              <% } }) %>
+            </div>
+          </div>
+        </div>
+      <% } %>
       <div class="detail-title-row">
         <h1><%= product.name %></h1>
-        <div class="detail-price"><%= formatIDR(product.price) %></div>
+        <div class="detail-price" data-product-price><%= product.pricing_mode==='VARIANT'?'Pilih nominal':formatIDR(product.price) %></div>
       </div>
 
       <% if(currentUser){ %>

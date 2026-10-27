@@ -288,7 +288,7 @@ apiRouter.post('/products/:id/review',
 );
 
 apiRouter.get('/categories',asyncHandler(api.productController.categories));
-apiRouter.post('/cart',requireAuth,validate(z.object({productId:z.string().uuid(),quantity:z.coerce.number().int().min(1).max(100)})),asyncHandler(api.cartController.add));
+apiRouter.post('/cart',requireAuth,validate(z.object({productId:z.string().uuid(),variantId:z.string().uuid().optional(),quantity:z.coerce.number().int().min(1).max(100)})),asyncHandler(api.cartController.add));
 apiRouter.get('/cart',requireAuth,asyncHandler(api.cartController.get));
 const recipientContactSchema=z.object({
   email:z.string().trim().email().max(254).transform(v=>v.toLowerCase()),
@@ -355,7 +355,7 @@ apiRouter.put('/cart/:id',requireAuth,validate(z.object({quantity:z.coerce.numbe
 apiRouter.delete('/cart/:id',requireAuth,asyncHandler(api.cartController.remove));
 apiRouter.delete('/cart',requireAuth,asyncHandler(api.cartController.clear));
 apiRouter.get('/checkout/preview',requireAuth,asyncHandler(api.orderController.preview));
-apiRouter.post('/orders',requireAuth,validate(z.object({paymentMethod:z.enum(['BALANCE','GATEWAY','SANDBOX','LIVE']),idempotencyKey:z.string().min(8).max(100).optional(),returnUrl:z.string().url().optional(),buyNowProductId:z.string().uuid().optional()})),asyncHandler(api.orderController.create));
+apiRouter.post('/orders',requireAuth,validate(z.object({paymentMethod:z.enum(['BALANCE','GATEWAY','SANDBOX','LIVE']),idempotencyKey:z.string().min(8).max(100).optional(),returnUrl:z.string().url().optional(),buyNowProductId:z.string().uuid().optional(),buyNowVariantId:z.string().uuid().optional()})),asyncHandler(api.orderController.create));
 apiRouter.get('/orders',requireAuth,asyncHandler(api.orderController.list));
 apiRouter.get('/orders/:id',requireAuth,asyncHandler(api.orderController.detail));
 apiRouter.post('/payment/create',requireAuth,validate(z.object({orderId:z.string().uuid(),returnUrl:z.string().url().optional()})),asyncHandler(api.paymentController.create));
@@ -407,8 +407,9 @@ ownerApi.get('/dashboard',asyncHandler(api.ownerController.dashboard));
 ownerApi.get('/analytics',asyncHandler(api.ownerController.analytics));
 ownerApi.get('/top-orders',asyncHandler(api.ownerController.topOrders));
 ownerApi.get('/products',asyncHandler(api.ownerController.products));
-ownerApi.post('/products',validate(z.object({name:z.string().min(2),slug:z.string().optional(),category_id:z.string().uuid().nullable().optional(),description:z.string().optional(),price:z.coerce.number().int().min(0),stock:z.coerce.number().int().min(0),status:z.enum(['DRAFT','PUBLISHED','ARCHIVED']).optional()})),asyncHandler(api.ownerController.productCreate));
-ownerApi.put('/products/:id',validate(z.object({name:z.string().min(2).optional(),slug:z.string().optional(),category_id:z.string().uuid().nullable().optional(),description:z.string().optional(),price:z.coerce.number().int().min(0).optional(),stock:z.coerce.number().int().min(0).optional(),status:z.enum(['DRAFT','PUBLISHED','ARCHIVED']).optional(),thumbnail_path:z.string().optional()})),asyncHandler(api.ownerController.productUpdate));
+ownerApi.post('/products',validate(z.object({name:z.string().min(2),slug:z.string().optional(),category_id:z.string().uuid().nullable().optional(),description:z.string().optional(),price:z.coerce.number().int().min(0),stock:z.coerce.number().int().min(0),pricing_mode:z.enum(['FIXED','VARIANT']).optional(),status:z.enum(['DRAFT','PUBLISHED','ARCHIVED']).optional()})),asyncHandler(api.ownerController.productCreate));
+ownerApi.put('/products/:id',validate(z.object({name:z.string().min(2).optional(),slug:z.string().optional(),category_id:z.string().uuid().nullable().optional(),description:z.string().optional(),price:z.coerce.number().int().min(0).optional(),stock:z.coerce.number().int().min(0).optional(),pricing_mode:z.enum(['FIXED','VARIANT']).optional(),status:z.enum(['DRAFT','PUBLISHED','ARCHIVED']).optional(),thumbnail_path:z.string().optional()})),asyncHandler(api.ownerController.productUpdate));
+ownerApi.put('/products/:id/variants',validate(z.object({variants:z.array(z.object({label:z.string().trim().min(1).max(120),amount:z.coerce.number().int().positive().nullable().optional(),price:z.coerce.number().int().min(0),stock:z.coerce.number().int().min(0),sort_order:z.coerce.number().int().min(0).optional()})).max(100)})),asyncHandler(api.ownerController.productVariantsSave));
 ownerApi.post('/products/:id/publish',asyncHandler(api.ownerController.productPublish));
 ownerApi.post('/products/:id/unpublish',asyncHandler(api.ownerController.productUnpublish));
 ownerApi.post('/products/:id/archive',asyncHandler(api.ownerController.productArchive));

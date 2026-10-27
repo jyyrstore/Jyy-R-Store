@@ -1678,9 +1678,16 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
     if(next==='PAID' && order.status==='PENDING'){
       const items=(await client.query('select * from order_items where order_id=$1',[order.id])).rows;
       for(const i of items){
-        const p=(await client.query('select stock,reserved_stock from products where id=$1 for update',[i.product_id])).rows[0];
-        if(!p||Number(p.reserved_stock)<Number(i.quantity)||Number(p.stock)<Number(i.quantity))throw badRequest('FULFILLMENT_STOCK_CONFLICT','Product stock is no longer available for this paid order.');
-        await client.query('update products set stock=stock-$2,reserved_stock=greatest(reserved_stock-$2,0),purchase_count=purchase_count+$2,updated_at=now() where id=$1',[i.product_id,i.quantity]);
+        if(i.variant_id){
+          const v=(await client.query('select stock,reserved_stock from product_variants where id=$1 for update',[i.variant_id])).rows[0];
+          if(!v||Number(v.reserved_stock)<Number(i.quantity)||Number(v.stock)<Number(i.quantity)) throw badRequest('FULFILLMENT_STOCK_CONFLICT','Variant stock is no longer available for this paid order.');
+          await client.query('update product_variants set stock=stock-$2,reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.variant_id,i.quantity]);
+          await client.query('update products set purchase_count=purchase_count+$2,updated_at=now() where id=$1',[i.product_id,i.quantity]);
+        }else{
+          const p=(await client.query('select stock,reserved_stock from products where id=$1 for update',[i.product_id])).rows[0];
+          if(!p||Number(p.reserved_stock)<Number(i.quantity)||Number(p.stock)<Number(i.quantity))throw badRequest('FULFILLMENT_STOCK_CONFLICT','Product stock is no longer available for this paid order.');
+          await client.query('update products set stock=stock-$2,reserved_stock=greatest(reserved_stock-$2,0),purchase_count=purchase_count+$2,updated_at=now() where id=$1',[i.product_id,i.quantity]);
+        }
         await client.query("insert into product_events(product_id,user_id,event_type) values($1,$2,'PURCHASE')",[i.product_id,payment.user_id]);
         await delivery.createEntitlement({userId:payment.user_id,productId:i.product_id,orderId:order.id},client);
       }
@@ -1690,8 +1697,8 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
       await notifications.notify(payment.user_id,{type:'ORDER',title:'Produk siap digunakan',body:`Order ${order.order_number} sudah dibayar dan akses content tersedia.`,link:`/orders/${order.id}`},client);
     } else if(['FAILED','EXPIRED','CANCELLED'].includes(next) && order.status==='PENDING'){
       await client.query("update orders set status=$2,updated_at=now() where id=$1",[order.id,next]);
-      const items=(await client.query('select product_id,quantity from order_items where order_id=$1',[order.id])).rows;
-      for(const i of items)await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.product_id,i.quantity]);
+      const items=(await client.query('select product_id,variant_id,quantity from order_items where order_id=$1',[order.id])).rows;
+      for(const i of items){if(i.variant_id) await client.query('update product_variants set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.variant_id,i.quantity]);else await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.product_id,i.quantity]);}
 
       // JYYR ORDER PAYMENT FAILURE NOTIFICATION
       const paymentFailure={

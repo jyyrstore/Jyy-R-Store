@@ -67,16 +67,16 @@ function filters({
   }
 
   if(sort==='price_asc'){
-    order='p.price asc,p.created_at desc';
+    order="case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end asc,p.created_at desc";
   }
 
   if(sort==='price_desc'){
-    order='p.price desc,p.created_at desc';
+    order="case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end desc,p.created_at desc";
   }
 
   return {
     args,
-    where:`p.status=$1 and ($2='' or p.name ilike '%'||$2||'%' or p.description ilike '%'||$2||'%') and ($3='' or c.slug=$3) and ($4::numeric is null or p.price >= $4::numeric) and ($5::numeric is null or p.price <= $5::numeric)`,
+    where:`p.status=$1 and ($2='' or p.name ilike '%'||$2||'%' or p.description ilike '%'||$2||'%') and ($3='' or c.slug=$3) and ($4::numeric is null or (case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end) >= $4::numeric) and ($5::numeric is null or (case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end) <= $5::numeric)`,
     order
   };
 }
@@ -84,7 +84,7 @@ async function list(opts={}){
   const f=filters(opts);
   const limit=safeIntRange(opts.limit,20,1,100);
   const offset=safeIntRange(opts.offset,0,0,1000000);
-  const sql=`select p.*,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
+  const sql=`select p.*,case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end as price,case when p.pricing_mode='VARIANT' then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else p.stock end as stock,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
   return (await query(sql,f.args)).rows;
 }
 async function adminList({
@@ -118,11 +118,11 @@ async function adminList({
   }
 
   if(sort==='price_asc'){
-    order='p.price asc,p.created_at desc';
+    order="case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end asc,p.created_at desc";
   }
 
   if(sort==='price_desc'){
-    order='p.price desc,p.created_at desc';
+    order="case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end desc,p.created_at desc";
   }
 
   const lim=safeIntRange(limit,100,1,100);
@@ -137,6 +137,7 @@ async function adminList({
          p.*,
          c.name category_name,
          c.slug category_slug,
+         coalesce((select json_agg(json_build_object('id',pv.id,'label',pv.label,'amount',pv.amount,'price',pv.price,'stock',pv.stock,'reserved_stock',pv.reserved_stock,'is_active',pv.is_active,'sort_order',pv.sort_order) order by pv.sort_order,pv.created_at) from product_variants pv where pv.product_id=p.id and pv.is_active=true),'[]'::json) variants,
          coalesce(
            (
              select count(*)
@@ -159,8 +160,8 @@ async function adminList({
 async function count(opts={}){ const f=filters(opts); return Number((await query(`select count(*)::int count from products p left join categories c on c.id=p.category_id where ${f.where}`,f.args)).rows[0].count); }
 async function findBySlug(slug){ return (await query(`select p.*,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where p.slug=$1`,[slug])).rows[0]||null; }
 async function findById(id){ return (await query('select p.*,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where p.id=$1',[id])).rows[0]||null; }
-async function create(data,client){ const c=client||require('../config/database').db(); return (await c.query('insert into products(category_id,name,slug,description,price,stock,thumbnail_path,status) values($1,$2,$3,$4,$5,$6,$7,$8) returning *',[data.category_id||null,data.name,data.slug,data.description||'',data.price,data.stock,data.thumbnail_path||null,data.status||'DRAFT'])).rows[0]; }
-async function update(id,data,client){ const c=client||require('../config/database').db(); const allowed=['category_id','name','slug','description','price','stock','thumbnail_path','status']; const keys=allowed.filter(k=>Object.prototype.hasOwnProperty.call(data,k)); if(!keys.length) return findById(id); const sql=`update products set ${keys.map((k,i)=>`${k}=$${i+2}`).join(',')},updated_at=now() where id=$1 returning *`; return (await c.query(sql,[id,...keys.map(k=>data[k])])).rows[0]; }
+async function create(data,client){ const c=client||require('../config/database').db(); return (await c.query('insert into products(category_id,name,slug,description,price,stock,thumbnail_path,status,pricing_mode) values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *',[data.category_id||null,data.name,data.slug,data.description||'',data.price,data.stock,data.thumbnail_path||null,data.status||'DRAFT',data.pricing_mode||'FIXED'])).rows[0]; }
+async function update(id,data,client){ const c=client||require('../config/database').db(); const allowed=['category_id','name','slug','description','price','stock','thumbnail_path','status','pricing_mode']; const keys=allowed.filter(k=>Object.prototype.hasOwnProperty.call(data,k)); if(!keys.length) return findById(id); const sql=`update products set ${keys.map((k,i)=>`${k}=$${i+2}`).join(',')},updated_at=now() where id=$1 returning *`; return (await c.query(sql,[id,...keys.map(k=>data[k])])).rows[0]; }
 async function remove(id){ return (await query("update products set status='ARCHIVED',updated_at=now() where id=$1 returning *",[id])).rows[0]; }
 async function deletePermanently(id){
   return withTransaction(async(client)=>{
@@ -261,7 +262,7 @@ async function duplicate(id){
     }
 
     const copy=(await client.query(
-      'insert into products(category_id,name,slug,description,price,stock,thumbnail_path,status) values($1,$2,$3,$4,$5,$6,$7,$8) returning *',
+      'insert into products(category_id,name,slug,description,price,stock,thumbnail_path,status,pricing_mode) values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *',
       [
         p.category_id,
         p.name+' Copy',
@@ -270,12 +271,18 @@ async function duplicate(id){
         p.price,
         p.stock,
         null,
-        'DRAFT'
+        'DRAFT',
+        p.pricing_mode||'FIXED'
       ]
     )).rows[0];
 
-    const env=loadEnv();
-    const createdObjects=[];
+      if(p.pricing_mode==='VARIANT'){
+        const sourceVariants=(await client.query('select label,amount,price,stock,sort_order from product_variants where product_id=$1 and is_active=true order by sort_order,created_at',[id])).rows;
+        for(const v of sourceVariants){await client.query('insert into product_variants(product_id,label,amount,price,stock,sort_order,is_active) values($1,$2,$3,$4,$5,$6,true)',[copy.id,v.label,v.amount,v.price,v.stock,v.sort_order]);}
+      }
+
+      const env=loadEnv();
+      const createdObjects=[];
 
     try{
       let thumbnailPath=null;
@@ -384,6 +391,49 @@ async function duplicate(id){
     }
   });
 }
+
+async function listVariants(productId,activeOnly=true){
+  return (await query(
+    `select id,product_id,label,amount,price,stock,reserved_stock,is_active,sort_order,created_at,updated_at
+     from product_variants where product_id=$1 ${activeOnly?"and is_active=true":""}
+     order by sort_order,created_at,id`,[productId]
+  )).rows;
+}
+async function findVariant(productId,variantId){
+  return (await query('select * from product_variants where product_id=$1 and id=$2 and is_active=true',[productId,variantId])).rows[0]||null;
+}
+async function hasReservedVariants(productId){
+  return Boolean((await query('select 1 from product_variants where product_id=$1 and reserved_stock>0 limit 1',[productId])).rowCount);
+}
+async function saveVariants(productId,variants){
+  if(!Array.isArray(variants)||variants.length>100) throw badRequest('INVALID_PRODUCT_VARIANTS','Daftar variasi tidak valid.');
+  const labels=new Set();
+  for(const [index,v] of variants.entries()){
+    const label=String(v?.label||'').trim();
+    const price=Number(v?.price),stock=Number(v?.stock),amount=v?.amount==null||v?.amount===''?null:Number(v.amount);
+    if(!label||label.length>120||!Number.isSafeInteger(price)||price<0||!Number.isSafeInteger(stock)||stock<0||(amount!==null&&(!Number.isSafeInteger(amount)||amount<=0))) throw badRequest('INVALID_PRODUCT_VARIANT',`Variasi nomor ${index+1} tidak valid.`);
+    const key=label.toLocaleLowerCase('id-ID');
+    if(labels.has(key)) throw badRequest('DUPLICATE_PRODUCT_VARIANT','Nama variasi tidak boleh duplikat.');
+    labels.add(key);
+  }
+  return withTransaction(async(client)=>{
+    const product=(await client.query('select id,pricing_mode from products where id=$1 for update',[productId])).rows[0];
+    if(!product) throw badRequest('PRODUCT_NOT_FOUND','Produk tidak ditemukan.');
+    if(variants.length&&product.pricing_mode!=='VARIANT') throw badRequest('PRODUCT_NOT_VARIANT','Aktifkan mode VARIANT sebelum menyimpan variasi.');
+    const pending=(await client.query('select 1 from product_variants where product_id=$1 and reserved_stock>0 limit 1',[productId])).rowCount;
+    if(pending) throw badRequest('PRODUCT_VARIANT_RESERVED','Variasi tidak dapat diubah selama stok sedang direservasi oleh pembayaran pending.');
+    await client.query('update product_variants set is_active=false,updated_at=now() where product_id=$1 and is_active=true',[productId]);
+    await client.query('delete from cart_items where product_id=$1',[productId]);
+    for(const [index,v] of variants.entries()){
+      await client.query(
+        'insert into product_variants(product_id,label,amount,price,stock,reserved_stock,is_active,sort_order) values($1,$2,$3,$4,$5,0,true,$6)',
+        [productId,String(v.label).trim(),v.amount==null||v.amount===''?null:Number(v.amount),Number(v.price),Number(v.stock),Number.isSafeInteger(Number(v.sort_order))&&Number(v.sort_order)>=0?Number(v.sort_order):index]
+      );
+    }
+    return (await client.query('select id,product_id,label,amount,price,stock,reserved_stock,is_active,sort_order,created_at,updated_at from product_variants where product_id=$1 and is_active=true order by sort_order,created_at,id',[productId])).rows;
+  });
+}
+
 async function contents(productId){ return (await query('select * from product_contents where product_id=$1 order by sort_order,created_at',[productId])).rows; }
 async function addContent(data){ return (await query('insert into product_contents(product_id,type,title,description,text_content,url,storage_path,mime_type,file_size,sort_order,is_preview,access_type) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *',[data.product_id,data.type,data.title,data.description||null,data.text_content||null,data.url||null,data.storage_path||null,data.mime_type||null,data.file_size||null,data.sort_order||0,!!data.is_preview,data.access_type||'PURCHASED'])).rows[0]; }
 async function updateContent(id,data){ return (await query('update product_contents set title=$2,description=$3,text_content=$4,url=$5,sort_order=$6,is_preview=$7,access_type=$8,updated_at=now() where id=$1 returning *',[id,data.title,data.description||null,data.text_content||null,data.url||null,data.sort_order||0,!!data.is_preview,data.access_type||'PURCHASED'])).rows[0]; }
@@ -463,6 +513,6 @@ async function countAdmin({
   );
 }
 
-module.exports={list,adminList,count,findBySlug,findById,create,update,remove,deletePermanently,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event,
+module.exports={list,adminList,count,findBySlug,findById,create,update,remove,deletePermanently,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event,listVariants,findVariant,hasReservedVariants,saveVariants,
   countAdmin
 };

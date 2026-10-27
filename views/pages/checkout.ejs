@@ -28,6 +28,7 @@
           <div class="list-card">
             <div>
               <strong><%= i.name %></strong>
+              <% if(i.variant_label){ %><span class="muted small"><%= i.variant_label %></span><% } %>
               <span><%= i.quantity %> × <%= formatIDR(i.price) %></span>
             </div>
 
@@ -169,6 +170,7 @@
         class="button button-primary button-block"
         data-checkout-confirm
         data-buy-now-product="<%= preview.buyNowProductId||'' %>"
+        data-buy-now-variant="<%= preview.buyNowVariantId||'' %>"
         aria-disabled="<%= preview.items.length && recipientComplete ? 'false' : 'true' %>"
         data-checkout-ready="<%= preview.items.length && recipientComplete ? '1' : '0' %>"
       >

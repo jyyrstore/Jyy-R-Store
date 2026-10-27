@@ -1042,6 +1042,25 @@
 
   document.addEventListener('error',e=>{const img=e.target;if(img?.matches?.('[data-image-fallback]')){img.hidden=true;img.nextElementSibling?.removeAttribute('hidden')} if(img?.matches?.('[data-image-fallback-hide]'))img.hidden=true;},{capture:true});
   document.addEventListener('change',e=>{
+    const variantSelect=e.target.closest('[data-product-variant-select]');
+    if(variantSelect){
+      const picker=variantSelect.closest('[data-product-variant-picker]');
+      const option=[...(picker?.querySelectorAll('[data-jyyr-select-option]')||[])].find(item=>String(item.dataset.value||'')===String(variantSelect.value||''));
+      const priceNode=document.querySelector('[data-product-price]');
+      const stockNode=document.querySelector('[data-product-stock-count]');
+      const stockState=document.querySelector('[data-product-stock-state]');
+      const selected=Boolean(variantSelect.value);
+      const price=Number(option?.dataset.price||0);
+      const stock=Number(option?.dataset.stock||0);
+      if(priceNode)priceNode.textContent=selected?money(price):'Pilih nominal';
+      if(stockNode)stockNode.textContent=selected?String(stock):'—';
+      if(stockState){
+        stockState.textContent=!selected?'Pilih nominal':stock>0?'Tersedia':'Habis';
+        stockState.classList.toggle('is-available',selected&&stock>0);
+        stockState.classList.toggle('is-unavailable',!selected||stock<1);
+      }
+      return;
+    }
     const input=e.target.closest('[data-thumbnail-input]');
     if(!input)return;
     const file=input.files?.[0];
@@ -1400,8 +1419,8 @@
     const searchRetry=e.target.closest('[data-search-retry]'); if(searchRetry){search();return}
     const openUrl=e.target.closest('[data-open-content-url]'); if(openUrl){window.open(openUrl.dataset.openContentUrl,'_blank','noopener');return}
 
-    const buy=e.target.closest('[data-buy-now]'); if(buy){buy.disabled=true;try{location.href='/checkout?buy_now='+encodeURIComponent(buy.dataset.buyNow)}catch(err){toast.error(err.message);buy.disabled=false}}
-    const add=e.target.closest('[data-add-cart]'); if(add){add.disabled=true;try{await api.request('/api/cart',{method:'POST',body:{productId:add.dataset.addCart,quantity:1}});toast.success('Produk ditambahkan ke keranjang.');await hydrateCartBadge();}catch(err){toast.error(err.message)}finally{add.disabled=false}}
+    const buy=e.target.closest('[data-buy-now]'); if(buy){const selector=document.querySelector('[data-product-variant-select]');const variantId=selector?.value||null;if(selector&&!variantId){toast.error('Pilih nominal produk terlebih dahulu.');return}buy.disabled=true;try{location.href='/checkout?buy_now='+encodeURIComponent(buy.dataset.buyNow)+(variantId?'&variant_id='+encodeURIComponent(variantId):'')}catch(err){toast.error(err.message);buy.disabled=false}}
+    const add=e.target.closest('[data-add-cart]'); if(add){const selector=document.querySelector('[data-product-variant-select]');const variantId=selector?.value||null;if(selector&&!variantId){toast.error('Pilih nominal produk terlebih dahulu.');return}add.disabled=true;try{await api.request('/api/cart',{method:'POST',body:{productId:add.dataset.addCart,quantity:1,...(variantId?{variantId}:{})}});toast.success('Produk ditambahkan ke keranjang.');await hydrateCartBadge();}catch(err){toast.error(err.message)}finally{add.disabled=false}}
     const rm=e.target.closest('[data-cart-remove]'); if(rm){try{await api.request('/api/cart/'+rm.dataset.cartRemove,{method:'DELETE'});location.reload()}catch(err){toast.error(err.message)}}
     const clearCart=e.target.closest('[data-cart-clear]'); if(clearCart){if(!(await window.JYYRModal.confirm('Kosongkan keranjang? Semua item akan dihapus.')))return;clearCart.disabled=true;try{await api.request('/api/cart',{method:'DELETE'});toast.success('Keranjang dikosongkan.');location.reload()}catch(err){toast.error(err.message)}finally{clearCart.disabled=false}}
     const minus=e.target.closest('[data-cart-minus]'),plus=e.target.closest('[data-cart-plus]');
@@ -1766,6 +1785,9 @@
               returnUrl:location.origin+'/orders',
               ...(checkout.dataset.buyNowProduct
                 ? {buyNowProductId:checkout.dataset.buyNowProduct}
+                : {}),
+              ...(checkout.dataset.buyNowVariant
+                ? {buyNowVariantId:checkout.dataset.buyNowVariant}
                 : {})
             }
           }
@@ -1885,6 +1907,24 @@
       <label class="field">
         <span>Stock</span>
         <input name="stock" type="number" min="0" required placeholder="10">
+      </label>
+
+      <label class="field">
+        <span>Mode Harga</span>
+        ${pickerSelect({
+          name:'pricing_mode',
+          value:'FIXED',
+          options:[
+            ['FIXED','Harga tetap'],
+            ['VARIANT','Harga per variasi']
+          ]
+        })}
+      </label>
+
+      <label class="field full">
+        <span>Variasi (JSON, dipakai untuk mode variasi)</span>
+        <textarea name="variants_json" rows="5" placeholder='[{"label":"86 Diamond","amount":86,"price":12000,"stock":10},{"label":"172 Diamond","amount":172,"price":23000,"stock":8},{"label":"257 Diamond","amount":257,"price":34000,"stock":5}]'></textarea>
+        <small>Harga dan stok setiap nominal disimpan terpisah. Isi array JSON jika Mode Harga = Harga per variasi.</small>
       </label>
 
       <label class="field full">
@@ -2018,6 +2058,24 @@
               <label class="field">
                 <span>Stok / Kuota</span>
                 <input name="stock" type="number" min="0" value="${Number(d.stock)||0}">
+              </label>
+
+              <label class="field">
+                <span>Mode Harga</span>
+                ${pickerSelect({
+                  name:'pricing_mode',
+                  value:d.pricing_mode||'FIXED',
+                  options:[
+                    ['FIXED','Harga tetap'],
+                    ['VARIANT','Harga per variasi']
+                  ]
+                })}
+              </label>
+
+              <label class="field full">
+                <span>Variasi aktif (JSON)</span>
+                <textarea name="variants_json" rows="5" placeholder='[{"label":"86 Diamond","amount":86,"price":12000,"stock":10}]'>${esc(JSON.stringify((d.variants||[]).map(v=>({label:v.label,amount:v.amount,price:Number(v.price),stock:Number(v.stock),sort_order:Number(v.sort_order||0)}))))}</textarea>
+                <small>Daftar ini menjadi sumber harga dan stok untuk setiap nominal.</small>
               </label>
 
               <label class="field full">
@@ -2267,8 +2325,14 @@
       delete fd.status;
 
       fd.status='DRAFT';
+      fd.pricing_mode=String(fd.pricing_mode||'FIXED').toUpperCase();
+      let variants;
+      try{variants=fd.variants_json?JSON.parse(fd.variants_json):[]}catch{toast.error('JSON variasi tidak valid.');return}
+      delete fd.variants_json;
+      if(!Array.isArray(variants)){toast.error('Variasi harus berupa array JSON.');return}
       fd.price=Number(fd.price);
       fd.stock=Number(fd.stock);
+      if(fd.pricing_mode==='VARIANT'){if(!variants.length){toast.error('Tambahkan minimal satu variasi.');return}fd.price=Math.min(...variants.map(v=>Number(v.price)));fd.stock=variants.reduce((n,v)=>n+Number(v.stock||0),0)}
       if(!fd.category_id)fd.category_id=null;
 
       const btn=pfm.querySelector('button[type="submit"]');
@@ -2283,6 +2347,7 @@
           'POST',
           'Produk DRAFT dibuat.'
         );
+        await ownerAction('/api/owner/products/'+created.id+'/variants',{variants:fd.pricing_mode==='VARIANT'?variants:[]},'PUT','Variasi produk disimpan.');
 
         if(thumbnail instanceof File && thumbnail.size){
           const progress=pfm.querySelector('[data-thumbnail-progress]');
@@ -2316,7 +2381,7 @@
       }
     }
 
-    const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.price=Number(fd.price);fd.stock=Number(fd.stock);try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
+    const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.pricing_mode=String(fd.pricing_mode||'FIXED').toUpperCase();let variants;try{variants=fd.variants_json?JSON.parse(fd.variants_json):[]}catch{toast.error('JSON variasi tidak valid.');return}delete fd.variants_json;if(!Array.isArray(variants)){toast.error('Variasi harus berupa array JSON.');return}fd.price=Number(fd.price);fd.stock=Number(fd.stock);if(fd.pricing_mode==='VARIANT'){if(!variants.length){toast.error('Tambahkan minimal satu variasi.');return}fd.price=Math.min(...variants.map(v=>Number(v.price)));fd.stock=variants.reduce((n,v)=>n+Number(v.stock||0),0)}try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');await ownerAction('/api/owner/products/'+id+'/variants',{variants:fd.pricing_mode==='VARIANT'?variants:[]},'PUT','Variasi produk disimpan.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
     const cfm=e.target.closest('[data-owner-content-form]');
     if(cfm){
       e.preventDefault();

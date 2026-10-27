@@ -22,7 +22,7 @@
       href="/product/<%= product.slug %>"
       class="product-title product-title--cover"
     ><%= product.name %></a>
-    <% if (currentUser && product.stock>0) { %>
+    <% if (currentUser && product.stock>0 && product.pricing_mode!=='VARIANT') { %>
       <button
         type="button"
         class="product-cover-cart"
@@ -36,7 +36,7 @@
   </div>
   <div class="product-body">
 
-    <div class="product-price"><%= formatIDR(product.price) %></div>
+    <div class="product-price"><%= product.pricing_mode==='VARIANT'?'Mulai dari ':'' %><%= formatIDR(product.price) %></div>
 
     <div class="product-actions">
       <div class="product-action-row">
@@ -46,7 +46,7 @@
         >
           Detail
         </a>
-        <% if (currentUser && product.stock>0) { %>
+        <% if (currentUser && product.stock>0 && product.pricing_mode!=='VARIANT') { %>
           <button
             class="button button-primary button-small"
             data-buy-now="<%= product.id %>"

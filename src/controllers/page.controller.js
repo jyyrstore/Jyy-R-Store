@@ -218,9 +218,10 @@ async function checkout(req,res,next){
     const buyNowProductId=
       String(req.query.buy_now||'').trim()||null;
 
+    const buyNowVariantId=String(req.query.variant_id||'').trim()||null;
     const preview=await orderService.preview(
       req.user.id,
-      {buyNowProductId}
+      {buyNowProductId,buyNowVariantId}
     );
     const walletState=await wallet.get(req.user.id);
     const walletSufficient=

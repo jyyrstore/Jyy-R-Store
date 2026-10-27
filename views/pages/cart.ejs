@@ -41,6 +41,7 @@
               <strong><%= i.name %></strong>
             </a>
 
+            <% if(i.variant_label){ %><span class="muted small"><%= i.variant_label %></span><% } %>
             <span><%= formatIDR(i.price) %> / item</span>
 
             <div class="quantity">

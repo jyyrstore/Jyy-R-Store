@@ -18,7 +18,7 @@ async function get(userId){
 
   const row=(
     await query(
-      'select c.id,coalesce(c.recipient_email,(select rc.recipient_email from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_email,coalesce(c.recipient_country_code,(select rc.recipient_country_code from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_country_code,coalesce(c.recipient_dial_code,(select rc.recipient_dial_code from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_dial_code,coalesce(c.recipient_phone,(select rc.recipient_phone from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_phone,coalesce(json_agg(json_build_object(\'id\',ci.id,\'quantity\',ci.quantity,\'product_id\',p.id,\'name\',p.name,\'slug\',p.slug,\'price\',p.price,\'stock\',p.stock,\'thumbnail_path\',p.thumbnail_path)) filter(where ci.id is not null),\'[]\') items from carts c left join cart_items ci on ci.cart_id=c.id left join products p on p.id=ci.product_id where c.user_id=$1 group by c.id',
+      'select c.id,coalesce(c.recipient_email,(select rc.recipient_email from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_email,coalesce(c.recipient_country_code,(select rc.recipient_country_code from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_country_code,coalesce(c.recipient_dial_code,(select rc.recipient_dial_code from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_dial_code,coalesce(c.recipient_phone,(select rc.recipient_phone from recipient_contacts rc where rc.user_id=c.user_id and rc.is_default=true order by rc.updated_at desc limit 1)) as recipient_phone,coalesce(json_agg(json_build_object(\'id\',ci.id,\'quantity\',ci.quantity,\'product_id\',p.id,\'variant_id\',ci.variant_id,\'variant_label\',v.label,\'variant_amount\',v.amount,\'pricing_mode\',p.pricing_mode,\'name\',p.name,\'slug\',p.slug,\'price\',case when p.pricing_mode=\'VARIANT\' then v.price else p.price end,\'stock\',case when p.pricing_mode=\'VARIANT\' then greatest(v.stock-v.reserved_stock,0) else p.stock end,\'thumbnail_path\',p.thumbnail_path)) filter(where ci.id is not null),\'[]\') items from carts c left join cart_items ci on ci.cart_id=c.id left join products p on p.id=ci.product_id left join product_variants v on v.id=ci.variant_id where c.user_id=$1 group by c.id',
       [userId]
     )
   ).rows[0];
@@ -43,23 +43,13 @@ async function setContact(userId,contact){
   ).rows[0];
 }
 
-async function upsertItem(userId,productId,quantity){
+async function upsertItem(userId,productId,quantity,variantId=null){
   const c=await ensure(userId);
-
-  const row=(
-    await query(
-      'insert into cart_items(cart_id,product_id,quantity) values($1,$2,$3) on conflict(cart_id,product_id) do update set quantity=cart_items.quantity+excluded.quantity,updated_at=now() where cart_items.quantity+excluded.quantity<=100 returning *',
-      [c.id,productId,quantity]
-    )
-  ).rows[0];
-
-  if(!row){
-    throw badRequest(
-      'CART_QUANTITY_LIMIT',
-      'Jumlah produk dalam keranjang maksimal 100.'
-    );
-  }
-
+  const sql=variantId
+    ? 'insert into cart_items(cart_id,product_id,quantity,variant_id) values($1,$2,$3,$4) on conflict(cart_id,product_id,variant_id) where variant_id is not null do update set quantity=cart_items.quantity+excluded.quantity,updated_at=now() where cart_items.quantity+excluded.quantity<=100 returning *'
+    : 'insert into cart_items(cart_id,product_id,quantity,variant_id) values($1,$2,$3,null) on conflict(cart_id,product_id) where variant_id is null do update set quantity=cart_items.quantity+excluded.quantity,updated_at=now() where cart_items.quantity+excluded.quantity<=100 returning *';
+  const row=(await query(sql,variantId?[c.id,productId,quantity,variantId]:[c.id,productId,quantity])).rows[0];
+  if(!row) throw badRequest('CART_QUANTITY_LIMIT','Jumlah produk dalam keranjang maksimal 100.');
   return row;
 }
 

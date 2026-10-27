@@ -2,7 +2,7 @@ const fs=require('fs');const path=require('path');
 const root=path.join(__dirname,'..'); let failed=false;
 const fail=(msg)=>{console.error(`BUILD CHECK FAILED: ${msg}`);failed=true};
 const exists=(p)=>fs.existsSync(path.join(root,p));
-const required=['server.js','package.json','.env.example','.nvmrc','views/app.ejs','src/routes/index.js','src/controllers/api.controller.js','src/controllers/page.controller.js','database/migrations/001_extensions.sql','database/migrations/028_supporting.sql','database/policies/profiles.sql','database/policies/storage.sql','public/css/variables.css','public/js/api.js','README.md','SECURITY.md','tests'];
+const required=['server.js','package.json','.env.example','.nvmrc','views/app.ejs','src/routes/index.js','src/controllers/api.controller.js','src/controllers/page.controller.js','database/migrations/001_extensions.sql','database/migrations/028_supporting.sql','database/migrations/041_product_variants.sql','database/policies/profiles.sql','database/policies/storage.sql','public/css/variables.css','public/js/api.js','README.md','SECURITY.md','tests'];
 for(const p of required)if(!exists(p))fail(`missing ${p}`);
 const mig=fs.readdirSync(path.join(root,'database/migrations')).filter(f=>/^\d+_.*\.sql$/.test(f)).sort((a,b)=>Number(a.split('_')[0])-Number(b.split('_')[0]));const nums=mig.map(f=>Number(f.split('_')[0]));if(nums.length){const max=Math.max(...nums);for(let i=1;i<=max;i++){if(!nums.includes(i))fail(`missing migration ${String(i).padStart(3,'0')}_`)}}
 const banned=/scaffold\s+placeholder|future responsibility|future implementation|future dependency|TODO:\s*implement|test\s+(?:fixture\s+)?placeholder|test skeleton|PLACEHOLDER:/i;

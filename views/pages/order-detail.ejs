@@ -21,7 +21,7 @@
 
 
 
-<% order.items.forEach(item=>{ %> <div class="section-header order-detail-table-product-row"> <span><%= item.product_name %></span> <b><%= item.quantity %> × <%= formatIDR(item.unit_price) %></b> </div> <div class="section-header order-detail-table-download-row"><span>Download Produk</span><b><%= (item.contents||[]).length %> item</b></div> <% }) %>
+<% order.items.forEach(item=>{ %> <div class="section-header order-detail-table-product-row"> <span><%= item.product_name %><%= item.variant_label?' — '+item.variant_label:'' %></span> <b><%= item.quantity %> × <%= formatIDR(item.unit_price) %></b> </div> <div class="section-header order-detail-table-download-row"><span>Download Produk</span><b><%= (item.contents||[]).length %> item</b></div> <% }) %>
 </div>
 <% let paymentDetailsShown = false; %>
 <% order.items.forEach(item=>{ %> <div class="section"> <div class="content-list order-detail-table-content-list"> <% if((item.contents||[]).length===0){ %><%- include('../partials/empty',{title:'Belum ada isi produk',description:'Belum ada isi produk yang ditambahkan untuk produk ini.'}) %><% } %> <% (item.contents||[]).forEach(c=>{ %> <article class="content-card"> <div class="content-main"><div class="content-main-heading"><div class="content-icon"><%- icon(c.type==='VIDEO'?'play':c.type==='AUDIO'?'music':c.type==='IMAGE'?'image':c.type==='LINK'?'external':c.type==='TEXT'?'note':'package') %></div><div class="content-heading order-item-content-heading"> <strong><%= c.title %></strong> <span><%= contentTypeLabels[c.type] || 'Konten' %> · <%= accessTypeLabels[c.access_type] || 'Akses terbatas' %></span> </div> </div>
