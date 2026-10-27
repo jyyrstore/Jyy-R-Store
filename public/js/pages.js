@@ -135,6 +135,192 @@
     `;
   };
 
+  function productVariantRowMarkup(variant={}){
+    return `
+      <div class="product-modal-grid" data-product-variant-row>
+        <label class="field">
+          <span>Nama Varian</span>
+          <input
+            type="text"
+            data-product-variant-label
+            maxlength="120"
+            autocomplete="off"
+            value="${esc(variant.label||'')}"
+          >
+        </label>
+
+        <label class="field">
+          <span>Jumlah (opsional)</span>
+          <input
+            type="number"
+            data-product-variant-amount
+            min="1"
+            step="1"
+            value="${esc(variant.amount==null?'':variant.amount)}"
+          >
+        </label>
+
+        <label class="field">
+          <span>Harga (Rp)</span>
+          <input
+            type="number"
+            data-product-variant-price
+            min="0"
+            step="1"
+            value="${esc(variant.price==null?'':variant.price)}"
+          >
+        </label>
+
+        <label class="field">
+          <span>Stok</span>
+          <input
+            type="number"
+            data-product-variant-stock
+            min="0"
+            step="1"
+            value="${esc(variant.stock==null?'':variant.stock)}"
+          >
+        </label>
+
+        <div class="field full">
+          <button
+            class="button button-secondary"
+            type="button"
+            data-product-variant-remove
+          >Hapus Varian</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function productVariantEditorMarkup(variants=[]){
+    const items=
+      Array.isArray(variants)&&variants.length
+        ? variants
+        : [{}];
+
+    return `
+      <section
+        class="product-modal-section full"
+        data-product-variant-editor
+      >
+        <div class="product-modal-section-title">
+          <strong>Daftar Varian</strong>
+          <button
+            class="button button-secondary"
+            type="button"
+            data-product-variant-add
+          >Tambah Varian</button>
+        </div>
+
+        <small>
+          Isi nama, harga, dan stok setiap varian.
+          Jumlah bersifat opsional dan hanya digunakan bila diperlukan.
+          Data disimpan saat Mode Harga memilih Harga per variasi.
+        </small>
+
+        <div
+          class="product-form-modal"
+          data-product-variant-list
+        >
+          ${items.map(productVariantRowMarkup).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  function readProductVariants(form){
+    const rows=[
+      ...form.querySelectorAll('[data-product-variant-row]')
+    ];
+
+    if(rows.length>100){
+      throw new Error('Maksimal 100 varian per produk.');
+    }
+
+    const variants=[];
+    const labels=new Set();
+
+    for(const [index,row] of rows.entries()){
+      const label=String(
+        row.querySelector('[data-product-variant-label]')?.value||''
+      ).trim();
+
+      const amountText=String(
+        row.querySelector('[data-product-variant-amount]')?.value||''
+      ).trim();
+
+      const priceText=String(
+        row.querySelector('[data-product-variant-price]')?.value||''
+      ).trim();
+
+      const stockText=String(
+        row.querySelector('[data-product-variant-stock]')?.value||''
+      ).trim();
+
+      if(!label&&!amountText&&priceText===''&&stockText===''){
+        continue;
+      }
+
+      if(!label){
+        throw new Error(`Nama varian baris ${index+1} wajib diisi.`);
+      }
+
+      if(label.length>120){
+        throw new Error(`Nama varian baris ${index+1} maksimal 120 karakter.`);
+      }
+
+      if(priceText===''||stockText===''){
+        throw new Error(
+          `Harga dan stok varian baris ${index+1} wajib diisi.`
+        );
+      }
+
+      const price=Number(priceText);
+      const stock=Number(stockText);
+      const amount=amountText===''?null:Number(amountText);
+
+      if(!Number.isSafeInteger(price)||price<0){
+        throw new Error(`Harga varian baris ${index+1} tidak valid.`);
+      }
+
+      if(!Number.isSafeInteger(stock)||stock<0){
+        throw new Error(`Stok varian baris ${index+1} tidak valid.`);
+      }
+
+      if(
+        amount!==null&&
+        (!Number.isSafeInteger(amount)||amount<=0)
+      ){
+        throw new Error(
+          `Jumlah varian baris ${index+1} harus bilangan bulat positif.`
+        );
+      }
+
+      const key=label.toLocaleLowerCase('id-ID');
+
+      if(labels.has(key)){
+        throw new Error('Nama varian tidak boleh duplikat.');
+      }
+
+      labels.add(key);
+
+      variants.push({
+        label,
+        amount,
+        price,
+        stock,
+        sort_order:variants.length
+      });
+    }
+
+    if(!variants.length){
+      throw new Error('Tambahkan minimal satu varian untuk mode variasi.');
+    }
+
+    return variants;
+  }
+
   const pickerFile=({
     name,
     accept='',
@@ -702,7 +888,8 @@
           description:meta.description,
           sortOrder:Number(meta.sortOrder||0),
           isPreview:Boolean(meta.isPreview),
-          accessType:meta.accessType||'PURCHASED'
+          accessType:meta.accessType||'PURCHASED',
+          variantId:meta.variantId||null
         }
       }
     );
@@ -753,6 +940,7 @@
     try{
       const r=await api.request('/api/owner/products/'+encodeURIComponent(productId)+'/content');
       const items=Array.isArray(r)?r:(r.items||[]);
+      const variants=Array.isArray(r?.variants)?r.variants:[];
 
       const coverReady=hasThumbnail===null ? null : Boolean(hasThumbnail);
       const validContentCount=items.filter(ownerContentIsValid).length;
@@ -766,9 +954,13 @@
             const type=String(c.type||'').toUpperCase();
             const access=String(c.access_type||'PURCHASED').toUpperCase();
             const valid=ownerContentIsValid(c);
+            const variantScope=c.variant_id
+              ? `Varian: ${c.variant_label||'khusus'}${c.variant_is_active?'':' (varian lama)'}`
+              : 'Bersama semua varian';
             const meta=[
               ownerContentTypeLabel(type),
               ownerAccessLabel(access),
+              variantScope,
               c.file_size?`${(Number(c.file_size)/1024/1024).toFixed(2)} MB`:null
             ].filter(Boolean).join(' · ');
 
@@ -1045,6 +1237,22 @@
     })}
                 <small class="field-help" data-owner-content-access-help>
                   Hanya user yang memiliki pembelian terkonfirmasi yang dapat membuka content ini.
+                </small>
+              </label>
+
+              <label class="field full">
+                <span>Target Varian</span>
+                ${pickerSelect({
+      name:'variant_id',
+      value:'',
+      attrs:'data-owner-content-variant',
+      options:[
+        ['','Konten bersama — semua varian'],
+        ...variants.map(variant=>[variant.id,variant.label])
+      ]
+    })}
+                <small class="field-help">
+                  Kosongkan untuk konten bersama. Konten khusus varian hanya bisa diakses pembeli varian tersebut dan harus memakai akses Hanya pembeli.
                 </small>
               </label>
             </div>
@@ -1339,6 +1547,44 @@
   });
 
   document.addEventListener('click',async e=>{
+    const addVariant=e.target.closest('[data-product-variant-add]');
+    if(addVariant){
+      const list=addVariant
+        .closest('[data-product-variant-editor]')
+        ?.querySelector('[data-product-variant-list]');
+
+      if(!list)return;
+
+      if(list.querySelectorAll('[data-product-variant-row]').length>=100){
+        toast.error('Maksimal 100 varian per produk.');
+        return;
+      }
+
+      list.insertAdjacentHTML(
+        'beforeend',
+        productVariantRowMarkup()
+      );
+      return;
+    }
+
+    const removeVariant=e.target.closest('[data-product-variant-remove]');
+    if(removeVariant){
+      const row=removeVariant.closest('[data-product-variant-row]');
+      const list=row?.closest('[data-product-variant-list]');
+
+      if(!row||!list)return;
+
+      if(list.querySelectorAll('[data-product-variant-row]').length===1){
+        row.querySelectorAll('input').forEach(input=>{
+          input.value='';
+        });
+      }else{
+        row.remove();
+      }
+
+      return;
+    }
+
     const profileEdit=
       e.target.closest('[data-profile-edit-open]');
 
@@ -1994,11 +2240,7 @@
         })}
       </label>
 
-      <label class="field full">
-        <span>Variasi (JSON, dipakai untuk mode variasi)</span>
-        <textarea name="variants_json" rows="5" placeholder='[{"label":"86 Diamond","amount":86,"price":12000,"stock":10},{"label":"172 Diamond","amount":172,"price":23000,"stock":8},{"label":"257 Diamond","amount":257,"price":34000,"stock":5}]'></textarea>
-        <small>Harga dan stok setiap nominal disimpan terpisah. Isi array JSON jika Mode Harga = Harga per variasi.</small>
-      </label>
+      ${productVariantEditorMarkup()}
 
       <label class="field full">
         <span>Description</span>
@@ -2145,11 +2387,7 @@
                 })}
               </label>
 
-              <label class="field full">
-                <span>Variasi aktif (JSON)</span>
-                <textarea name="variants_json" rows="5" placeholder='[{"label":"86 Diamond","amount":86,"price":12000,"stock":10}]'>${esc(JSON.stringify((d.variants||[]).map(v=>({label:v.label,amount:v.amount,price:Number(v.price),stock:Number(v.stock),sort_order:Number(v.sort_order||0)}))))}</textarea>
-                <small>Daftar ini menjadi sumber harga dan stok untuk setiap nominal.</small>
-              </label>
+              ${productVariantEditorMarkup(d.variants||[])}
 
               <label class="field full">
                 <span>Deskripsi</span>
@@ -2399,13 +2637,22 @@
 
       fd.status='DRAFT';
       fd.pricing_mode=String(fd.pricing_mode||'FIXED').toUpperCase();
-      let variants;
-      try{variants=fd.variants_json?JSON.parse(fd.variants_json):[]}catch{toast.error('JSON variasi tidak valid.');return}
-      delete fd.variants_json;
-      if(!Array.isArray(variants)){toast.error('Variasi harus berupa array JSON.');return}
+      let variants=[];
+
+      if(fd.pricing_mode==='VARIANT'){
+        try{
+          variants=readProductVariants(pfm);
+        }catch(err){
+          toast.error(err.message);
+          return;
+        }
+
+        fd.price=Math.min(...variants.map(v=>v.price));
+        fd.stock=variants.reduce((n,v)=>n+v.stock,0);
+      }
+
       fd.price=Number(fd.price);
       fd.stock=Number(fd.stock);
-      if(fd.pricing_mode==='VARIANT'){if(!variants.length){toast.error('Tambahkan minimal satu variasi.');return}fd.price=Math.min(...variants.map(v=>Number(v.price)));fd.stock=variants.reduce((n,v)=>n+Number(v.stock||0),0)}
       if(!fd.category_id)fd.category_id=null;
 
       const btn=pfm.querySelector('button[type="submit"]');
@@ -2454,7 +2701,7 @@
       }
     }
 
-    const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.pricing_mode=String(fd.pricing_mode||'FIXED').toUpperCase();let variants;try{variants=fd.variants_json?JSON.parse(fd.variants_json):[]}catch{toast.error('JSON variasi tidak valid.');return}delete fd.variants_json;if(!Array.isArray(variants)){toast.error('Variasi harus berupa array JSON.');return}fd.price=Number(fd.price);fd.stock=Number(fd.stock);if(fd.pricing_mode==='VARIANT'){if(!variants.length){toast.error('Tambahkan minimal satu variasi.');return}fd.price=Math.min(...variants.map(v=>Number(v.price)));fd.stock=variants.reduce((n,v)=>n+Number(v.stock||0),0)}try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');await ownerAction('/api/owner/products/'+id+'/variants',{variants:fd.pricing_mode==='VARIANT'?variants:[]},'PUT','Variasi produk disimpan.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
+    const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.pricing_mode=String(fd.pricing_mode||'FIXED').toUpperCase();let variants=[];if(fd.pricing_mode==='VARIANT'){try{variants=readProductVariants(pem)}catch(err){toast.error(err.message);return}fd.price=Math.min(...variants.map(v=>v.price));fd.stock=variants.reduce((n,v)=>n+v.stock,0)}fd.price=Number(fd.price);fd.stock=Number(fd.stock);try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');await ownerAction('/api/owner/products/'+id+'/variants',{variants:fd.pricing_mode==='VARIANT'?variants:[]},'PUT','Variasi produk disimpan.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
     const cfm=e.target.closest('[data-owner-content-form]');
     if(cfm){
       e.preventDefault();
@@ -2493,6 +2740,14 @@
       const access=String(
         fd.get('access_type')||'PURCHASED'
       ).toUpperCase();
+      const variantId=String(fd.get('variant_id')||'').trim()||null;
+
+      if(variantId&&access!=='PURCHASED'){
+        toast.error(
+          'Konten khusus varian harus menggunakan akses Hanya pembeli.'
+        );
+        return;
+      }
 
       if(!title){
         toast.error(
@@ -2592,6 +2847,7 @@
                 title,
                 description,
                 accessType:access,
+                variantId,
                 isPreview:
                   access==='PREVIEW',
                 sortOrder:0
@@ -2623,6 +2879,7 @@
               is_preview:
                 access==='PREVIEW',
               access_type:access,
+              variant_id:variantId,
               sort_order:0
             },
             'POST',

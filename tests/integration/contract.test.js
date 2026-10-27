@@ -89,8 +89,65 @@ test('BuatQris webhook code scopes providers and guards sandbox/early events',()
 test('public content and preview require PUBLISHED products',()=>{
   const s=fs.readFileSync(path.join(root,'src/services/delivery/delivery.service.js'),'utf8');
   assert.match(s,/p\.status product_status/);
-  assert.match(s,/if\(published\s*&& content\.access_type==='PUBLIC'\)/);
-  assert.match(s,/if\(published\s*&& content\.access_type==='PREVIEW'/);
+  assert.match(s,/if\(!content\.variant_id\s*&&\s*published\s*&&\s*content\.access_type==='PUBLIC'\)/);
+  assert.match(s,/if\(\s*!content\.variant_id\s*&&\s*published\s*&&\s*content\.access_type==='PREVIEW'/);
+});
+
+test('variant-specific content preserves shared legacy access and checks the purchased variant',()=>{
+  const migration=fs.readFileSync(
+    path.join(root,'database/migrations/042_product_content_variants.sql'),
+    'utf8'
+  );
+  const repository=fs.readFileSync(
+    path.join(root,'src/repositories/products.repository.js'),
+    'utf8'
+  );
+  const controller=fs.readFileSync(
+    path.join(root,'src/controllers/api.controller.js'),
+    'utf8'
+  );
+  const routes=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const delivery=fs.readFileSync(
+    path.join(root,'src/services/delivery/delivery.service.js'),
+    'utf8'
+  );
+  const page=fs.readFileSync(
+    path.join(root,'src/controllers/page.controller.js'),
+    'utf8'
+  );
+  const orders=fs.readFileSync(
+    path.join(root,'src/repositories/orders.repository.js'),
+    'utf8'
+  );
+
+  assert.match(migration,/add column if not exists variant_id uuid/i);
+  assert.match(
+    migration,
+    /foreign key\s*\(variant_id,\s*product_id\)\s*references product_variants\(id,\s*product_id\)\s*on delete cascade/i
+  );
+  assert.match(repository,/const variantMap=new Map\(\)/);
+  assert.match(repository,/variantMap\.set\(String\(v\.id\),String\(copiedVariant\.id\)\)/);
+  assert.match(repository,/const activeByLabel=new Map/);
+  assert.match(repository,/pc\.variant_id is null or pc\.variant_id=\$2/);
+  assert.match(controller,/PRODUCT_VARIANT_CONTENT_PRIVATE/);
+  assert.match(controller,/variant_id:variantId/);
+  assert.match(routes,/variant_id:z\.string\(\)\.uuid\(\)\.nullable\(\)\.optional\(\)/);
+  assert.match(routes,/variantId:z\.string\(\)\.uuid\(\)\.nullable\(\)\.optional\(\)/);
+  assert.match(browser,/data-owner-content-variant/);
+  assert.match(browser,/variantId:meta\.variantId\|\|null/);
+  assert.match(browser,/variant_id:variantId/);
+  assert.match(delivery,/oi\.variant_id=\$3/);
+  assert.match(delivery,/e\.status='ACTIVE'/);
+  assert.match(delivery,/!content\.variant_id/);
+  assert.match(page,/productRepo\.contents\(item\.product_id,\s*\{\s*variantId:item\.variant_id\|\|null,\s*forOrder:true\s*\}\)/);
+  assert.match(orders,/'variant_id',oi\.variant_id/);
 });
 test('OWNER role cannot be assigned through the normal role API/repository',()=>{
   const repo=fs.readFileSync(path.join(root,'src/repositories/users.repository.js'),'utf8');
@@ -547,6 +604,38 @@ test('Messages search and composer legacy rules stay removed',()=>{
 test('owner extended sections are routed',()=>{for(const r of ['roles','messages','storage','login-history','system','top-orders']) assert.ok(page.includes(`'${r}'`),r)});
 test('explicit owner URL routes exist',()=>{assert.match(route,/owner\.get\('\/products\/create'/);assert.match(route,/ownerApi\.get\('\/top-orders'/)});
 test('owner order fulfillment status API is routed',()=>{assert.match(route,/ownerApi\.post\('\/orders\/:id\/status'/);assert.match(fs.readFileSync(path.join(root,'src/services/order/order.service.js'),'utf8'),/ownerUpdateStatus/)});
+test('Owner product variants use structured inputs instead of JSON text',()=>{
+  const pages=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const routes=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+
+  assert.match(pages,/function productVariantEditorMarkup/);
+  assert.match(pages,/function readProductVariants/);
+  assert.match(pages,/data-product-variant-add/);
+  assert.match(pages,/data-product-variant-remove/);
+  assert.match(pages,/productVariantEditorMarkup\(d\.variants\|\|\[\]\)/);
+  assert.match(pages,/variants=readProductVariants\(pfm\)/);
+  assert.match(pages,/variants=readProductVariants\(pem\)/);
+  assert.doesNotMatch(pages,/variants_json/);
+  assert.ok(
+    pages.includes("'/api/owner/products/'+created.id+'/variants'"),
+    'Product creation must preserve the existing variants endpoint.'
+  );
+  assert.ok(
+    pages.includes("'/api/owner/products/'+id+'/variants'"),
+    'Product edit must preserve the existing variants endpoint.'
+  );
+  assert.ok(
+    routes.includes("ownerApi.put('/products/:id/variants'"),
+    'The existing API route must remain canonical.'
+  );
+});
+
 test('variant saves are no-op when unchanged and preserve fixed cart items',()=>{
   const repository=fs.readFileSync(path.join(root,'src/repositories/products.repository.js'),'utf8');
   const saveStart=repository.indexOf('async function saveVariants(productId,variants){');

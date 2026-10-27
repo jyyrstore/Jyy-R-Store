@@ -280,9 +280,21 @@ async function duplicate(id){
       ]
     )).rows[0];
 
+      const variantMap=new Map();
       if(p.pricing_mode==='VARIANT'){
-        const sourceVariants=(await client.query('select label,amount,price,stock,sort_order from product_variants where product_id=$1 and is_active=true order by sort_order,created_at',[id])).rows;
-        for(const v of sourceVariants){await client.query('insert into product_variants(product_id,label,amount,price,stock,sort_order,is_active) values($1,$2,$3,$4,$5,$6,true)',[copy.id,v.label,v.amount,v.price,v.stock,v.sort_order]);}
+        const sourceVariants=(await client.query(
+          'select id,label,amount,price,stock,sort_order from product_variants where product_id=$1 and is_active=true order by sort_order,created_at',
+          [id]
+        )).rows;
+
+        for(const v of sourceVariants){
+          const copiedVariant=(await client.query(
+            'insert into product_variants(product_id,label,amount,price,stock,sort_order,is_active) values($1,$2,$3,$4,$5,$6,true) returning id',
+            [copy.id,v.label,v.amount,v.price,v.stock,v.sort_order]
+          )).rows[0];
+
+          variantMap.set(String(v.id),String(copiedVariant.id));
+        }
       }
 
       const env=loadEnv();
@@ -317,6 +329,12 @@ async function duplicate(id){
       )).rows;
 
       for(const c of contents){
+        // A copied product has new variant IDs. Never turn content tied
+        // to a retired variant into shared content by accident.
+        if(c.variant_id&&!variantMap.has(String(c.variant_id))){
+          continue;
+        }
+
         let storagePath=null;
 
         if(c.storage_path){
@@ -357,9 +375,10 @@ async function duplicate(id){
         }
 
         await client.query(
-          'insert into product_contents(product_id,type,title,description,text_content,url,storage_path,mime_type,file_size,sort_order,is_preview,access_type) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
+          'insert into product_contents(product_id,variant_id,type,title,description,text_content,url,storage_path,mime_type,file_size,sort_order,is_preview,access_type) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
           [
             copy.id,
+            c.variant_id ? variantMap.get(String(c.variant_id)) : null,
             c.type,
             c.title,
             c.description,
@@ -441,20 +460,109 @@ async function saveVariants(productId,variants){
     if(unchanged) return active;
     const pending=(await client.query('select 1 from product_variants where product_id=$1 and reserved_stock>0 limit 1',[productId])).rowCount;
     if(pending) throw badRequest('PRODUCT_VARIANT_RESERVED','Variasi tidak dapat diubah selama stok sedang direservasi oleh pembayaran pending.');
-    await client.query('update product_variants set is_active=false,updated_at=now() where product_id=$1 and is_active=true',[productId]);
-    await client.query('delete from cart_items where product_id=$1 and variant_id is not null',[productId]);
+
+    // Reuse the current ID when the variant label is unchanged. This keeps
+    // content assignments and existing order references attached to the
+    // same logical variant when only price, stock, or order changes.
+    const activeByLabel=new Map(
+      active.map(row=>[
+        String(row.label).toLocaleLowerCase('id-ID'),
+        row
+      ])
+    );
+
+    await client.query(
+      'update product_variants set is_active=false,updated_at=now() where product_id=$1 and is_active=true',
+      [productId]
+    );
+    await client.query(
+      'delete from cart_items where product_id=$1 and variant_id is not null',
+      [productId]
+    );
+
     for(const [index,v] of variants.entries()){
-      await client.query(
-        'insert into product_variants(product_id,label,amount,price,stock,reserved_stock,is_active,sort_order) values($1,$2,$3,$4,$5,0,true,$6)',
-        [productId,String(v.label).trim(),v.amount==null||v.amount===''?null:Number(v.amount),Number(v.price),Number(v.stock),Number.isSafeInteger(Number(v.sort_order))&&Number(v.sort_order)>=0?Number(v.sort_order):index]
-      );
+      const label=String(v.label).trim();
+      const amount=v.amount==null||v.amount===''?null:Number(v.amount);
+      const sortOrder=Number.isSafeInteger(Number(v.sort_order))&&Number(v.sort_order)>=0?Number(v.sort_order):index;
+      const existing=activeByLabel.get(label.toLocaleLowerCase('id-ID'));
+
+      if(existing){
+        await client.query(
+          `update product_variants
+           set label=$2,amount=$3,price=$4,stock=$5,
+               is_active=true,sort_order=$6,updated_at=now()
+           where id=$1 and product_id=$7`,
+          [
+            existing.id,
+            label,
+            amount,
+            Number(v.price),
+            Number(v.stock),
+            sortOrder,
+            productId
+          ]
+        );
+      }else{
+        await client.query(
+          'insert into product_variants(product_id,label,amount,price,stock,reserved_stock,is_active,sort_order) values($1,$2,$3,$4,$5,0,true,$6)',
+          [
+            productId,
+            label,
+            amount,
+            Number(v.price),
+            Number(v.stock),
+            sortOrder
+          ]
+        );
+      }
     }
-    return (await client.query('select id,product_id,label,amount,price,stock,reserved_stock,is_active,sort_order,created_at,updated_at from product_variants where product_id=$1 and is_active=true order by sort_order,created_at,id',[productId])).rows;
+
+    return (await client.query(
+      'select id,product_id,label,amount,price,stock,reserved_stock,is_active,sort_order,created_at,updated_at from product_variants where product_id=$1 and is_active=true order by sort_order,created_at,id',
+      [productId]
+    )).rows;
   });
 }
 
-async function contents(productId){ return (await query('select * from product_contents where product_id=$1 order by sort_order,created_at',[productId])).rows; }
-async function addContent(data){ return (await query('insert into product_contents(product_id,type,title,description,text_content,url,storage_path,mime_type,file_size,sort_order,is_preview,access_type) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning *',[data.product_id,data.type,data.title,data.description||null,data.text_content||null,data.url||null,data.storage_path||null,data.mime_type||null,data.file_size||null,data.sort_order||0,!!data.is_preview,data.access_type||'PURCHASED'])).rows[0]; }
+async function contents(productId,options={}){
+  const forOrder=options.forOrder===true;
+  const args=[productId];
+  const scope=forOrder
+    ? 'and (pc.variant_id is null or pc.variant_id=$2)'
+    : '';
+
+  if(forOrder) args.push(options.variantId||null);
+
+  return (await query(
+    `select pc.*,pv.label as variant_label,pv.is_active as variant_is_active
+     from product_contents pc
+     left join product_variants pv on pv.id=pc.variant_id
+     where pc.product_id=$1 ${scope}
+     order by pc.sort_order,pc.created_at`,
+    args
+  )).rows;
+}
+
+async function addContent(data){
+  return (await query(
+    'insert into product_contents(product_id,variant_id,type,title,description,text_content,url,storage_path,mime_type,file_size,sort_order,is_preview,access_type) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) returning *',
+    [
+      data.product_id,
+      data.variant_id||null,
+      data.type,
+      data.title,
+      data.description||null,
+      data.text_content||null,
+      data.url||null,
+      data.storage_path||null,
+      data.mime_type||null,
+      data.file_size||null,
+      data.sort_order||0,
+      !!data.is_preview,
+      data.access_type||'PURCHASED'
+    ]
+  )).rows[0];
+}
 async function updateContent(id,data){ return (await query('update product_contents set title=$2,description=$3,text_content=$4,url=$5,sort_order=$6,is_preview=$7,access_type=$8,updated_at=now() where id=$1 returning *',[id,data.title,data.description||null,data.text_content||null,data.url||null,data.sort_order||0,!!data.is_preview,data.access_type||'PURCHASED'])).rows[0]; }
 async function deleteContent(id,productId=null){
   if(productId){

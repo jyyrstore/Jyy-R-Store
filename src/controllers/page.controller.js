@@ -344,7 +344,10 @@ async function orderDetail(req,res,next){
           reviewViewer,
           product
         ]=await Promise.all([
-          productRepo.contents(item.product_id),
+          productRepo.contents(item.product_id,{
+            variantId:item.variant_id||null,
+            forOrder:true
+          }),
           accessControl.canAccess(
             req.user.id,
             item.product_id
@@ -362,8 +365,8 @@ async function orderDetail(req,res,next){
         const mappedContents=await Promise.all(
           contents.map(async content=>{
             const allowed=
-              (published && content.access_type==='PUBLIC') ||
-              (published && content.access_type==='PREVIEW' && content.is_preview) ||
+              (!content.variant_id && published && content.access_type==='PUBLIC') ||
+              (!content.variant_id && published && content.access_type==='PREVIEW' && content.is_preview) ||
               owned;
 
             let preview_url=null;

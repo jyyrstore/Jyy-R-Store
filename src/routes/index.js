@@ -42,6 +42,7 @@ const ownerFaqSchema=z.object({
 });
 const ownerProductContentSchema=z.object({
   type:z.enum(['FILE','IMAGE','VIDEO','AUDIO','TEXT','LINK']),
+  variant_id:z.string().uuid().nullable().optional(),
   title:z.string().trim().min(1).max(160),
   description:z.string().max(2000).optional(),
   text_content:z.string().max(50000).optional(),
@@ -434,7 +435,8 @@ ownerApi.post('/products/:id/upload-complete',validate(z.object({
   description:z.string().max(2000).optional(),
   sortOrder:z.coerce.number().int().min(0).max(10000).optional(),
   isPreview:zBool.optional(),
-  accessType:z.enum(['PUBLIC','PREVIEW','PURCHASED']).optional()
+  accessType:z.enum(['PUBLIC','PREVIEW','PURCHASED']).optional(),
+  variantId:z.string().uuid().nullable().optional()
 })),asyncHandler(api.ownerUploadComplete));
 ownerApi.get('/categories',asyncHandler(api.ownerController.categories));
 ownerApi.post('/categories',validate(ownerCategorySchema),asyncHandler(api.ownerController.categoryCreate));

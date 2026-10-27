@@ -14,17 +14,92 @@ async function makeUrl(content){
 }
 async function access(userId,contentId,context={}){
   const {ip=null,userAgent=null}=context||{};
-  const content=(await query('select pc.*,p.slug,p.name,p.id product_id,p.status product_status from product_contents pc join products p on p.id=pc.product_id where pc.id=$1',[contentId])).rows[0];
+  const content=(await query(
+    'select pc.*,p.slug,p.name,p.id product_id,p.status product_status from product_contents pc join products p on p.id=pc.product_id where pc.id=$1',
+    [contentId]
+  )).rows[0];
   if(!content) throw notFound('Content not found.');
+
   const published=String(content.product_status||'').toUpperCase()==='PUBLISHED';
-  if(published && content.access_type==='PUBLIC') return {content,url:await makeUrl(content),purchased:true};
-  if(published && content.access_type==='PREVIEW' && content.is_preview) return {content,url:await makeUrl(content),purchased:false};
-  const ent=await delivery.entitlement(userId,content.product_id);
-  if(!ent) throw forbidden('You do not own this content.');
-  const order=(await query("select o.id,o.status from orders o where o.id=$1 and o.user_id=$2",[ent.order_id,userId])).rows[0];
-  if(!order || !['PAID','PROCESSING','COMPLETED'].includes(order.status)) throw forbidden('Payment is not confirmed.');
+
+  // Legacy/public product content remains accessible as before. Variant-bound
+  // content always requires an active entitlement for the matching order item.
+  if(!content.variant_id && published && content.access_type==='PUBLIC'){
+    return {
+      content,
+      url:await makeUrl(content),
+      purchased:true
+    };
+  }
+
+  if(
+    !content.variant_id &&
+    published &&
+    content.access_type==='PREVIEW' &&
+    content.is_preview
+  ){
+    return {
+      content,
+      url:await makeUrl(content),
+      purchased:false
+    };
+  }
+
+  let order;
+
+  if(content.variant_id){
+    order=(await query(
+      `select o.id,o.status
+         from orders o
+         join order_items oi
+           on oi.order_id=o.id
+          and oi.product_id=$2
+          and oi.variant_id=$3
+         join entitlements e
+           on e.order_id=o.id
+          and e.user_id=o.user_id
+          and e.product_id=oi.product_id
+          and e.status='ACTIVE'
+        where o.user_id=$1
+          and o.status in ('PAID','PROCESSING','COMPLETED')
+        order by o.paid_at desc nulls last,o.created_at desc
+        limit 1`,
+      [userId,content.product_id,content.variant_id]
+    )).rows[0]||null;
+
+    if(!order){
+      throw forbidden('You do not own this variant content.');
+    }
+  }else{
+    const ent=await delivery.entitlement(userId,content.product_id);
+    if(!ent) throw forbidden('You do not own this content.');
+
+    order=(await query(
+      "select o.id,o.status from orders o where o.id=$1 and o.user_id=$2",
+      [ent.order_id,userId]
+    )).rows[0];
+
+    if(!order||!['PAID','PROCESSING','COMPLETED'].includes(order.status)){
+      throw forbidden('Payment is not confirmed.');
+    }
+  }
+
   const url=await makeUrl(content);
-  if(['FILE','IMAGE','VIDEO','AUDIO'].includes(content.type)) await delivery.logDownload({user_id:userId,content_id:content.id,order_id:ent.order_id,ip,user_agent:userAgent},null);
-  return {content,url,purchased:true};
+
+  if(['FILE','IMAGE','VIDEO','AUDIO'].includes(content.type)){
+    await delivery.logDownload({
+      user_id:userId,
+      content_id:content.id,
+      order_id:order.id,
+      ip,
+      user_agent:userAgent
+    },null);
+  }
+
+  return {
+    content,
+    url,
+    purchased:true
+  };
 }
 module.exports={access};

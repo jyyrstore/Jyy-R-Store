@@ -501,16 +501,51 @@ const ownerController={
 
    return ok(res,p);
  },
- productPublish:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat dipublish.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});if(!current.thumbnail_path)throw Object.assign(new Error('Tambahkan thumbnail sebelum publish produk.'),{status:400,code:'PRODUCT_THUMBNAIL_REQUIRED',expose:true});const contents=await repo.contents(req.params.id);if(!contents.length)throw Object.assign(new Error('Tambahkan minimal satu content sebelum publish produk.'),{status:400,code:'PRODUCT_CONTENT_REQUIRED',expose:true});const invalid=contents.find(c=>(['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)&&!c.storage_path)||(c.type==='TEXT'&&!String(c.text_content||'').trim())||(c.type==='LINK'&&!String(c.url||'').trim()));if(invalid)throw Object.assign(new Error('Ada content yang belum lengkap. Pastikan file, text, atau URL sudah benar.'),{status:400,code:'PRODUCT_CONTENT_INVALID',expose:true});if(current.pricing_mode==='VARIANT'&&!(await repo.listVariants(req.params.id)).length)throw Object.assign(new Error('Tambahkan minimal satu variasi aktif sebelum publish produk.'),{status:400,code:'PRODUCT_VARIANT_REQUIRED',expose:true});const p=await product.update(req.params.id,{status:'PUBLISHED'});await recordOwnerAudit(req,{action:'PUBLISH_PRODUCT',entityType:'product',entityId:p.id,metadata:{contentCount:contents.length}});return ok(res,p)},
+ productPublish:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat dipublish.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});if(!current.thumbnail_path)throw Object.assign(new Error('Tambahkan thumbnail sebelum publish produk.'),{status:400,code:'PRODUCT_THUMBNAIL_REQUIRED',expose:true});const contents=(await repo.contents(req.params.id)).filter(c=>!c.variant_id||c.variant_is_active===true);if(!contents.length)throw Object.assign(new Error('Tambahkan minimal satu content sebelum publish produk.'),{status:400,code:'PRODUCT_CONTENT_REQUIRED',expose:true});const invalid=contents.find(c=>(['FILE','IMAGE','VIDEO','AUDIO'].includes(c.type)&&!c.storage_path)||(c.type==='TEXT'&&!String(c.text_content||'').trim())||(c.type==='LINK'&&!String(c.url||'').trim()));if(invalid)throw Object.assign(new Error('Ada content yang belum lengkap. Pastikan file, text, atau URL sudah benar.'),{status:400,code:'PRODUCT_CONTENT_INVALID',expose:true});if(current.pricing_mode==='VARIANT'&&!(await repo.listVariants(req.params.id)).length)throw Object.assign(new Error('Tambahkan minimal satu variasi aktif sebelum publish produk.'),{status:400,code:'PRODUCT_VARIANT_REQUIRED',expose:true});const p=await product.update(req.params.id,{status:'PUBLISHED'});await recordOwnerAudit(req,{action:'PUBLISH_PRODUCT',entityType:'product',entityId:p.id,metadata:{contentCount:contents.length}});return ok(res,p)},
  productContent:async(req,res)=>{const repo=require('../repositories/products.repository');const current=await repo.findById(req.params.id);if(!current)throw Object.assign(new Error('Product not found.'),{status:404,code:'PRODUCT_NOT_FOUND',expose:true});if(current.status==='ARCHIVED')throw Object.assign(new Error('Produk ARCHIVED tidak dapat diubah.'),{status:400,code:'PRODUCT_ARCHIVED',expose:true});const accessType=
   String(req.body.access_type||'PURCHASED').toUpperCase();
+const variantId=String(req.body.variant_id||'').trim()||null;
+
+if(variantId){
+  const variant=await repo.findVariant(req.params.id,variantId);
+
+  if(!variant){
+    throw Object.assign(
+      new Error('Varian produk tidak ditemukan atau tidak aktif.'),
+      {status:400,code:'PRODUCT_VARIANT_INVALID',expose:true}
+    );
+  }
+
+  if(accessType!=='PURCHASED'){
+    throw Object.assign(
+      new Error('Konten khusus varian hanya boleh diatur sebagai Hanya pembeli.'),
+      {status:400,code:'PRODUCT_VARIANT_CONTENT_PRIVATE',expose:true}
+    );
+  }
+}
 
 const p=await repo.addContent({
   ...req.body,
   product_id:req.params.id,
+  variant_id:variantId,
   access_type:accessType,
   is_preview:accessType==='PREVIEW'
-});await recordOwnerAudit(req,{action:'CREATE_PRODUCT_CONTENT',entityType:'product_content',entityId:p.id,metadata:{productId:req.params.id,type:p.type}});return ok(res,p,201)},productContents:async(req,res)=>ok(res,await require('../repositories/products.repository').contents(req.params.id)),
+});
+await recordOwnerAudit(req,{
+  action:'CREATE_PRODUCT_CONTENT',
+  entityType:'product_content',
+  entityId:p.id,
+  metadata:{productId:req.params.id,type:p.type,variantId}
+});
+return ok(res,p,201)},
+ productContents:async(req,res)=>{
+  const repo=require('../repositories/products.repository');
+  const [items,variants]=await Promise.all([
+    repo.contents(req.params.id),
+    repo.listVariants(req.params.id)
+  ]);
+  return ok(res,{items,variants});
+},
  productContentDelete:async(req,res)=>{const repo=require('../repositories/products.repository');const deleted=await repo.deleteContent(req.params.contentId,req.params.id);if(!deleted)throw Object.assign(new Error('Content tidak ditemukan pada product tersebut.'),{status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true});await removeUnusedProductStorage(deleted.storage_path,loadEnv().PRIVATE_PRODUCT_BUCKET);await recordOwnerAudit(req,{action:'DELETE_PRODUCT_CONTENT',entityType:'product_content',entityId:req.params.contentId,metadata:{productId:req.params.id}});return ok(res,{})},
  categories:async(req,res)=>ok(res,await categories.list(false)),
  categoryCreate:async(req,res)=>{
@@ -896,8 +931,30 @@ async function ownerUploadComplete(req,res){
       return ok(res,{product:updated,path});
     }
 
+    const variantId=String(req.body.variantId||'').trim()||null;
+    const accessType=String(req.body.accessType||'PURCHASED').toUpperCase();
+
+    if(variantId){
+      const variant=await repo.findVariant(productId,variantId);
+
+      if(!variant){
+        throw Object.assign(
+          new Error('Varian produk tidak ditemukan atau tidak aktif.'),
+          {status:400,code:'PRODUCT_VARIANT_INVALID',expose:true}
+        );
+      }
+
+      if(accessType!=='PURCHASED'){
+        throw Object.assign(
+          new Error('Konten khusus varian hanya boleh diatur sebagai Hanya pembeli.'),
+          {status:400,code:'PRODUCT_VARIANT_CONTENT_PRIVATE',expose:true}
+        );
+      }
+    }
+
     const content=await repo.addContent({
       product_id:productId,
+      variant_id:variantId,
       type:contentType,
       title:req.body.title||descriptor.originalName,
       description:req.body.description||null,
@@ -905,10 +962,8 @@ async function ownerUploadComplete(req,res){
       mime_type:descriptor.mime,
       file_size:fileSize,
       sort_order:Number(req.body.sortOrder||0),
-      is_preview:
-        String(req.body.accessType||'PURCHASED').toUpperCase()==='PREVIEW',
-      access_type:
-        String(req.body.accessType||'PURCHASED').toUpperCase()
+      is_preview:accessType==='PREVIEW',
+      access_type:accessType
     });
 
     await recordOwnerAudit(req,{action:'CREATE_PRODUCT_CONTENT_UPLOAD',
