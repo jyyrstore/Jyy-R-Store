@@ -1192,6 +1192,212 @@ async function recordWebhookEvent(client,{
   );
   return true;
 }
+async function logDepositReconciliationRequired(
+  client,{payment,deposit=null,reason,source}
+){
+  await client.query(
+    'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
+    [
+      'PAYMENT_DEPOSIT_RECONCILIATION_REQUIRED',
+      deposit?'deposit':'payment',
+      deposit?.id||payment.id,
+      {
+        paymentId:payment.id,
+        depositId:deposit?.id||null,
+        provider:payment.provider,
+        paymentStatus:payment.status,
+        depositStatus:deposit?.status||null,
+        reason,
+        source
+      }
+    ]
+  );
+}
+
+async function settlePaidDeposit(
+  client,{payment,deposit,reference,source='WEBHOOK'}
+){
+  if(!deposit){
+    await logDepositReconciliationRequired(client,{
+      payment,reason:'DEPOSIT_NOT_FOUND',source
+    });
+    return {
+      credited:false,
+      reconciliationRequired:true,
+      reason:'DEPOSIT_NOT_FOUND'
+    };
+  }
+
+  const previousStatus=String(deposit.status||'').toUpperCase();
+
+  if(previousStatus==='SUCCESS'){
+    return {
+      credited:false,
+      duplicate:true,
+      depositId:deposit.id
+    };
+  }
+
+  if(!['PENDING','FAILED','EXPIRED'].includes(previousStatus)){
+    await logDepositReconciliationRequired(client,{
+      payment,deposit,
+      reason:'DEPOSIT_STATUS_NOT_CREDITABLE',
+      source
+    });
+    return {
+      credited:false,
+      reconciliationRequired:true,
+      reason:'DEPOSIT_STATUS_NOT_CREDITABLE',
+      depositId:deposit.id
+    };
+  }
+
+  const amount=Number(deposit.amount);
+  const paymentAmount=Number(payment.amount);
+
+  if(
+    !Number.isSafeInteger(amount) ||
+    amount<=0 ||
+    !Number.isSafeInteger(paymentAmount) ||
+    paymentAmount!==amount
+  ){
+    await logDepositReconciliationRequired(client,{
+      payment,deposit,
+      reason:'DEPOSIT_PAYMENT_AMOUNT_MISMATCH',
+      source
+    });
+    return {
+      credited:false,
+      reconciliationRequired:true,
+      reason:'DEPOSIT_PAYMENT_AMOUNT_MISMATCH',
+      depositId:deposit.id
+    };
+  }
+
+  await client.query(
+    'insert into wallets(user_id) values($1) on conflict(user_id) do nothing',
+    [payment.user_id]
+  );
+
+  const wallet=(await client.query(
+    'select * from wallets where user_id=$1 for update',
+    [payment.user_id]
+  )).rows[0];
+
+  const before=Number(wallet?.balance);
+  const after=before+amount;
+
+  if(
+    !wallet ||
+    !Number.isSafeInteger(before) ||
+    before<0 ||
+    !Number.isSafeInteger(after)
+  ){
+    await logDepositReconciliationRequired(client,{
+      payment,deposit,
+      reason:'WALLET_BALANCE_OUT_OF_SAFE_RANGE',
+      source
+    });
+    return {
+      credited:false,
+      reconciliationRequired:true,
+      reason:'WALLET_BALANCE_OUT_OF_SAFE_RANGE',
+      depositId:deposit.id
+    };
+  }
+
+  const updatedDeposit=(await client.query(
+    `update deposits
+     set status='SUCCESS',
+         webhook_status='PAID',
+         paid_at=coalesce(paid_at,$2,now()),
+         updated_at=now()
+     where id=$1
+       and status in ('PENDING','FAILED','EXPIRED')
+     returning id`,
+    [deposit.id,payment.paid_at||null]
+  )).rows[0];
+
+  if(!updatedDeposit){
+    await logDepositReconciliationRequired(client,{
+      payment,deposit,
+      reason:'DEPOSIT_STATE_CHANGED',
+      source
+    });
+    return {
+      credited:false,
+      reconciliationRequired:true,
+      reason:'DEPOSIT_STATE_CHANGED',
+      depositId:deposit.id
+    };
+  }
+
+  await client.query(
+    'update wallets set balance=$2,updated_at=now() where user_id=$1',
+    [payment.user_id,after]
+  );
+
+  const depositReference=
+    deposit.reference||reference||payment.reference||deposit.id;
+
+  await client.query(
+    `insert into wallet_transactions(
+       wallet_id,user_id,type,amount,balance_before,balance_after,
+       reference,status,metadata
+     )
+     values($1,$2,'DEPOSIT',$3,$4,$5,$6,'COMPLETED',$7)`,
+    [
+      wallet.id,
+      payment.user_id,
+      amount,
+      before,
+      after,
+      depositReference,
+      JSON.stringify({
+        depositId:deposit.id,
+        paymentId:payment.id,
+        reconciliationSource:source,
+        previousDepositStatus:previousStatus
+      })
+    ]
+  );
+
+  await notifications.notify(
+    payment.user_id,
+    {
+      type:'DEPOSIT',
+      title:'Deposit berhasil',
+      body:`Deposit ${depositReference} sebesar Rp${amount.toLocaleString('id-ID')} berhasil ditambahkan.`,
+      link:'/deposit'
+    },
+    client
+  );
+
+  if(previousStatus!=='PENDING'||source!=='WEBHOOK'){
+    await client.query(
+      'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
+      [
+        'PAYMENT_DEPOSIT_RECONCILED',
+        'deposit',
+        deposit.id,
+        {
+          paymentId:payment.id,
+          source,
+          previousDepositStatus:previousStatus,
+          amount
+        }
+      ]
+    );
+  }
+
+  return {
+    credited:true,
+    depositId:deposit.id,
+    amount,
+    previousStatus
+  };
+}
+
 async function processWebhook(rawBody,signature,payload,requestedProvider){
   const providerName=String(
     requestedProvider||loadEnv().PAYMENT_PROVIDER||'generic-json'
@@ -1551,13 +1757,63 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
     const current=String(payment.status||'PENDING').toUpperCase();
     const allowed=PAYMENT_TRANSITIONS[current];
 
+    // Deposit memakai urutan lock PAYMENT -> DEPOSIT, sama dengan
+    // expiry dan rekonsiliasi. Jangan menandai event sukses selesai jika
+    // deposit tidak dapat ditemukan atau sudah berada pada status refund.
+    const deposit=payment.order_id
+      ? null
+      : (
+          (await client.query(
+            'select * from deposits where payment_id=$1 and user_id=$2 for update',
+            [payment.id,payment.user_id]
+          )).rows[0]||null
+        );
+
+    const depositStatus=String(deposit?.status||'').toUpperCase();
+    const lateDepositStatuses=['PENDING','FAILED','EXPIRED','SUCCESS'];
+
+    if(
+      !payment.order_id &&
+      next==='PAID' &&
+      (!deposit||!lateDepositStatuses.includes(depositStatus))
+    ){
+      const reason=deposit
+        ? 'DEPOSIT_STATUS_NOT_CREDITABLE'
+        : 'DEPOSIT_NOT_FOUND';
+
+      await logDepositReconciliationRequired(client,{
+        payment,deposit,reason,source:'WEBHOOK'
+      });
+
+      return {
+        duplicate:false,
+        reconciliationRequired:true,
+        reason,
+        paymentId:payment.id,
+        paymentStatus:current,
+        depositId:deposit?.id||null,
+        depositStatus:depositStatus||null
+      };
+    }
+
+    const lateDepositPayment=(
+      next==='PAID' &&
+      !payment.order_id &&
+      ['FAILED','EXPIRED','CANCELLED'].includes(current) &&
+      lateDepositStatuses.includes(depositStatus)
+    );
+
     const lateOrderPayment=(
       next==='PAID' &&
       Boolean(payment.order_id) &&
       ['FAILED','EXPIRED','CANCELLED'].includes(current)
     );
 
-    if((!allowed || !allowed.has(next)) && !lateOrderPayment){
+    if(
+      (!allowed || !allowed.has(next)) &&
+      !lateOrderPayment &&
+      !lateDepositPayment
+    ){
       await client.query(
         'insert into activity_logs(action,entity_type,entity_id,metadata) values($1,$2,$3,$4)',
         [
@@ -1588,14 +1844,29 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
     );
 
     if(!payment.order_id){
-      const dep=(await client.query('select * from deposits where payment_id=$1 for update',[payment.id])).rows[0];
-      if(dep && next==='PAID' && dep.status==='PENDING'){
-        const wallet=(await client.query('select * from wallets where user_id=$1 for update',[payment.user_id])).rows[0] || (await client.query('insert into wallets(user_id) values($1) returning *',[payment.user_id])).rows[0];
-        const before=Number(wallet.balance), after=before+Number(dep.amount);
-        await client.query("update wallets set balance=$2,updated_at=now() where user_id=$1",[payment.user_id,after]);
-        await client.query("insert into wallet_transactions(wallet_id,user_id,type,amount,balance_before,balance_after,reference,status) values($1,$2,'DEPOSIT',$3,$4,$5,$6,'COMPLETED')",[wallet.id,payment.user_id,dep.amount,before,after,dep.reference||parsed.reference]);
-        await client.query("update deposits set status='SUCCESS',webhook_status='PAID',paid_at=now(),updated_at=now() where id=$1",[dep.id]);
-        await notifications.notify(payment.user_id,{type:'DEPOSIT',title:'Deposit berhasil',body:`Deposit ${dep.reference||parsed.reference} sebesar Rp${Number(dep.amount).toLocaleString('id-ID')} berhasil ditambahkan.`,link:'/deposit'},client);
+      const dep=deposit;
+      if(
+        dep &&
+        next==='PAID' &&
+        ['PENDING','FAILED','EXPIRED'].includes(String(dep.status||'').toUpperCase())
+      ){
+        const settlement=await settlePaidDeposit(client,{
+          payment,
+          deposit:dep,
+          reference:parsed.reference,
+          source:'WEBHOOK'
+        });
+
+        if(settlement.reconciliationRequired){
+          return {
+            duplicate:false,
+            reconciliationRequired:true,
+            reason:settlement.reason,
+            paymentId:payment.id,
+            paymentStatus:next,
+            depositId:dep.id
+          };
+        }
       } else if(dep && ['FAILED','EXPIRED','CANCELLED','REFUNDED'].includes(next) && dep.status==='PENDING'){
         const depStatus=next==='REFUNDED'?'REFUNDED':next;
         await client.query('update deposits set status=$2,webhook_status=$3,updated_at=now() where id=$1',[dep.id,depStatus,next]);
@@ -1763,4 +2034,133 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
 
   return result;
 }
-module.exports={assertProviderReady,createForOrder,getStatus,simulateSandboxPayment,reconcileBuatQrisStatus,reconcilePendingBuatQris,processWebhook};
+async function reconcilePaidDeposits({limit=50}={}){
+  const cap=Math.min(100,Math.max(1,Number(limit)||50));
+
+  // PAID + deposit belum selesai mencakup webhook lama yang sudah
+  // mencatat payment PAID tetapi tidak sempat mengkredit wallet.
+  // Activity log juga menandai callback PAID terverifikasi yang dahulu
+  // diabaikan karena payment sudah EXPIRED/FAILED/CANCELLED.
+  const candidates=(await query(
+    `select p.id
+       from payments p
+       join deposits d
+         on d.payment_id=p.id
+        and d.user_id=p.user_id
+      where p.order_id is null
+        and d.status in ('PENDING','FAILED','EXPIRED')
+        and (
+          p.status='PAID'
+          or exists(
+            select 1
+              from activity_logs al
+             where al.action='PAYMENT_WEBHOOK_IGNORED'
+               and al.entity_type='payment'
+               and al.entity_id=p.id
+               and al.metadata->>'requestedStatus'='PAID'
+          )
+        )
+      order by p.updated_at asc
+      limit $1`,
+    [cap]
+  )).rows;
+
+  let credited=0;
+  let stillPending=0;
+  let errors=0;
+
+  for(const candidate of candidates){
+    try{
+      const result=await withTransaction(async(client)=>{
+        const payment=(await client.query(
+          'select * from payments where id=$1 for update',
+          [candidate.id]
+        )).rows[0];
+
+        if(!payment||payment.order_id)return null;
+
+        const currentStatus=String(payment.status||'').toUpperCase();
+
+        const lateSuccessSignal=currentStatus!=='PAID'&&Boolean(
+          (await client.query(
+            `select 1
+               from activity_logs
+              where action='PAYMENT_WEBHOOK_IGNORED'
+                and entity_type='payment'
+                and entity_id=$1
+                and metadata->>'requestedStatus'='PAID'
+              limit 1`,
+            [payment.id]
+          )).rowCount
+        );
+
+        if(currentStatus!=='PAID'&&!lateSuccessSignal)return null;
+
+        const deposit=(await client.query(
+          `select *
+             from deposits
+            where payment_id=$1
+              and user_id=$2
+            for update`,
+          [payment.id,payment.user_id]
+        )).rows[0];
+
+        if(
+          !deposit ||
+          !['PENDING','FAILED','EXPIRED'].includes(
+            String(deposit.status||'').toUpperCase()
+          )
+        ){
+          return null;
+        }
+
+        const settlement=await settlePaidDeposit(client,{
+          payment,
+          deposit,
+          reference:payment.reference,
+          source:'CRON_RECONCILIATION'
+        });
+
+        if(settlement.credited&&currentStatus!=='PAID'){
+          await client.query(
+            "update payments set status='PAID',paid_at=coalesce(paid_at,now()),updated_at=now() where id=$1",
+            [payment.id]
+          );
+        }
+
+        return settlement;
+      });
+
+      if(result?.credited){
+        credited++;
+      }else if(result?.reconciliationRequired){
+        stillPending++;
+      }
+    }catch(error){
+      errors++;
+      log('warn','paid_deposit_reconciliation_failed',{
+        paymentId:String(candidate.id),
+        code:String(error?.code||'RECONCILIATION_FAILED').slice(0,80),
+        message:String(error?.message||error).slice(0,180)
+      });
+    }
+  }
+
+  return {
+    scanned:candidates.length,
+    credited,
+    stillPending,
+    errors
+  };
+}
+
+module.exports={
+  assertProviderReady,
+  createForOrder,
+  getStatus,
+  simulateSandboxPayment,
+  reconcileBuatQrisStatus,
+  reconcilePendingBuatQris,
+  reconcilePaidDeposits,
+  processWebhook
+};

@@ -334,6 +334,23 @@ async function expire(req, res) {
     paymentReconciliation.errors = 1;
   }
 
+  let depositReconciliation={
+    scanned:0,
+    credited:0,
+    stillPending:0,
+    errors:0
+  };
+
+  try{
+    depositReconciliation=
+      await paymentService.reconcilePaidDeposits({limit:50});
+  }catch(error){
+    log('warn','paid_deposit_reconciliation_failed',{
+      message:String(error?.message||error).slice(0,180)
+    });
+    depositReconciliation.errors=1;
+  }
+
   const [payments, deposits] = await Promise.all([
     paymentExpiration.run(),
     depositExpiration.run()
@@ -365,6 +382,7 @@ async function expire(req, res) {
   return res.json({
     success: true,
     paymentReconciliation,
+    depositReconciliation,
     payments,
     deposits,
     productUploads,

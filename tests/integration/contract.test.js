@@ -123,6 +123,57 @@ test('deposit idempotency is scoped and lookup is user-bound',()=>{
   assert.match(s,/paymentService\.assertProviderReady\(\)/);
   assert.match(s,/where user_id=\$1 and \(idempotency_key=\$2/);
 });
+test('paid deposit webhook retries and expiry races are reconciled idempotently',()=>{
+  const payment=fs.readFileSync(
+    path.join(root,'src/services/payment/payment.service.js'),
+    'utf8'
+  );
+  const expiry=fs.readFileSync(
+    path.join(root,'src/services/deposit/expiration.service.js'),
+    'utf8'
+  );
+  const cron=fs.readFileSync(
+    path.join(root,'src/controllers/cron.controller.js'),
+    'utf8'
+  );
+
+  assert.match(payment,/async function settlePaidDeposit/);
+  assert.match(payment,/lateDepositPayment/);
+  assert.match(payment,/PAYMENT_DEPOSIT_RECONCILIATION_REQUIRED/);
+  assert.match(payment,/async function reconcilePaidDeposits/);
+  assert.match(payment,/metadata->>'requestedStatus'='PAID'/);
+  assert.match(
+    expiry,
+    /not exists\s*\(\s*select 1\s+from payments p[\s\S]*?p\.status in \('PENDING','PAID'\)/
+  );
+  assert.match(cron,/paymentService\.reconcilePaidDeposits/);
+  assert.match(cron,/depositReconciliation/);
+});
+
+test('checkout idempotency key is independent of payment method and reflects intent',()=>{
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const template=fs.readFileSync(
+    path.join(root,'views/pages/checkout.ejs'),
+    'utf8'
+  );
+
+  assert.match(template,/data-checkout-intent=/);
+
+  const start=browser.indexOf(
+    'const checkoutAction=beginIdempotentAction('
+  );
+  const end=browser.indexOf('checkout.disabled=true;',start);
+
+  assert.ok(start>=0&&end>start,'Checkout idempotency action is absent.');
+
+  const action=browser.slice(start,end);
+  assert.match(action,/checkout\.dataset\.checkoutIntent/);
+  assert.doesNotMatch(action,/paymentMethod\s*:/);
+});
+
 test('deposit expiration updates pending deposits',()=>{
   const s=fs.readFileSync(path.join(root,'src/jobs/payment-expiration.job.js'),'utf8');
   assert.match(s,/update deposits set status='EXPIRED'/);

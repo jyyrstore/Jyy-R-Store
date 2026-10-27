@@ -1833,9 +1833,11 @@
       const checkoutAction=beginIdempotentAction(
         'checkout',
         JSON.stringify({
-          paymentMethod:method,
-          buyNowProductId:checkout.dataset.buyNowProduct||null,
-          buyNowVariantId:checkout.dataset.buyNowVariant||null
+          checkoutIntent:checkout.dataset.checkoutIntent ||
+            JSON.stringify({
+              buyNowProductId:checkout.dataset.buyNowProduct||null,
+              buyNowVariantId:checkout.dataset.buyNowVariant||null
+            })
         })
       );
 

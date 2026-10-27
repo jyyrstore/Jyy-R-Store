@@ -171,6 +171,22 @@
         data-checkout-confirm
         data-buy-now-product="<%= preview.buyNowProductId||'' %>"
         data-buy-now-variant="<%= preview.buyNowVariantId||'' %>"
+        data-checkout-intent="<%= encodeURIComponent(JSON.stringify({
+          items: preview.items.map(item => ({
+            cartItemId: item.id || null,
+            productId: item.product_id,
+            variantId: item.variant_id || null,
+            quantity: Number(item.quantity)
+          })),
+          buyNowProductId: preview.buyNowProductId || null,
+          buyNowVariantId: preview.buyNowVariantId || null,
+          recipient: recipientComplete ? {
+            email: recipient.email,
+            countryCode: recipient.countryCode,
+            dialCode: recipient.dialCode,
+            phone: recipient.phone
+          } : null
+        })) %>"
         aria-disabled="<%= preview.items.length && recipientComplete ? 'false' : 'true' %>"
         data-checkout-ready="<%= preview.items.length && recipientComplete ? '1' : '0' %>"
       >
