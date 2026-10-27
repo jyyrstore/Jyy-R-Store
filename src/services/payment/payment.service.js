@@ -1697,8 +1697,10 @@ async function processWebhook(rawBody,signature,payload,requestedProvider){
       await notifications.notify(payment.user_id,{type:'ORDER',title:'Produk siap digunakan',body:`Order ${order.order_number} sudah dibayar dan akses content tersedia.`,link:`/orders/${order.id}`},client);
     } else if(['FAILED','EXPIRED','CANCELLED'].includes(next) && order.status==='PENDING'){
       await client.query("update orders set status=$2,updated_at=now() where id=$1",[order.id,next]);
-      const items=(await client.query('select product_id,variant_id,quantity from order_items where order_id=$1',[order.id])).rows;
-      for(const i of items){if(i.variant_id) await client.query('update product_variants set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.variant_id,i.quantity]);else await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.product_id,i.quantity]);}
+      if(order.payment_method!=='SANDBOX'){
+        const items=(await client.query('select product_id,variant_id,quantity from order_items where order_id=$1',[order.id])).rows;
+        for(const i of items){if(i.variant_id) await client.query('update product_variants set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.variant_id,i.quantity]);else await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.product_id,i.quantity]);}
+      }
 
       // JYYR ORDER PAYMENT FAILURE NOTIFICATION
       const paymentFailure={

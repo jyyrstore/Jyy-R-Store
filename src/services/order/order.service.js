@@ -682,7 +682,7 @@ async function ownerUpdateStatus(ownerId,orderId,status){
     const valid=(from==='PAID'&&status==='PROCESSING')||(from==='PROCESSING'&&status==='COMPLETED')||(from==='PENDING'&&status==='CANCELLED')||(from===status);
     if(!valid) throw badRequest('INVALID_ORDER_TRANSITION',`Perubahan status ${from} → ${status} tidak diizinkan.`);
     if(from===status) return order;
-    if(status==='CANCELLED'){
+    if(status==='CANCELLED'&&order.payment_method!=='SANDBOX'){
       const items=(await client.query('select product_id,variant_id,quantity from order_items where order_id=$1',[orderId])).rows;
       for(const i of items){if(i.variant_id) await client.query('update product_variants set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.variant_id,i.quantity]);else await client.query('update products set reserved_stock=greatest(reserved_stock-$2,0),updated_at=now() where id=$1',[i.product_id,i.quantity]);}
     }

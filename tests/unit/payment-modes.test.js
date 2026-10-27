@@ -49,6 +49,22 @@ test('Sandbox order does not reserve stock',()=>{
   assert.match(expiry,/o\.payment_method in \('GATEWAY','SANDBOX'\)/);
 });
 
+test('Sandbox cancellation and failed callbacks never release live reservations',()=>{
+  const order=read('src/services/order/order.service.js');
+  const payment=read('src/services/payment/payment.service.js');
+
+  assert.match(order,/if\(status==='CANCELLED'&&order\.payment_method!=='SANDBOX'\)/);
+
+  const failureStart=payment.indexOf("} else if(['FAILED','EXPIRED','CANCELLED'].includes(next) && order.status==='PENDING'){");
+  const failureEnd=payment.indexOf('// JYYR ORDER PAYMENT FAILURE NOTIFICATION',failureStart);
+  const failure=payment.slice(failureStart,failureEnd);
+
+  assert.ok(failureStart>=0&&failureEnd>failureStart,'Payment failure transition is absent.');
+  assert.match(failure,/if\(order\.payment_method!=='SANDBOX'\)/);
+  assert.match(failure,/update product_variants set reserved_stock=greatest/);
+  assert.match(failure,/update products set reserved_stock=greatest/);
+});
+
 test('Sandbox callback gives Owner test access without real stock or revenue side effects',()=>{
   const service=read('src/services/payment/payment.service.js');
   const page=(read('views/pages/payment.ejs') + read('views/partials/payment-details.ejs'));

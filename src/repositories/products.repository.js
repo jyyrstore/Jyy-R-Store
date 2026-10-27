@@ -135,6 +135,10 @@ async function adminList({
     await query(
       `select
          p.*,
+         case when p.pricing_mode='VARIANT'
+           then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0)
+           else p.stock
+         end as stock,
          c.name category_name,
          c.slug category_slug,
          coalesce((select json_agg(json_build_object('id',pv.id,'label',pv.label,'amount',pv.amount,'price',pv.price,'stock',pv.stock,'reserved_stock',pv.reserved_stock,'is_active',pv.is_active,'sort_order',pv.sort_order) order by pv.sort_order,pv.created_at) from product_variants pv where pv.product_id=p.id and pv.is_active=true),'[]'::json) variants,
@@ -420,10 +424,25 @@ async function saveVariants(productId,variants){
     const product=(await client.query('select id,pricing_mode from products where id=$1 for update',[productId])).rows[0];
     if(!product) throw badRequest('PRODUCT_NOT_FOUND','Produk tidak ditemukan.');
     if(variants.length&&product.pricing_mode!=='VARIANT') throw badRequest('PRODUCT_NOT_VARIANT','Aktifkan mode VARIANT sebelum menyimpan variasi.');
+    const active=(await client.query(
+      'select id,product_id,label,amount,price,stock,reserved_stock,is_active,sort_order,created_at,updated_at from product_variants where product_id=$1 and is_active=true order by sort_order,created_at,id',[productId]
+    )).rows;
+    const unchanged=active.length===variants.length && active.every((row,index)=>{
+      const variant=variants[index];
+      const label=String(variant.label).trim();
+      const amount=variant.amount==null||variant.amount===''?null:Number(variant.amount);
+      const sortOrder=Number.isSafeInteger(Number(variant.sort_order))&&Number(variant.sort_order)>=0?Number(variant.sort_order):index;
+      return row.label===label &&
+        (row.amount==null?null:Number(row.amount))===amount &&
+        Number(row.price)===Number(variant.price) &&
+        Number(row.stock)===Number(variant.stock) &&
+        Number(row.sort_order)===sortOrder;
+    });
+    if(unchanged) return active;
     const pending=(await client.query('select 1 from product_variants where product_id=$1 and reserved_stock>0 limit 1',[productId])).rowCount;
     if(pending) throw badRequest('PRODUCT_VARIANT_RESERVED','Variasi tidak dapat diubah selama stok sedang direservasi oleh pembayaran pending.');
     await client.query('update product_variants set is_active=false,updated_at=now() where product_id=$1 and is_active=true',[productId]);
-    await client.query('delete from cart_items where product_id=$1',[productId]);
+    await client.query('delete from cart_items where product_id=$1 and variant_id is not null',[productId]);
     for(const [index,v] of variants.entries()){
       await client.query(
         'insert into product_variants(product_id,label,amount,price,stock,reserved_stock,is_active,sort_order) values($1,$2,$3,$4,$5,0,true,$6)',

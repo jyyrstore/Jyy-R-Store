@@ -482,6 +482,28 @@ test('Messages search and composer legacy rules stay removed',()=>{
 test('owner extended sections are routed',()=>{for(const r of ['roles','messages','storage','login-history','system','top-orders']) assert.ok(page.includes(`'${r}'`),r)});
 test('explicit owner URL routes exist',()=>{assert.match(route,/owner\.get\('\/products\/create'/);assert.match(route,/ownerApi\.get\('\/top-orders'/)});
 test('owner order fulfillment status API is routed',()=>{assert.match(route,/ownerApi\.post\('\/orders\/:id\/status'/);assert.match(fs.readFileSync(path.join(root,'src/services/order/order.service.js'),'utf8'),/ownerUpdateStatus/)});
+test('variant saves are no-op when unchanged and preserve fixed cart items',()=>{
+  const repository=fs.readFileSync(path.join(root,'src/repositories/products.repository.js'),'utf8');
+  const saveStart=repository.indexOf('async function saveVariants(productId,variants){');
+  const saveEnd=repository.indexOf('\nasync function contents(',saveStart);
+  assert.ok(saveStart>=0&&saveEnd>saveStart,'Variant repository function is absent.');
+
+  const save=repository.slice(saveStart,saveEnd);
+  const noOp=save.indexOf('if(unchanged) return active;');
+  const pending=save.indexOf('const pending=');
+  const mutation=save.indexOf('update product_variants set is_active=false');
+
+  assert.ok(noOp>=0&&pending>noOp&&mutation>pending,'No-op, reservation guard, and mutation order must remain safe.');
+  assert.ok(save.includes("'delete from cart_items where product_id=$1 and variant_id is not null'"),'Only variant cart lines may be removed.');
+
+  const adminStart=repository.indexOf('async function adminList(');
+  const adminEnd=repository.indexOf('\nasync function count(',adminStart);
+  assert.ok(adminStart>=0&&adminEnd>adminStart,'Owner product query is absent.');
+
+  const admin=repository.slice(adminStart,adminEnd);
+  assert.ok(admin.includes("sum(greatest(pv.stock-pv.reserved_stock,0))"),'Owner stock must use available active-variant stock.');
+  assert.ok(admin.includes('as stock')&&admin.includes('else p.stock'),'FIXED stock contract must be preserved.');
+});
 test('service metadata migration exists',()=>assert.ok(fs.existsSync(path.join(root,'database/migrations/029_service_metadata.sql'))));
 test('views do not read process.env directly',()=>{for(const f of fs.readdirSync(path.join(root,'views'),{recursive:true}).filter(x=>x.endsWith('.ejs'))){const s=fs.readFileSync(path.join(root,'views',f),'utf8');assert.doesNotMatch(s,/process\.env\./,f)}});
 
