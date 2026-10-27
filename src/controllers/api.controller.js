@@ -134,6 +134,29 @@ const cartController={
      )
    )
 };
+function assertOrderPaymentMode(order,requestedMode){
+  const persistedMethod=String(order?.payment_method||'').toUpperCase();
+  const persistedPaymentMode=
+    persistedMethod==='BALANCE'
+      ? 'BALANCE'
+      : persistedMethod==='SANDBOX'
+        ? 'SANDBOX'
+        : ['GATEWAY','LIVE'].includes(persistedMethod)
+          ? 'LIVE'
+          : null;
+
+  if(persistedPaymentMode!==requestedMode){
+    throw Object.assign(
+      new Error('Mode pembayaran tidak cocok dengan order yang sudah tersimpan.'),
+      {
+        status:409,
+        code:'ORDER_PAYMENT_MODE_MISMATCH',
+        expose:true
+      }
+    );
+  }
+}
+
 const orderController={
  preview:async(req,res)=>ok(res,await orders.preview(req.user.id,{buyNowProductId:req.query.buyNowProductId||null,buyNowVariantId:req.query.buyNowVariantId||null})),
  create:async(req,res)=>{
@@ -142,15 +165,13 @@ const orderController={
    const buyNowVariantId=req.body.buyNowVariantId||null;
 
    if(method==='BALANCE'){
-     return ok(
-       res,
-       await orders.createWalletOrder(
-         req.user.id,
-         req.body.idempotencyKey||crypto.randomUUID(),
-         {buyNowProductId,buyNowVariantId}
-       ),
-       201
+     const created=await orders.createWalletOrder(
+       req.user.id,
+       req.body.idempotencyKey||crypto.randomUUID(),
+       {buyNowProductId,buyNowVariantId}
      );
+     assertOrderPaymentMode(created.order,'BALANCE');
+     return ok(res,created,201);
    }
 
    const paymentMode=
@@ -214,31 +235,8 @@ const orderController={
      }
    );
 
-   // Idempotency dapat mengembalikan order lama. Jangan mengganti mode
-   // payment jika metode pembayaran pada order tersebut berbeda.
-   const persistedMethod=String(
-     created.order?.payment_method||''
-   ).toUpperCase();
-
-   const persistedPaymentMode=
-     persistedMethod==='SANDBOX'
-       ? 'SANDBOX'
-       : ['GATEWAY','LIVE'].includes(persistedMethod)
-         ? 'LIVE'
-         : null;
-
-   if(persistedPaymentMode!==paymentMode){
-     throw Object.assign(
-       new Error(
-         'Mode pembayaran tidak cocok dengan order yang sudah tersimpan.'
-       ),
-       {
-         status:409,
-         code:'ORDER_PAYMENT_MODE_MISMATCH',
-         expose:true
-       }
-     );
-   }
+   // Idempotency dapat mengembalikan order lama; pastikan metode cocok.
+   assertOrderPaymentMode(created.order,paymentMode);
 
    const reviewReturnUrl=(()=>{
      try{

@@ -3,6 +3,33 @@
   const money=v=>window.JYYR.formatIDR(v), esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const csrf=()=>window.JYYR?.csrf||'';
 
+  function beginIdempotentAction(scope,identity){
+    const storageKey=
+      'jyyr:idempotency:'+scope+':'+encodeURIComponent(String(identity));
+    let key=null;
+
+    try{
+      key=sessionStorage.getItem(storageKey);
+    }catch{ /* Storage may be unavailable; the key remains valid in-page. */ }
+
+    if(!key){
+      key=window.crypto?.randomUUID?.()||
+        `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+
+      try{
+        sessionStorage.setItem(storageKey,key);
+      }catch{ /* The request remains protected for in-page retries. */ }
+    }
+
+    return {key,storageKey};
+  }
+
+  function completeIdempotentAction(action){
+    try{
+      if(action?.storageKey)sessionStorage.removeItem(action.storageKey);
+    }catch{ /* Keep request handling independent from storage availability. */ }
+  }
+
   function enhancePasswordFields(){
     document
       .querySelectorAll(
@@ -1728,7 +1755,37 @@
       return;
     }
     const tab=e.target.closest('[data-tab-target]');if(tab){const name=tab.dataset.tabTarget;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(x=>x.classList.remove('active'));tab.classList.add('active');document.querySelector(`[data-tab="${name}"]`)?.classList.add('active')}
-    const dep=e.target.closest('[data-deposit-submit]');if(dep){const v=Number(String(document.getElementById('deposit-custom')?.value||'').replace(/\D/g,''))||0;if(v<1000)return toast.error('Minimum deposit Rp1.000.');dep.disabled=true;try{const r=await api.request('/api/deposit',{method:'POST',body:{amount:v,returnUrl:location.origin+'/deposit'}});if(r.paymentUrl)location.href=r.paymentUrl;else toast.success('Deposit dibuat.')}catch(err){toast.error(err.message)}finally{dep.disabled=false}}
+    const dep=e.target.closest('[data-deposit-submit]');
+    if(dep){
+      const v=Number(String(document.getElementById('deposit-custom')?.value||'').replace(/\D/g,''))||0;
+      if(v<1000)return toast.error('Minimum deposit Rp1.000.');
+
+      const depositAction=beginIdempotentAction('deposit',String(v));
+      dep.disabled=true;
+
+      try{
+        const r=await api.request('/api/deposit',{
+          method:'POST',
+          body:{
+            amount:v,
+            idempotencyKey:depositAction.key,
+            returnUrl:location.origin+'/deposit'
+          }
+        });
+
+        if(r.paymentUrl){
+          completeIdempotentAction(depositAction);
+          location.href=r.paymentUrl;
+        }else{
+          completeIdempotentAction(depositAction);
+          toast.success('Deposit dibuat.');
+        }
+      }catch(err){
+        toast.error(err.message);
+      }finally{
+        dep.disabled=false;
+      }
+    }
     const checkoutRemove=e.target.closest('[data-checkout-remove]');
     if(checkoutRemove){
       const id=checkoutRemove.dataset.checkoutRemove;
@@ -1773,6 +1830,15 @@
           'input[name="paymentMethod"]:checked'
         )?.value||'BALANCE';
 
+      const checkoutAction=beginIdempotentAction(
+        'checkout',
+        JSON.stringify({
+          paymentMethod:method,
+          buyNowProductId:checkout.dataset.buyNowProduct||null,
+          buyNowVariantId:checkout.dataset.buyNowVariant||null
+        })
+      );
+
       checkout.disabled=true;
 
       try{
@@ -1781,6 +1847,7 @@
           {
             method:'POST',
             body:{
+              idempotencyKey:checkoutAction.key,
               paymentMethod:method,
               returnUrl:location.origin+'/orders',
               ...(checkout.dataset.buyNowProduct
@@ -1794,23 +1861,27 @@
         );
 
         const createdPayment=r.payment?.payment;
+        let destination;
 
         if(
           String(createdPayment?.provider || '').toLowerCase()==='buatqris' &&
           createdPayment?.id
         ){
           // Biarkan halaman JYYR memantau status pembayaran.
-          location.href=
+          destination=
             '/payment/'+
             encodeURIComponent(createdPayment.public_id || createdPayment.id);
         }else if(r.payment?.paymentUrl){
-          location.href=r.payment.paymentUrl;
+          destination=r.payment.paymentUrl;
         }else{
-          location.href=
+          destination=
             '/orders/'+
             encodeURIComponent(r.order.id)+
             '?review=1';
         }
+
+        completeIdempotentAction(checkoutAction);
+        location.href=destination;
       }catch(err){
         toast.error(err.message);
       }finally{

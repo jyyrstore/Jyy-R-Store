@@ -34,6 +34,19 @@ function normalizeBuyNowVariantId(value){
   return id;
 }
 
+async function resolveIdempotencyConflict(error,userId,idempotencyKey){
+  if(
+    error?.code!=='23505'||
+    error?.constraint!=='orders_idempotency_key_key'||
+    !idempotencyKey
+  )return null;
+
+  return (await query(
+    'select * from orders where user_id=$1 and idempotency_key=$2',
+    [userId,idempotencyKey]
+  )).rows[0]||null;
+}
+
 async function directCheckoutContext(client,userId,productId,{gateway=false,variantId=null}={}){
   const product=(await client.query(
     `select id,slug,name,price,stock,reserved_stock,status,pricing_mode
@@ -120,7 +133,9 @@ async function createWalletOrder(
   const directVariantId=normalizeBuyNowVariantId(buyNowVariantId);
   if(directVariantId&&!directProductId) throw badRequest('INVALID_PRODUCT_VARIANT','Variasi membutuhkan produk yang dipilih.');
 
-  const result=await withTransaction(async(client)=>{
+  let result;
+  try{
+    result=await withTransaction(async(client)=>{
     let items;
     let contact;
     const directBuyNow=Boolean(directProductId);
@@ -424,6 +439,11 @@ async function createWalletOrder(
       directBuyNow
     };
   });
+  }catch(error){
+    const concurrent=await resolveIdempotencyConflict(error,userId,idempotencyKey);
+    if(concurrent)return {order:concurrent,duplicate:true};
+    throw error;
+  }
 
   if(result?.order?.recipient_email){
     await sendOrderPaidEmail(result.order).catch(error=>{
@@ -471,7 +491,8 @@ async function createGatewayOrder(
   const directVariantId=normalizeBuyNowVariantId(buyNowVariantId);
   if(directVariantId&&!directProductId) throw badRequest('INVALID_PRODUCT_VARIANT','Variasi membutuhkan produk yang dipilih.');
 
-  return withTransaction(async(client)=>{
+  try{
+    return await withTransaction(async(client)=>{
     let items;
     let contact;
 
@@ -673,7 +694,12 @@ async function createGatewayOrder(
       items,
       directBuyNow:Boolean(directProductId)
     };
-  });
+    });
+  }catch(error){
+    const concurrent=await resolveIdempotencyConflict(error,userId,idempotencyKey);
+    if(concurrent)return {order:concurrent,duplicate:true};
+    throw error;
+  }
 }
 
 async function ownerUpdateStatus(ownerId,orderId,status){

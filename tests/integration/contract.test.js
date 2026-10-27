@@ -102,6 +102,20 @@ test('gateway order checks payment readiness before reserving stock',()=>{
   const s=fs.readFileSync(path.join(root,'src/controllers/api.controller.js'),'utf8');
   assert.match(s,/payment\.assertProviderReady\(\{testMode:paymentMode==='SANDBOX'\}\);[\s\S]*?orders\.createGatewayOrder/);
 });
+test('checkout and deposit retries reuse stable keys and prevent payment-mode crossover',()=>{
+  const browser=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
+  const controller=fs.readFileSync(path.join(root,'src/controllers/api.controller.js'),'utf8');
+  const orderService=fs.readFileSync(path.join(root,'src/services/order/order.service.js'),'utf8');
+
+  assert.match(browser,/function beginIdempotentAction/);
+  assert.match(browser,/idempotencyKey:checkoutAction\.key/);
+  assert.match(browser,/idempotencyKey:depositAction\.key/);
+  assert.match(browser,/completeIdempotentAction\(checkoutAction\)/);
+  assert.match(browser,/completeIdempotentAction\(depositAction\)/);
+  assert.match(controller,/assertOrderPaymentMode\(created\.order,'BALANCE'\)/);
+  assert.match(controller,/assertOrderPaymentMode\(created\.order,paymentMode\)/);
+  assert.equal((orderService.match(/await resolveIdempotencyConflict\(error,userId,idempotencyKey\)/g)||[]).length,2);
+});
 test('deposit idempotency is scoped and lookup is user-bound',()=>{
   const s=fs.readFileSync(path.join(root,'src/services/deposit/deposit.service.js'),'utf8');
   assert.match(s,/scopedIdempotencyKey\('dep',userId,idempotencyKey\)/);
