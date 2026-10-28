@@ -1,8 +1,23 @@
 <script nonce="<%= cspNonce %>">window.__OWNER_CATEGORIES=<%- JSON.stringify(typeof categories !== "undefined" ? categories : []) %>;window.__OWNER_PRODUCT_EDITOR=<%- JSON.stringify(typeof ownerProduct !== "undefined" && ownerProduct ? {id:ownerProduct.id,name:ownerProduct.name,status:ownerProduct.status,hasThumbnail:!!ownerProduct.thumbnail_path} : null).replace(/</g,'\\u003c') %>;</script>
 <section class="page-shell owner-page">
   <div class="owner-content">
-      <div class="page-header">
-        <div><div class="eyebrow">Owner</div><h1><%= ({create_produk:'Buat Produk',edit_produk:'Edit Produk',content_produk:'Content Produk'})[ownerSection] || (ownerSection==='dashboard'?'Ringkasan':ownerSection.replace(/(^|-)/g,m=>m.toUpperCase()).replace(/-/g,' ')) %></h1><p>Semua aksi sensitif tetap diverifikasi server-side dan dicatat ke activity log.</p></div>
+      <div class="page-header<%= ownerSection==='create_produk'?' owner-product-create-page-header':'' %>">
+        <div>
+          <% if(ownerSection==='create_produk'){ %>
+            <div class="owner-product-create-page-header-topline">
+              <div class="eyebrow">Katalog Produk</div>
+              <button
+                class="button button-secondary"
+                type="button"
+                data-owner-editor-back
+              ><%- icon('circle-x') %> Batal</button>
+            </div>
+          <% } else { %>
+            <div class="eyebrow">Owner</div>
+          <% } %>
+          <h1><%= ({create_produk:'Buat Produk',edit_produk:'Edit Produk',content_produk:'Content Produk'})[ownerSection] || (ownerSection==='dashboard'?'Ringkasan':ownerSection.replace(/(^|-)/g,m=>m.toUpperCase()).replace(/-/g,' ')) %></h1>
+          <p><%= ownerSection==='create_produk'?'Lengkapi informasi utama produk, cover, dan harga. Content serta publikasi dapat diatur setelah produk tersimpan.':'Semua aksi sensitif tetap diverifikasi server-side dan dicatat ke activity log.' %></p>
+        </div>
         <% if(['products','categories','services','faq','information','notifications'].includes(ownerSection)){ %>
           <button class="button button-primary" data-owner-create="<%= ownerSection %>"><%- icon('circle-plus') %> Tambah</button>
         <% } %>

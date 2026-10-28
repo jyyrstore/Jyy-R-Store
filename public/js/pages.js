@@ -135,105 +135,124 @@
     `;
   };
 
-  function productVariantRowMarkup(variant={}){
+  function productVariantRowMarkup(variant={},editingExisting=false){
     return `
-      <div class="product-modal-grid" data-product-variant-row>
+      <div
+        class="product-modal-grid owner-product-variant-editor-form"
+        data-product-variant-row
+        data-product-variant-draft
+        data-product-variant-edit-existing="${editingExisting?'1':'0'}"
+        data-product-variant-original="${esc(JSON.stringify(variant))}"
+      >
         <label class="field">
           <span>Nama Varian</span>
-          <input
-            type="text"
-            data-product-variant-label
-            maxlength="120"
-            autocomplete="off"
-            value="${esc(variant.label||'')}"
-          >
+          <input type="text" data-product-variant-label maxlength="120"
+            autocomplete="off" value="${esc(variant.label||'')}">
         </label>
-
         <label class="field">
           <span>Jumlah (opsional)</span>
-          <input
-            type="number"
-            data-product-variant-amount
-            min="1"
-            step="1"
-            value="${esc(variant.amount==null?'':variant.amount)}"
-          >
+          <input type="number" data-product-variant-amount min="1" step="1"
+            value="${esc(variant.amount==null?'':variant.amount)}">
         </label>
-
         <label class="field">
           <span>Harga (Rp)</span>
-          <input
-            type="number"
-            data-product-variant-price
-            min="0"
-            step="1"
-            value="${esc(variant.price==null?'':variant.price)}"
-          >
+          <input type="number" data-product-variant-price min="0" step="1"
+            value="${esc(variant.price==null?'':variant.price)}">
         </label>
-
         <label class="field">
           <span>Stok</span>
-          <input
-            type="number"
-            data-product-variant-stock
-            min="0"
-            step="1"
-            value="${esc(variant.stock==null?'':variant.stock)}"
-          >
+          <input type="number" data-product-variant-stock min="0" step="1"
+            value="${esc(variant.stock==null?'':variant.stock)}">
         </label>
-
-        <div class="field full">
-          <button
-            class="button button-secondary"
-            type="button"
-            data-product-variant-remove
-          >Hapus Varian</button>
+        <div class="owner-product-variant-editor-actions">
+          <button class="button button-primary" type="button"
+            data-product-variant-save>Simpan Varian</button>
+          <button class="button button-secondary" type="button"
+            data-product-variant-cancel>Batal</button>
         </div>
       </div>
     `;
   }
 
-  function productVariantEditorMarkup(variants=[]){
-    const items=
-      Array.isArray(variants)&&variants.length
-        ? variants
-        : [{}];
+  function productVariantCardMarkup(variant={}){
+    const label=String(variant.label||'');
+    const amount=variant.amount==null?'':String(variant.amount);
+    const price=variant.price==null?'':String(variant.price);
+    const stock=variant.stock==null?'':String(variant.stock);
 
     return `
-      <section
-        class="product-modal-section full"
+      <article class="owner-product-variant-card"
+        data-product-variant-row data-product-variant-card>
+        <div class="owner-product-variant-card-values">
+          <div class="owner-product-variant-card-value">
+            <small>Nama Varian</small><strong>${esc(label||'—')}</strong>
+          </div>
+          <div class="owner-product-variant-card-value">
+            <small>Jumlah</small><strong>${amount===''?'—':esc(amount)}</strong>
+          </div>
+          <div class="owner-product-variant-card-value">
+            <small>Harga</small><strong>${price===''?'—':esc(money(Number(price)))}</strong>
+          </div>
+          <div class="owner-product-variant-card-value">
+            <small>Stok</small><strong>${stock===''?'—':esc(stock)}</strong>
+          </div>
+        </div>
+        <div class="owner-product-variant-card-actions">
+          <button class="button button-secondary" type="button"
+            data-product-variant-edit>Edit</button>
+          <button class="button button-secondary" type="button"
+            data-product-variant-remove>Hapus</button>
+        </div>
+        <input type="hidden" data-product-variant-label value="${esc(label)}">
+        <input type="hidden" data-product-variant-amount value="${esc(amount)}">
+        <input type="hidden" data-product-variant-price value="${esc(price)}">
+        <input type="hidden" data-product-variant-stock value="${esc(stock)}">
+      </article>
+    `;
+  }
+
+  function productVariantEditorMarkup(variants=[]){
+    const items=Array.isArray(variants)?variants:[];
+
+    return `
+      <div
+        class="owner-product-variant-layout full"
         data-product-variant-editor
       >
-        <div class="product-modal-section-title">
-          <strong>Daftar Varian</strong>
-          <button
-            class="button button-secondary"
-            type="button"
-            data-product-variant-add
-          >Tambah Varian</button>
-        </div>
+        <section class="product-modal-section full">
+          <div class="product-modal-section-title">
+            <strong>Daftar Varian</strong>
+            <button
+              class="button button-secondary"
+              type="button"
+              data-product-variant-add
+              ${items.length>=100?'disabled':''}
+            >Tambah Varian</button>
+          </div>
 
-        <small>
-          Isi nama, harga, dan stok setiap varian.
-          Jumlah bersifat opsional dan hanya digunakan bila diperlukan.
-          Data disimpan saat Mode Harga memilih Harga per variasi.
-        </small>
+          <small>
+            Simpan varian yang sedang diisi sebelum menambahkan varian berikutnya.
+            Jumlah bersifat opsional.
+          </small>
+
+          <div
+            class="owner-product-variant-list"
+            data-product-variant-draft-host
+          ></div>
+        </section>
 
         <div
-          class="product-form-modal"
+          class="owner-product-variant-list"
           data-product-variant-list
         >
-          ${items.map(productVariantRowMarkup).join('')}
+          ${items.map(productVariantCardMarkup).join('')}
         </div>
-      </section>
+      </div>
     `;
   }
 
   function readProductVariants(form){
-    const rows=[
-      ...form.querySelectorAll('[data-product-variant-row]')
-    ];
-
+    const rows=[...form.querySelectorAll('[data-product-variant-row]')];
     if(rows.length>100){
       throw new Error('Maksimal 100 varian per produk.');
     }
@@ -242,38 +261,22 @@
     const labels=new Set();
 
     for(const [index,row] of rows.entries()){
-      const label=String(
-        row.querySelector('[data-product-variant-label]')?.value||''
-      ).trim();
-
-      const amountText=String(
-        row.querySelector('[data-product-variant-amount]')?.value||''
-      ).trim();
-
-      const priceText=String(
-        row.querySelector('[data-product-variant-price]')?.value||''
-      ).trim();
-
-      const stockText=String(
-        row.querySelector('[data-product-variant-stock]')?.value||''
-      ).trim();
+      const label=String(row.querySelector('[data-product-variant-label]')?.value||'').trim();
+      const amountText=String(row.querySelector('[data-product-variant-amount]')?.value||'').trim();
+      const priceText=String(row.querySelector('[data-product-variant-price]')?.value||'').trim();
+      const stockText=String(row.querySelector('[data-product-variant-stock]')?.value||'').trim();
 
       if(!label&&!amountText&&priceText===''&&stockText===''){
+        if(row.hasAttribute('data-product-variant-draft')){
+          throw new Error('Isi Nama Varian, Harga, dan Stok sebelum menyimpan varian.');
+        }
         continue;
       }
 
-      if(!label){
-        throw new Error(`Nama varian baris ${index+1} wajib diisi.`);
-      }
-
-      if(label.length>120){
-        throw new Error(`Nama varian baris ${index+1} maksimal 120 karakter.`);
-      }
-
+      if(!label)throw new Error(`Nama varian baris ${index+1} wajib diisi.`);
+      if(label.length>120)throw new Error(`Nama varian baris ${index+1} maksimal 120 karakter.`);
       if(priceText===''||stockText===''){
-        throw new Error(
-          `Harga dan stok varian baris ${index+1} wajib diisi.`
-        );
+        throw new Error(`Harga dan stok varian baris ${index+1} wajib diisi.`);
       }
 
       const price=Number(priceText);
@@ -283,48 +286,31 @@
       if(!Number.isSafeInteger(price)||price<0){
         throw new Error(`Harga varian baris ${index+1} tidak valid.`);
       }
-
       if(!Number.isSafeInteger(stock)||stock<0){
         throw new Error(`Stok varian baris ${index+1} tidak valid.`);
       }
-
-      if(
-        amount!==null&&
-        (!Number.isSafeInteger(amount)||amount<=0)
-      ){
-        throw new Error(
-          `Jumlah varian baris ${index+1} harus bilangan bulat positif.`
-        );
+      if(amount!==null&&(!Number.isSafeInteger(amount)||amount<=0)){
+        throw new Error(`Jumlah varian baris ${index+1} harus bilangan bulat positif.`);
       }
 
       const key=label.toLocaleLowerCase('id-ID');
-
-      if(labels.has(key)){
-        throw new Error('Nama varian tidak boleh duplikat.');
-      }
-
+      if(labels.has(key))throw new Error('Nama varian tidak boleh duplikat.');
       labels.add(key);
-
-      variants.push({
-        label,
-        amount,
-        price,
-        stock,
-        sort_order:variants.length
-      });
+      variants.push({label,amount,price,stock,sort_order:variants.length});
     }
 
     if(!variants.length){
       throw new Error('Tambahkan minimal satu varian untuk mode variasi.');
     }
-
     return variants;
   }
 
   const pickerFile=({
     name,
     accept='',
-    attrs=''
+    attrs='',
+    mainClass='',
+    statusText=''
   }={})=>`
     <div
       class="jyyr-file-picker"
@@ -339,17 +325,32 @@
         ${attrs}
       >
 
-      <div class="jyyr-file-picker-main">
+      <div class="jyyr-file-picker-main${mainClass?` ${esc(mainClass)}`:''}">
+        ${statusText?`
+          <div class="jyyr-file-picker-status-row">
+            <span
+              class="jyyr-file-name"
+              data-jyyr-file-name
+            >Belum ada file dipilih.</span>
+            <small
+              class="jyyr-file-thumbnail-status"
+              data-thumbnail-status
+            >${esc(statusText)}</small>
+          </div>
+        `:''}
+
         <button
           type="button"
           class="button button-secondary jyyr-file-trigger"
           data-jyyr-file-trigger
         >Pilih file</button>
 
-        <span
-          class="jyyr-file-name"
-          data-jyyr-file-name
-        >Belum ada file dipilih.</span>
+        ${statusText?'':`
+          <span
+            class="jyyr-file-name"
+            data-jyyr-file-name
+          >Belum ada file dipilih.</span>
+        `}
       </div>
 
       <button
@@ -1565,40 +1566,142 @@
     }
 
     const addVariant=e.target.closest('[data-product-variant-add]');
+
     if(addVariant){
-      const list=addVariant
-        .closest('[data-product-variant-editor]')
-        ?.querySelector('[data-product-variant-list]');
+      const section=addVariant.closest('[data-product-variant-editor]');
+      const list=section?.querySelector('[data-product-variant-list]');
+      const draftHost=section?.querySelector('[data-product-variant-draft-host]');
+      if(!section||!list||!draftHost)return;
 
-      if(!list)return;
-
-      if(list.querySelectorAll('[data-product-variant-row]').length>=100){
-        toast.error('Maksimal 100 varian per produk.');
+      if(draftHost.querySelector('[data-product-variant-draft]')){
+        toast.error('Simpan atau batalkan varian yang sedang diedit terlebih dahulu.');
         return;
       }
 
-      list.insertAdjacentHTML(
-        'beforeend',
-        productVariantRowMarkup()
-      );
+      if(list.querySelectorAll('[data-product-variant-card]').length>=100){
+        toast.error('Maksimal 100 varian per produk.');
+        addVariant.disabled=true;
+        return;
+      }
+
+      draftHost.insertAdjacentHTML('beforeend',productVariantRowMarkup());
+      addVariant.hidden=true;
+      draftHost.querySelector('[data-product-variant-label]')?.focus();
+      return;
+    }
+
+    const saveVariant=e.target.closest('[data-product-variant-save]');
+    if(saveVariant){
+      const row=saveVariant.closest('[data-product-variant-draft]');
+      const section=row?.closest('[data-product-variant-editor]');
+      const list=section?.querySelector('[data-product-variant-list]');
+      const form=row?.closest('form');
+      if(!row||!section||!list||!form)return;
+
+      try{
+        const rows=[...form.querySelectorAll('[data-product-variant-row]')];
+        const values=readProductVariants(form);
+        const variant=values[rows.indexOf(row)];
+        if(!variant)throw new Error('Data varian tidak dapat dibaca.');
+
+        const originalCard=list.querySelector('[data-product-variant-editing-card]');
+        row.remove();
+
+        if(originalCard){
+          originalCard.outerHTML=productVariantCardMarkup(variant);
+        }else{
+          list.insertAdjacentHTML('beforeend',productVariantCardMarkup(variant));
+        }
+
+        const add=section.querySelector('[data-product-variant-add]');
+        if(add){
+          add.hidden=false;
+          add.disabled=list.querySelectorAll('[data-product-variant-card]').length>=100;
+        }
+      }catch(err){
+        toast.error(err.message);
+      }
+      return;
+    }
+
+    const editVariant=e.target.closest('[data-product-variant-edit]');
+    if(editVariant){
+      const row=editVariant.closest('[data-product-variant-card]');
+      const section=row?.closest('[data-product-variant-editor]');
+      const list=section?.querySelector('[data-product-variant-list]');
+      const draftHost=section?.querySelector('[data-product-variant-draft-host]');
+      if(!row||!section||!list||!draftHost)return;
+
+      if(draftHost.querySelector('[data-product-variant-draft]')){
+        toast.error('Simpan atau batalkan varian yang sedang diedit terlebih dahulu.');
+        return;
+      }
+
+      const amountText=String(
+        row.querySelector('[data-product-variant-amount]')?.value||''
+      ).trim();
+      const variant={
+        label:String(row.querySelector('[data-product-variant-label]')?.value||'').trim(),
+        amount:amountText===''?null:Number(amountText),
+        price:Number(row.querySelector('[data-product-variant-price]')?.value),
+        stock:Number(row.querySelector('[data-product-variant-stock]')?.value),
+        sort_order:[...list.querySelectorAll('[data-product-variant-card]')].indexOf(row)
+      };
+
+      row.hidden=true;
+      row.removeAttribute('data-product-variant-row');
+      row.setAttribute('data-product-variant-editing-card','');
+
+      draftHost.insertAdjacentHTML('beforeend',productVariantRowMarkup(variant,true));
+      const add=section.querySelector('[data-product-variant-add]');
+      if(add)add.hidden=true;
+      draftHost.querySelector('[data-product-variant-label]')?.focus();
+      return;
+    }
+
+    const cancelVariant=e.target.closest('[data-product-variant-cancel]');
+    if(cancelVariant){
+      const row=cancelVariant.closest('[data-product-variant-draft]');
+      const section=row?.closest('[data-product-variant-editor]');
+      const list=section?.querySelector('[data-product-variant-list]');
+      if(!row||!section||!list)return;
+
+      if(row.dataset.productVariantEditExisting==='1'){
+        const originalCard=list.querySelector('[data-product-variant-editing-card]');
+        if(!originalCard){
+          toast.error('Card varian asli tidak ditemukan.');
+          return;
+        }
+
+        row.remove();
+        originalCard.hidden=false;
+        originalCard.removeAttribute('data-product-variant-editing-card');
+        originalCard.setAttribute('data-product-variant-row','');
+      }else{
+        row.remove();
+      }
+
+      const add=section.querySelector('[data-product-variant-add]');
+      if(add){
+        add.hidden=false;
+        add.disabled=list.querySelectorAll('[data-product-variant-card]').length>=100;
+      }
       return;
     }
 
     const removeVariant=e.target.closest('[data-product-variant-remove]');
     if(removeVariant){
-      const row=removeVariant.closest('[data-product-variant-row]');
-      const list=row?.closest('[data-product-variant-list]');
+      const row=removeVariant.closest('[data-product-variant-card]');
+      const section=row?.closest('[data-product-variant-editor]');
+      const list=section?.querySelector('[data-product-variant-list]');
+      if(!row||!section||!list)return;
 
-      if(!row||!list)return;
-
-      if(list.querySelectorAll('[data-product-variant-row]').length===1){
-        row.querySelectorAll('input').forEach(input=>{
-          input.value='';
-        });
-      }else{
-        row.remove();
+      row.remove();
+      const add=section.querySelector('[data-product-variant-add]');
+      if(add){
+        add.hidden=false;
+        add.disabled=list.querySelectorAll('[data-product-variant-card]').length>=100;
       }
-
       return;
     }
 
@@ -2162,9 +2265,25 @@
       products:`<form data-owner-product-form class="product-form-modal">
   <div class="product-modal-head">
     <div class="product-modal-kicker">Owner Store · Langkah 1</div>
-    <h2>Buat Produk</h2>
+    <h2>Data Utama Produk</h2>
     <p>Lengkapi informasi dasar dan <strong>Cover Produk</strong>. Produk disimpan sebagai <strong>DRAFT</strong> sebelum dipublikasikan.</p>
     <div class="product-flow-steps"><span class="active">1. Data Produk</span><span>2. Content</span><span>3. Publish</span></div>
+  </div>
+
+  <div class="owner-product-pricing-modes"
+       role="radiogroup"
+       aria-label="Pilih mode harga">
+    <label class="owner-product-pricing-option">
+      <input type="radio" name="pricing_mode" value="FIXED" checked>
+      <span class="owner-product-pricing-label">Harga tetap</span>
+      <span class="owner-product-pricing-check" aria-hidden="true">✓</span>
+    </label>
+
+    <label class="owner-product-pricing-option">
+      <input type="radio" name="pricing_mode" value="VARIANT">
+      <span class="owner-product-pricing-label">Harga per variasi</span>
+      <span class="owner-product-pricing-check" aria-hidden="true">✓</span>
+    </label>
   </div>
 
   <section class="product-modal-section">
@@ -2197,9 +2316,10 @@
         ${pickerFile({
   name:'thumbnail',
   accept:'image/jpeg,image/png,image/webp',
-  attrs:'data-thumbnail-input'
+  attrs:'data-thumbnail-input',
+  mainClass:'jyyr-file-picker-main-cover',
+  statusText:'Belum ada thumbnail dipilih.'
 })}
-        <small data-thumbnail-status>Belum ada thumbnail dipilih.</small>
         <progress data-thumbnail-progress value="0" max="100" hidden></progress>
       </div>
     </div>
@@ -2245,34 +2365,23 @@
         <input name="stock" type="number" min="0" required placeholder="10">
       </label>
 
-      <label class="field">
-        <span>Mode Harga</span>
-        ${pickerSelect({
-          name:'pricing_mode',
-          value:'FIXED',
-          options:[
-            ['FIXED','Harga tetap'],
-            ['VARIANT','Harga per variasi']
-          ]
-        })}
-      </label>
 
-      ${productVariantEditorMarkup()}
 
       <label class="field full">
         <span>Description</span>
         <textarea name="description" rows="4" placeholder="Deskripsi singkat produk..."></textarea>
       </label>
-
-      <div class="product-flow-note full">
-        <strong>Setelah disimpan</strong>
-        <span>Produk masuk ke <b>DRAFT</b>. Lanjutkan ke <b>Kelola Content</b>, tambahkan barang yang akan diterima pembeli, lalu Publish.</span>
-      </div>
     </div>
   </section>
 
+  ${productVariantEditorMarkup()}
+
+  <section class="product-modal-section product-flow-note">
+    <strong>Setelah disimpan</strong>
+    <span>Produk masuk ke <b>DRAFT</b>. Lanjutkan ke <b>Kelola Content</b>, tambahkan barang yang akan diterima pembeli, lalu Publish.</span>
+  </section>
+
   <div class="product-modal-actions">
-    <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Batal</button>
     <button class="button button-primary" type="submit">Simpan Produk</button>
   </div>
 </form>`,
@@ -2349,9 +2458,10 @@
                 ${pickerFile({
   name:'thumbnail',
   accept:'image/jpeg,image/png,image/webp',
-  attrs:'data-thumbnail-input'
+  attrs:'data-thumbnail-input',
+  mainClass:'jyyr-file-picker-main-cover',
+  statusText:'Belum ada perubahan cover.'
 })}
-                <small data-thumbnail-status>Belum ada perubahan cover.</small>
                 <progress data-thumbnail-progress value="0" max="100" hidden></progress>
               </div>
             </div>
@@ -2677,6 +2787,11 @@
     if(pfm){
       e.preventDefault();
 
+      if(pfm.querySelector('[data-product-variant-draft]')){
+        toast.error('Simpan atau batalkan varian yang sedang diedit terlebih dahulu.');
+        return;
+      }
+
       const formData=new FormData(pfm);
       const thumbnail=formData.get('thumbnail');
       const fd=Object.fromEntries(formData);
@@ -2755,7 +2870,7 @@
       }
     }
 
-    const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.pricing_mode=String(fd.pricing_mode||'FIXED').toUpperCase();let variants=[];if(fd.pricing_mode==='VARIANT'){try{variants=readProductVariants(pem)}catch(err){toast.error(err.message);return}fd.price=Math.min(...variants.map(v=>v.price));fd.stock=variants.reduce((n,v)=>n+v.stock,0)}fd.price=Number(fd.price);fd.stock=Number(fd.stock);try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');await ownerAction('/api/owner/products/'+id+'/variants',{variants:fd.pricing_mode==='VARIANT'?variants:[]},'PUT','Variasi produk disimpan.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}if(location.pathname==='/owner/products/edit_produk'){location.href='/owner/products';return;}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
+    const pem=e.target.closest('[data-owner-product-edit]');if(pem){e.preventDefault();if(pem.querySelector('[data-product-variant-draft]')){toast.error('Simpan atau batalkan varian yang sedang diedit terlebih dahulu.');return;}const formData=new FormData(pem);const thumbnail=formData.get('thumbnail');const fd=Object.fromEntries(formData);const id=fd.id;delete fd.id;delete fd.thumbnail;fd.pricing_mode=String(fd.pricing_mode||'FIXED').toUpperCase();let variants=[];if(fd.pricing_mode==='VARIANT'){try{variants=readProductVariants(pem)}catch(err){toast.error(err.message);return}fd.price=Math.min(...variants.map(v=>v.price));fd.stock=variants.reduce((n,v)=>n+v.stock,0)}fd.price=Number(fd.price);fd.stock=Number(fd.stock);try{await ownerAction('/api/owner/products/'+id,fd,'PUT','Produk diperbarui.');await ownerAction('/api/owner/products/'+id+'/variants',{variants:fd.pricing_mode==='VARIANT'?variants:[]},'PUT','Variasi produk disimpan.');if(thumbnail instanceof File && thumbnail.size){const progress=pem.querySelector('[data-thumbnail-progress]'),status=pem.querySelector('[data-thumbnail-status]');await uploadOwnerFile(id,thumbnail,{contentType:'THUMBNAIL',progressEl:progress,statusEl:status});toast.success('Thumbnail berhasil diperbarui.')}if(location.pathname==='/owner/products/edit_produk'){location.href='/owner/products';return;}window.JYYRModal.close();location.reload()}catch(err){toast.error(err.message)}}
     const cfm=e.target.closest('[data-owner-content-form]');
     if(cfm){
       e.preventDefault();

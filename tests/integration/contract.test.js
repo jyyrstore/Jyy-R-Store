@@ -622,6 +622,183 @@ test('explicit owner URL routes exist',()=>{
   assert.ok(browser.includes('/owner/products/content_produk?id='));
 });
 test('owner order fulfillment status API is routed',()=>{assert.match(route,/ownerApi\.post\('\/orders\/:id\/status'/);assert.match(fs.readFileSync(path.join(root,'src/services/order/order.service.js'),'utf8'),/ownerUpdateStatus/)});
+test('Owner product create cancel button stays in the page header',()=>{
+  const ownerView=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+  const pages=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  const createStart=pages.indexOf(
+    'products:`<form data-owner-product-form class="product-form-modal">'
+  );
+  const createEnd=pages.indexOf(
+    '\n      services:`<form data-owner-service-form',
+    createStart
+  );
+
+  assert.ok(
+    createStart>=0&&createEnd>createStart,
+    'Create product form harus ditemukan.'
+  );
+
+  const createForm=pages.slice(createStart,createEnd);
+
+  assert.match(
+    ownerView,
+    /owner-product-create-page-header-topline[\s\S]*?Katalog Produk[\s\S]*?data-owner-editor-back[\s\S]*?Batal[\s\S]*?<\/button>/
+  );
+
+  assert.doesNotMatch(
+    createForm,
+    /Batal/,
+    'Tombol Batal tidak boleh tersisa di form create.'
+  );
+
+  assert.match(
+    createForm,
+    /<button class="button button-primary" type="submit">Simpan Produk<\/button>/
+  );
+});
+
+test('Owner product cover status text stays above file trigger',()=>{
+  const pages=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const createStart=pages.indexOf(
+    'products:`<form data-owner-product-form class="product-form-modal">'
+  );
+  const createEnd=pages.indexOf(
+    '\n      services:`<form data-owner-service-form',
+    createStart
+  );
+
+  assert.ok(
+    createStart>=0&&createEnd>createStart,
+    'Create product form harus ditemukan.'
+  );
+
+  const createForm=pages.slice(createStart,createEnd);
+  const helperStart=pages.indexOf('const pickerFile=({');
+  const helperEnd=pages.indexOf(
+    '\\n  async function saveRecipientContact',
+    helperStart
+  );
+  const pickerHelper=pages.slice(helperStart,helperEnd);
+
+  assert.ok(
+    createForm.includes("statusText:'Belum ada thumbnail dipilih.'"),
+    'Status thumbnail harus memakai picker cover yang sama.'
+  );
+  assert.ok(
+    pickerHelper.includes('class="jyyr-file-picker-status-row"'),
+    'Kedua teks status harus berada dalam satu baris.'
+  );
+
+  const fileNamePosition=pickerHelper.indexOf('data-jyyr-file-name');
+  const thumbnailStatusPosition=pickerHelper.indexOf('data-thumbnail-status');
+  const fileButtonPosition=pickerHelper.indexOf('data-jyyr-file-trigger');
+
+  assert.ok(
+    fileNamePosition>=0 &&
+    thumbnailStatusPosition>fileNamePosition &&
+    fileButtonPosition>thumbnailStatusPosition,
+    'Kedua teks harus berada di atas tombol Pilih file.'
+  );
+  assert.match(
+    css,
+    /\.jyyr-file-picker-status-row\s*\{[^}]*display\s*:\s*flex\s*;[^}]*flex-direction\s*:\s*row\s*;/
+  );
+  assert.match(
+    css,
+    /\.jyyr-file-picker-main\.jyyr-file-picker-main-cover\s*\{[^}]*flex-direction\s*:\s*column\s*;/
+  );
+});
+
+test('Owner product pricing modes render as selectable cards above cover',()=>{
+  const pages=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const start=pages.indexOf(
+    'products:`<form data-owner-product-form class="product-form-modal">'
+  );
+  const end=pages.indexOf(
+    '\n      services:`<form data-owner-service-form',
+    start
+  );
+
+  assert.ok(start>=0&&end>start,'Create product form harus ditemukan.');
+
+  const form=pages.slice(start,end);
+  const modes=form.indexOf('<div class="owner-product-pricing-modes"');
+  const cover=form.indexOf('<strong>Cover Produk</strong>',modes);
+
+  assert.ok(
+    modes>=0&&cover>modes,
+    'Kartu Mode Harga harus muncul sebelum card Cover Produk.'
+  );
+  assert.match(form,/name="pricing_mode" value="FIXED" checked/);
+  assert.match(form,/name="pricing_mode" value="VARIANT"/);
+  assert.match(form,/>Harga tetap</);
+  assert.match(form,/>Harga per variasi</);
+  assert.doesNotMatch(form,/<span>Mode Harga<\/span>/);
+
+  assert.match(
+    css,
+    /\.owner-product-pricing-modes\s*\{[^}]*grid-template-columns\s*:\s*repeat\(2,minmax\(0,1fr\)\)/
+  );
+  assert.match(
+    css,
+    /\.owner-product-pricing-option:has\(input:checked\)/
+  );
+  assert.match(
+    css,
+    /\.owner-product-pricing-option:has\(input:checked\)\s*\.owner-product-pricing-check/
+  );
+});
+
+test('Owner product variant editor stays in title card while saved cards stay below',()=>{
+  const pages=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  const start=pages.indexOf('function productVariantEditorMarkup(variants=[]){');
+  const end=pages.indexOf('\n  function readProductVariants(form){',start);
+  assert.ok(start>=0&&end>start,'Renderer varian harus ditemukan.');
+
+  const markup=pages.slice(start,end);
+  const sectionStart=markup.indexOf('<section');
+  const sectionEnd=markup.indexOf('</section>',sectionStart);
+  const draftHost=markup.indexOf('data-product-variant-draft-host');
+  const savedList=markup.indexOf('data-product-variant-list');
+
+  assert.ok(
+    sectionStart>=0&&draftHost>sectionStart&&draftHost<sectionEnd,
+    'Host input harus berada di dalam card Daftar Varian.'
+  );
+  assert.ok(
+    savedList>sectionEnd,
+    'Card varian tersimpan harus berada di bawah card judul.'
+  );
+  assert.match(pages,/draftHost\.insertAdjacentHTML\('beforeend',productVariantRowMarkup/);
+  assert.match(pages,/data-product-variant-editing-card/);
+});
 test('Owner product variants use structured inputs instead of JSON text',()=>{
   const pages=fs.readFileSync(
     path.join(root,'public/js/pages.js'),
@@ -633,6 +810,28 @@ test('Owner product variants use structured inputs instead of JSON text',()=>{
   );
 
   assert.match(pages,/function productVariantEditorMarkup/);
+  const editorMarkupStart=pages.indexOf(
+    'function productVariantEditorMarkup(variants=[]){'
+  );
+  const editorMarkupEnd=pages.indexOf(
+    '\n  function readProductVariants(form){',
+    editorMarkupStart
+  );
+
+  assert.ok(
+    editorMarkupStart>=0&&editorMarkupEnd>editorMarkupStart,
+    'Renderer varian harus ditemukan.'
+  );
+
+  const editorMarkup=pages.slice(editorMarkupStart,editorMarkupEnd);
+  const titleCardEnd=editorMarkup.indexOf('</section>');
+  const variantListStart=editorMarkup.indexOf('data-product-variant-list');
+
+  assert.ok(
+    titleCardEnd>=0&&variantListStart>titleCardEnd,
+    'Variant list must be rendered after the title section card.'
+  );
+
   assert.match(pages,/function readProductVariants/);
   assert.match(pages,/data-product-variant-add/);
   assert.match(pages,/data-product-variant-remove/);
@@ -651,6 +850,52 @@ test('Owner product variants use structured inputs instead of JSON text',()=>{
   assert.ok(
     routes.includes("ownerApi.put('/products/:id/variants'"),
     'The existing API route must remain canonical.'
+  );
+
+  const createStart = pages.indexOf(
+    'products:`<form data-owner-product-form class="product-form-modal">'
+  );
+  const createEnd = pages.indexOf(
+    '\n      services:`<form data-owner-service-form',
+    createStart
+  );
+
+  assert.ok(
+    createStart >= 0 && createEnd > createStart,
+    'Create product form harus ditemukan.'
+  );
+
+  const createForm = pages.slice(createStart, createEnd);
+  const informationTitle = createForm.indexOf(
+    '<strong>Informasi Produk</strong>'
+  );
+  const informationEnd = createForm.indexOf(
+    '\n  </section>',
+    informationTitle
+  );
+  const variantsCard = createForm.indexOf(
+    '${productVariantEditorMarkup()}'
+  );
+  const afterSaveCard = createForm.indexOf(
+    '<section class="product-modal-section product-flow-note">'
+  );
+  const afterSaveTitle = createForm.indexOf(
+    '<strong>Setelah disimpan</strong>'
+  );
+
+  assert.ok(
+    informationTitle >= 0 &&
+    informationEnd > informationTitle &&
+    informationEnd < variantsCard,
+    'Informasi Produk harus ditutup sebelum card Daftar Varian.'
+  );
+  assert.ok(
+    variantsCard >= 0 && variantsCard < afterSaveCard,
+    'Card Daftar Varian harus berada sebelum Setelah disimpan.'
+  );
+  assert.ok(
+    afterSaveCard > variantsCard && afterSaveTitle > afterSaveCard,
+    'Setelah disimpan harus menjadi card tersendiri.'
   );
 });
 
