@@ -1162,6 +1162,43 @@ test('owner variant icons remain separate from the product cover',()=>{
   assert.match(cron,/select icon_path[\s\S]*from product_variants/);
 });
 
+test('renaming a variant preserves its source icon reference',()=>{
+  const routes=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+  const repository=fs.readFileSync(
+    path.join(root,'src/repositories/products.repository.js'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.match(
+    routes,
+    /icon_source_id:z\.string\(\)\.uuid\(\)\.nullable\(\)\.optional\(\)/
+  );
+  assert.match(
+    browser,
+    /icon_source_id:String\(row\.dataset\.productVariantSourceId\|\|''\)\.trim\(\)\|\|null/
+  );
+  assert.match(
+    repository,
+    /const activeById=new Map\(active\.map\(row=>\[String\(row\.id\),row\]\)\)/
+  );
+  assert.match(
+    repository,
+    /const sourceVariant=activeById\.get\(String\(v\.icon_source_id\|\|''\)\)/
+  );
+  assert.match(repository,/sourceVariant\?\.icon_path\|\|null/);
+  assert.match(
+    repository,
+    /sort_order,icon_path\) values\(\$1,\$2,\$3,\$4,\$5,0,true,\$6,\$7\)/
+  );
+});
+
 test('variant saves are no-op when unchanged and preserve fixed cart items',()=>{
   const repository=fs.readFileSync(path.join(root,'src/repositories/products.repository.js'),'utf8');
   const saveStart=repository.indexOf('async function saveVariants(productId,variants){');

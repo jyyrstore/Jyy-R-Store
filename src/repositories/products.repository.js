@@ -501,6 +501,7 @@ async function saveVariants(productId,variants){
     const active=(await client.query(
       'select id,product_id,label,amount,price,stock,icon_path,reserved_stock,is_active,sort_order,created_at,updated_at from product_variants where product_id=$1 and is_active=true order by sort_order,created_at,id',[productId]
     )).rows;
+    const activeById=new Map(active.map(row=>[String(row.id),row]));
     const unchanged=active.length===variants.length && active.every((row,index)=>{
       const variant=variants[index];
       const label=String(variant.label).trim();
@@ -540,6 +541,7 @@ async function saveVariants(productId,variants){
       const amount=v.amount==null||v.amount===''?null:Number(v.amount);
       const sortOrder=Number.isSafeInteger(Number(v.sort_order))&&Number(v.sort_order)>=0?Number(v.sort_order):index;
       const existing=activeByLabel.get(label.toLocaleLowerCase('id-ID'));
+      const sourceVariant=activeById.get(String(v.icon_source_id||''));
 
       if(existing){
         await client.query(
@@ -559,14 +561,15 @@ async function saveVariants(productId,variants){
         );
       }else{
         await client.query(
-          'insert into product_variants(product_id,label,amount,price,stock,reserved_stock,is_active,sort_order) values($1,$2,$3,$4,$5,0,true,$6)',
+          'insert into product_variants(product_id,label,amount,price,stock,reserved_stock,is_active,sort_order,icon_path) values($1,$2,$3,$4,$5,0,true,$6,$7)',
           [
             productId,
             label,
             amount,
             Number(v.price),
             Number(v.stock),
-            sortOrder
+            sortOrder,
+            sourceVariant?.icon_path||null
           ]
         );
       }

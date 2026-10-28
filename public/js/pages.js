@@ -166,6 +166,7 @@
         data-product-variant-row
         data-product-variant-draft
         data-product-variant-edit-existing="${editingExisting?'1':'0'}"
+        data-product-variant-source-id="${esc(variant.icon_source_id||variant.id||'')}"
         data-product-variant-original="${esc(JSON.stringify(variant))}"
       >
         <label class="field">
@@ -211,6 +212,7 @@
     return `
       <article class="owner-product-variant-card"
         data-product-variant-row data-product-variant-card
+        data-product-variant-source-id="${esc(variant.icon_source_id||variant.id||'')}"
         data-product-variant-icon-path="${esc(iconPath)}"
         data-product-variant-icon-url="${esc(iconUrl)}">
         <div class="owner-product-variant-icon-control" data-product-variant-icon-field>
@@ -352,7 +354,11 @@
       const key=label.toLocaleLowerCase('id-ID');
       if(labels.has(key))throw new Error('Nama varian tidak boleh duplikat.');
       labels.add(key);
-      variants.push({label,amount,price,stock,sort_order:variants.length});
+      variants.push({
+        label,amount,price,stock,
+        icon_source_id:String(row.dataset.productVariantSourceId||'').trim()||null,
+        sort_order:variants.length
+      });
     }
 
     if(!variants.length){
@@ -1872,6 +1878,7 @@
         stock:Number(row.querySelector('[data-product-variant-stock]')?.value),
         icon_path:row.dataset.productVariantIconPath||null,
         icon_url:row.dataset.productVariantIconUrl||null,
+        icon_source_id:row.dataset.productVariantSourceId||null,
         sort_order:[...list.querySelectorAll('[data-product-variant-card]')].indexOf(row)
       };
 

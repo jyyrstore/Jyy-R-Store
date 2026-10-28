@@ -1716,6 +1716,10 @@ body.no-scroll{
   min-width:72px;
 }
 
+button[hidden]{
+  display:none;
+}
+
 .jyyr-native-file-input{
   position:absolute!important;
   width:1px!important;
