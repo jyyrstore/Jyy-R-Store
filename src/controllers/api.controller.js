@@ -410,7 +410,7 @@ async function removeUnusedProductStorage(inputPath,defaultBucket){
     :path;
 
   const referenced=(await query(
-    'select 1 where exists(select 1 from product_contents where storage_path=$1) or exists(select 1 from products where thumbnail_path=$1)',
+    'select 1 where exists(select 1 from product_contents where storage_path=$1) or exists(select 1 from products where thumbnail_path=$1) or exists(select 1 from product_variants where icon_path=$1 and is_active=true)',
     [path]
   )).rowCount;
 
@@ -491,6 +491,13 @@ const ownerController={
      await removeUnusedProductStorage(
        item.storage_path,
        env.PRIVATE_PRODUCT_BUCKET
+     );
+   }
+
+   for(const item of deleted.variantIcons){
+     await removeUnusedProductStorage(
+       item.icon_path,
+       env.PUBLIC_ASSET_BUCKET
      );
    }
 
@@ -725,12 +732,22 @@ async function ownerUploadInit(req,res){
   }
 
   const contentType=String(req.body.contentType||'FILE').toUpperCase();
-  const allowed=['THUMBNAIL','FILE','IMAGE','VIDEO','AUDIO'];
+  const allowed=['THUMBNAIL','VARIANT_ICON','FILE','IMAGE','VIDEO','AUDIO'];
 
   if(!allowed.includes(contentType)){
     throw Object.assign(new Error('Content type upload tidak didukung.'),{
       status:400,code:'INVALID_CONTENT_TYPE',expose:true
     });
+  }
+
+  if(contentType==='VARIANT_ICON'){
+    const variantId=String(req.body.variantId||'').trim();
+    if(!variantId||!(await repo.findVariant(req.params.id,variantId))){
+      throw Object.assign(
+        new Error('Varian produk tidak ditemukan atau tidak aktif.'),
+        {status:400,code:'PRODUCT_VARIANT_INVALID',expose:true}
+      );
+    }
   }
 
   const originalName=String(req.body.originalName||'').trim();
@@ -740,6 +757,7 @@ async function ownerUploadInit(req,res){
   const env=loadEnv();
   const maxBytes=Math.floor(Number(env.MAX_UPLOAD_MB||100)*1024*1024);
   const thumbnailMax=Math.min(maxBytes,100*1024*1024);
+  const variantIconMax=Math.min(maxBytes,5*1024*1024);
 
   if(!Number.isSafeInteger(fileSize)||fileSize<=0){
     throw Object.assign(new Error('Ukuran file tidak valid.'),{
@@ -759,12 +777,18 @@ async function ownerUploadInit(req,res){
     });
   }
 
+  if(contentType==='VARIANT_ICON'&&fileSize>variantIconMax){
+    throw Object.assign(new Error('Ukuran ikon varian maksimal 5 MB.'),{
+      status:413,code:'VARIANT_ICON_TOO_LARGE',expose:true
+    });
+  }
+
   const descriptor=validateUploadDescriptor({
     originalName,
     mime:mimeType
   },contentType);
 
-  const bucket=contentType==='THUMBNAIL'
+  const bucket=['THUMBNAIL','VARIANT_ICON'].includes(contentType)
     ?env.PUBLIC_ASSET_BUCKET
     :env.PRIVATE_PRODUCT_BUCKET;
 
@@ -805,12 +829,22 @@ async function ownerUploadComplete(req,res){
   }
 
   const contentType=String(req.body.contentType||'FILE').toUpperCase();
-  const allowed=['THUMBNAIL','FILE','IMAGE','VIDEO','AUDIO'];
+  const allowed=['THUMBNAIL','VARIANT_ICON','FILE','IMAGE','VIDEO','AUDIO'];
 
   if(!allowed.includes(contentType)){
     throw Object.assign(new Error('Content type upload tidak didukung.'),{
       status:400,code:'INVALID_CONTENT_TYPE',expose:true
     });
+  }
+
+  if(contentType==='VARIANT_ICON'){
+    const variantId=String(req.body.variantId||'').trim();
+    if(!variantId||!(await repo.findVariant(req.params.id,variantId))){
+      throw Object.assign(
+        new Error('Varian produk tidak ditemukan atau tidak aktif.'),
+        {status:400,code:'PRODUCT_VARIANT_INVALID',expose:true}
+      );
+    }
   }
 
   const originalName=String(req.body.originalName||'').trim();
@@ -833,6 +867,7 @@ async function ownerUploadComplete(req,res){
 
   const maxBytes=Math.floor(Number(env.MAX_UPLOAD_MB||100)*1024*1024);
   const thumbnailMax=Math.min(maxBytes,100*1024*1024);
+  const variantIconMax=Math.min(maxBytes,5*1024*1024);
 
   if(!Number.isSafeInteger(fileSize)||fileSize<=0){
     throw Object.assign(new Error('Ukuran file tidak valid.'),{
@@ -852,6 +887,12 @@ async function ownerUploadComplete(req,res){
     });
   }
 
+  if(contentType==='VARIANT_ICON'&&fileSize>variantIconMax){
+    throw Object.assign(new Error('Ukuran ikon varian maksimal 5 MB.'),{
+      status:413,code:'VARIANT_ICON_TOO_LARGE',expose:true
+    });
+  }
+
   const descriptor=validateUploadDescriptor({
     originalName,
     mime:mimeType
@@ -863,7 +904,7 @@ async function ownerUploadComplete(req,res){
     });
   }
 
-  const expectedBucket=contentType==='THUMBNAIL'
+  const expectedBucket=['THUMBNAIL','VARIANT_ICON'].includes(contentType)
     ?env.PUBLIC_ASSET_BUCKET
     :env.PRIVATE_PRODUCT_BUCKET;
 
@@ -929,6 +970,36 @@ async function ownerUploadComplete(req,res){
       });
 
       return ok(res,{product:updated,path});
+    }
+
+    if(contentType==='VARIANT_ICON'){
+      const variantId=String(req.body.variantId||'').trim();
+      const result=variantId
+        ?await repo.updateVariantIcon(productId,variantId,path)
+        :null;
+
+      if(!result){
+        throw Object.assign(
+          new Error('Varian produk tidak ditemukan atau tidak aktif.'),
+          {status:400,code:'PRODUCT_VARIANT_INVALID',expose:true}
+        );
+      }
+
+      if(result.previousIconPath&&result.previousIconPath!==path){
+        await removeUnusedProductStorage(
+          result.previousIconPath,
+          env.PUBLIC_ASSET_BUCKET
+        );
+      }
+
+      await recordOwnerAudit(req,{
+        action:'UPLOAD_PRODUCT_VARIANT_ICON',
+        entityType:'product_variant',
+        entityId:variantId,
+        metadata:{productId,path,size:fileSize,mimeType:descriptor.mime}
+      });
+
+      return ok(res,{variant:result.variant,path});
     }
 
     const variantId=String(req.body.variantId||'').trim()||null;

@@ -422,14 +422,15 @@ ownerApi.delete('/products/:id/delete',asyncHandler(api.ownerController.productD
 ownerApi.post('/products/:id/content',validate(ownerProductContentSchema),asyncHandler(api.ownerController.productContent));ownerApi.get('/products/:id/content',asyncHandler(api.ownerController.productContents));
 ownerApi.delete('/products/:id/content/:contentId',asyncHandler(api.ownerController.productContentDelete));
 ownerApi.post('/products/:id/upload-init',validate(z.object({
-  contentType:z.enum(['THUMBNAIL','FILE','IMAGE','VIDEO','AUDIO']),
+  contentType:z.enum(['THUMBNAIL','VARIANT_ICON','FILE','IMAGE','VIDEO','AUDIO']),
   originalName:z.string().trim().min(1).max(255),
   mimeType:z.string().trim().min(1).max(160),
-  fileSize:z.coerce.number().int().positive()
+  fileSize:z.coerce.number().int().positive(),
+  variantId:z.string().uuid().nullable().optional()
 })),asyncHandler(api.ownerUploadInit));
 
 ownerApi.post('/products/:id/upload-complete',validate(z.object({
-  contentType:z.enum(['THUMBNAIL','FILE','IMAGE','VIDEO','AUDIO']),
+  contentType:z.enum(['THUMBNAIL','VARIANT_ICON','FILE','IMAGE','VIDEO','AUDIO']),
   path:z.string().min(1).max(500),
   originalName:z.string().trim().min(1).max(255),
   mimeType:z.string().trim().min(1).max(160),

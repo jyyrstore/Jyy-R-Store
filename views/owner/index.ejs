@@ -37,7 +37,7 @@
               type="button"
               hidden
               data-owner-product-editor-launch
-              data-owner-edit-product='<%- JSON.stringify({...ownerProduct,thumbnail_url:ownerProduct.thumbnail_path?assetUrl(publicAssetBucket,ownerProduct.thumbnail_path):null}).replace(/'/g,"&#39;") %>'
+              data-owner-edit-product='<%- JSON.stringify({...ownerProduct,thumbnail_url:ownerProduct.thumbnail_path?assetUrl(publicAssetBucket,ownerProduct.thumbnail_path):null,variants:(ownerProduct.variants||[]).map(v=>({...v,icon_url:v.icon_path?assetUrl(publicAssetBucket,v.icon_path):null}))}).replace(/'/g,"&#39;") %>'
             ></button>
           <% } %>
         </div>
@@ -345,7 +345,7 @@
                   </div>
 
                   <div class="owner-product-card-actions">
-                    <button class="button button-secondary button-small" data-owner-edit-product='<%- JSON.stringify({...row,thumbnail_url:row.thumbnail_path?assetUrl(publicAssetBucket,row.thumbnail_path):null}).replace(/'/g,"&#39;") %>'>Edit</button>
+                    <button class="button button-secondary button-small" data-owner-edit-product='<%- JSON.stringify({...row,thumbnail_url:row.thumbnail_path?assetUrl(publicAssetBucket,row.thumbnail_path):null,variants:(row.variants||[]).map(v=>({...v,icon_url:v.icon_path?assetUrl(publicAssetBucket,v.icon_path):null}))}).replace(/'/g,"&#39;") %>'>Edit</button>
                     <button class="button button-secondary button-small"
                       data-owner-content="<%= row.id %>"
                       data-owner-product-name="<%- row.name.replace(/"/g,'&quot;') %>"

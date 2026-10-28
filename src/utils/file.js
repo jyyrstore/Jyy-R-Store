@@ -14,11 +14,13 @@ const ALLOWED = {
   VIDEO: ['video/mp4','video/webm','video/quicktime'],
   AUDIO: ['audio/mpeg','audio/wav','audio/ogg','audio/mp4'],
   FILE: ['application/zip','application/x-zip-compressed','application/pdf','application/octet-stream'],
-  THUMBNAIL: ['image/jpeg','image/png','image/webp']
+  THUMBNAIL: ['image/jpeg','image/png','image/webp'],
+  VARIANT_ICON: ['image/jpeg','image/png','image/webp']
 };
 const EXTENSIONS = {
   IMAGE: ['.jpg','.jpeg','.png','.webp'],
   THUMBNAIL: ['.jpg','.jpeg','.png','.webp'],
+  VARIANT_ICON: ['.jpg','.jpeg','.png','.webp'],
   VIDEO: ['.mp4','.webm','.mov'],
   AUDIO: ['.mp3','.wav','.ogg','.m4a'],
   FILE: ['.zip','.pdf']
@@ -63,7 +65,7 @@ function validateUploadDescriptor({originalName,mime},category){
 
   return {
     mime:declaredMime,
-    kind:normalized==='THUMBNAIL'?'IMAGE':normalized,
+    kind:['THUMBNAIL','VARIANT_ICON'].includes(normalized)?'IMAGE':normalized,
     extension:originalExt.slice(1),
     originalName:cleanName
   };
@@ -81,7 +83,7 @@ async function validateFile(file, category) {
   const declaredMime=String(file.mimetype||'').toLowerCase();
   if (!validateContentType(declaredMime,detectedMime,normalized)) throw Object.assign(new Error('MIME type file tidak diperbolehkan atau tidak cocok dengan content.'),{status:400,code:'INVALID_FILE_MIME',expose:true});
   const mime=detectedMime||declaredMime;
-  const kind=normalized==='THUMBNAIL'?'IMAGE':normalized;
+  const kind=['THUMBNAIL','VARIANT_ICON'].includes(normalized)?'IMAGE':normalized;
   return {mime,kind,extension:detected?.ext||originalExt.slice(1),size:file.size||file.buffer.length,originalName:safeName(file.originalname)};
 }
 module.exports = { detect, safeName, ext, validateContentType, validateUploadDescriptor, validateFile, ALLOWED, EXTENSIONS };

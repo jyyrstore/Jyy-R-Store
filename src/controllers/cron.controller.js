@@ -51,7 +51,8 @@ async function cleanupProductUploadOrphans(){
 
   const [
     contentRefs,
-    thumbnailRefs
+    thumbnailRefs,
+    variantIconRefs
   ]=await Promise.all([
     query(
       `select storage_path
@@ -62,6 +63,11 @@ async function cleanupProductUploadOrphans(){
       `select thumbnail_path
        from products
        where thumbnail_path is not null`
+    ),
+    query(
+      `select icon_path
+       from product_variants
+       where is_active=true and icon_path is not null`
     )
   ]);
 
@@ -78,6 +84,10 @@ async function cleanupProductUploadOrphans(){
   const publicRefs=new Set([
     ...thumbnailRefs.rows
       .map(row=>String(row.thumbnail_path||''))
+      .filter(Boolean),
+
+    ...variantIconRefs.rows
+      .map(row=>String(row.icon_path||''))
       .filter(Boolean),
 
     ...contentRefs.rows

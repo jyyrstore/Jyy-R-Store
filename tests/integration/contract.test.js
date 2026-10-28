@@ -1115,6 +1115,53 @@ test('Owner product variants use structured inputs instead of JSON text',()=>{
   );
 });
 
+test('owner variant icons remain separate from the product cover',()=>{
+  const migration=fs.readFileSync(
+    path.join(root,'database/migrations/043_product_variant_icons.sql'),
+    'utf8'
+  );
+  const routes=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+  const controller=fs.readFileSync(
+    path.join(root,'src/controllers/api.controller.js'),
+    'utf8'
+  );
+  const repository=fs.readFileSync(
+    path.join(root,'src/repositories/products.repository.js'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const detail=fs.readFileSync(
+    path.join(root,'views/pages/product-detail.ejs'),
+    'utf8'
+  );
+  const cron=fs.readFileSync(
+    path.join(root,'src/controllers/cron.controller.js'),
+    'utf8'
+  );
+
+  assert.match(migration,/ADD COLUMN IF NOT EXISTS icon_path text/i);
+  assert.match(routes,/VARIANT_ICON/);
+  assert.match(controller,/repo\.updateVariantIcon\(productId,variantId,path\)/);
+  assert.match(
+    controller,
+    /const expectedBucket=\['THUMBNAIL','VARIANT_ICON'\]\.includes\(contentType\)/
+  );
+  assert.match(
+    repository,
+    /json_build_object\('id',pv\.id,'label',pv\.label,'amount',pv\.amount,'price',pv\.price,'stock',pv\.stock,'icon_path',pv\.icon_path/
+  );
+  assert.match(browser,/data-product-variant-icon-input/);
+  assert.match(browser,/contentType:'VARIANT_ICON'/);
+  assert.match(detail,/data-icon="<%= iconUrl %>"/);
+  assert.match(cron,/select icon_path[\s\S]*from product_variants/);
+});
+
 test('variant saves are no-op when unchanged and preserve fixed cart items',()=>{
   const repository=fs.readFileSync(path.join(root,'src/repositories/products.repository.js'),'utf8');
   const saveStart=repository.indexOf('async function saveVariants(productId,variants){');

@@ -69,13 +69,17 @@
           <div class="jyyr-select" data-jyyr-select data-product-variant-picker>
             <input type="hidden" name="variant_id" value="" data-jyyr-select-value data-product-variant-select>
             <button class="jyyr-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" data-jyyr-select-trigger>
+              <img class="product-variant-selected-icon" data-product-variant-selected-icon alt="" hidden>
               <span data-jyyr-select-label>Pilih nominal produk</span>
               <span class="jyyr-select-chevron" aria-hidden="true"></span>
             </button>
             <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
               <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="" data-label="Pilih nominal produk">Pilih nominal produk</button>
-              <% (product.variants||[]).forEach(v=>{ const available=Math.max(0,Number(v.stock)-Number(v.reserved_stock||0)); if(available>0){ const variantLabel=String(v.label)+' — '+formatIDR(v.price); %>
-                <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="<%= v.id %>" data-label="<%= variantLabel %>" data-price="<%= v.price %>" data-stock="<%= available %>"><%= variantLabel %></button>
+              <% (product.variants||[]).forEach(v=>{ const available=Math.max(0,Number(v.stock)-Number(v.reserved_stock||0)); if(available>0){ const variantLabel=String(v.label)+' — '+formatIDR(v.price); const iconUrl=v.icon_path?assetUrl(publicAssetBucket,v.icon_path):''; %>
+                <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="<%= v.id %>" data-label="<%= variantLabel %>" data-price="<%= v.price %>" data-stock="<%= available %>" data-icon="<%= iconUrl %>">
+                  <span class="product-variant-option-icon" aria-hidden="true"><% if(iconUrl){ %><img src="<%= iconUrl %>" alt="" loading="lazy"><% }else{ %><%- icon('package') %><% } %></span>
+                  <span><%= variantLabel %></span>
+                </button>
               <% } }) %>
             </div>
           </div>

@@ -141,7 +141,7 @@ async function adminList({
          end as stock,
          c.name category_name,
          c.slug category_slug,
-         coalesce((select json_agg(json_build_object('id',pv.id,'label',pv.label,'amount',pv.amount,'price',pv.price,'stock',pv.stock,'reserved_stock',pv.reserved_stock,'is_active',pv.is_active,'sort_order',pv.sort_order) order by pv.sort_order,pv.created_at) from product_variants pv where pv.product_id=p.id and pv.is_active=true),'[]'::json) variants,
+         coalesce((select json_agg(json_build_object('id',pv.id,'label',pv.label,'amount',pv.amount,'price',pv.price,'stock',pv.stock,'icon_path',pv.icon_path,'reserved_stock',pv.reserved_stock,'is_active',pv.is_active,'sort_order',pv.sort_order) order by pv.sort_order,pv.created_at) from product_variants pv where pv.product_id=p.id and pv.is_active=true),'[]'::json) variants,
          coalesce(
            (
              select count(*)
@@ -226,6 +226,11 @@ async function deletePermanently(id){
       [id]
     )).rows;
 
+    const variantIcons=(await client.query(
+      'select distinct icon_path from product_variants where product_id=$1 and icon_path is not null',
+      [id]
+    )).rows;
+
     await client.query(
       'delete from cart_items where product_id=$1',
       [id]
@@ -238,7 +243,7 @@ async function deletePermanently(id){
 
     if(!deleted)return null;
 
-    return {product:deleted,contents};
+    return {product:deleted,contents,variantIcons};
   });
 }
 async function unpublish(id){ return update(id,{status:'DRAFT'}); }
@@ -281,9 +286,10 @@ async function duplicate(id){
     )).rows[0];
 
       const variantMap=new Map();
+      const sourceVariantIcons=[];
       if(p.pricing_mode==='VARIANT'){
         const sourceVariants=(await client.query(
-          'select id,label,amount,price,stock,sort_order from product_variants where product_id=$1 and is_active=true order by sort_order,created_at',
+          'select id,label,amount,price,stock,sort_order,icon_path from product_variants where product_id=$1 and is_active=true order by sort_order,created_at',
           [id]
         )).rows;
 
@@ -294,6 +300,12 @@ async function duplicate(id){
           )).rows[0];
 
           variantMap.set(String(v.id),String(copiedVariant.id));
+          if(v.icon_path){
+            sourceVariantIcons.push({
+              variantId:copiedVariant.id,
+              iconPath:v.icon_path
+            });
+          }
         }
       }
 
@@ -321,6 +333,29 @@ async function duplicate(id){
           bucket:env.PUBLIC_ASSET_BUCKET,
           path:thumbnailPath
         });
+      }
+
+      for(const sourceIcon of sourceVariantIcons){
+        const sourceObjectPath=storage.publicObjectPath(sourceIcon.iconPath);
+        const extension=(sourceObjectPath.match(/\.[a-z0-9]+$/i)||[''])[0];
+        const destinationObjectPath=
+          `products/${copy.id}/${crypto.randomUUID()}${extension}`;
+
+        await storage.copy(
+          env.PUBLIC_ASSET_BUCKET,
+          sourceObjectPath,
+          destinationObjectPath
+        );
+
+        createdObjects.push({
+          bucket:env.PUBLIC_ASSET_BUCKET,
+          path:destinationObjectPath
+        });
+
+        await client.query(
+          'update product_variants set icon_path=$2,updated_at=now() where id=$1',
+          [sourceIcon.variantId,destinationObjectPath]
+        );
       }
 
       const contents=(await client.query(
@@ -417,13 +452,33 @@ async function duplicate(id){
 
 async function listVariants(productId,activeOnly=true){
   return (await query(
-    `select id,product_id,label,amount,price,stock,reserved_stock,is_active,sort_order,created_at,updated_at
+    `select id,product_id,label,amount,price,stock,icon_path,reserved_stock,is_active,sort_order,created_at,updated_at
      from product_variants where product_id=$1 ${activeOnly?"and is_active=true":""}
      order by sort_order,created_at,id`,[productId]
   )).rows;
 }
 async function findVariant(productId,variantId){
   return (await query('select * from product_variants where product_id=$1 and id=$2 and is_active=true',[productId,variantId])).rows[0]||null;
+}
+async function updateVariantIcon(productId,variantId,iconPath){
+  return withTransaction(async(client)=>{
+    const current=(await client.query(
+      'select icon_path from product_variants where product_id=$1 and id=$2 and is_active=true for update',
+      [productId,variantId]
+    )).rows[0];
+
+    if(!current)return null;
+
+    const variant=(await client.query(
+      'update product_variants set icon_path=$3,updated_at=now() where product_id=$1 and id=$2 and is_active=true returning id,product_id,label,icon_path',
+      [productId,variantId,iconPath]
+    )).rows[0];
+
+    return variant?{
+      variant,
+      previousIconPath:current.icon_path||null
+    }:null;
+  });
 }
 async function hasReservedVariants(productId){
   return Boolean((await query('select 1 from product_variants where product_id=$1 and reserved_stock>0 limit 1',[productId])).rowCount);
@@ -444,7 +499,7 @@ async function saveVariants(productId,variants){
     if(!product) throw badRequest('PRODUCT_NOT_FOUND','Produk tidak ditemukan.');
     if(variants.length&&product.pricing_mode!=='VARIANT') throw badRequest('PRODUCT_NOT_VARIANT','Aktifkan mode VARIANT sebelum menyimpan variasi.');
     const active=(await client.query(
-      'select id,product_id,label,amount,price,stock,reserved_stock,is_active,sort_order,created_at,updated_at from product_variants where product_id=$1 and is_active=true order by sort_order,created_at,id',[productId]
+      'select id,product_id,label,amount,price,stock,icon_path,reserved_stock,is_active,sort_order,created_at,updated_at from product_variants where product_id=$1 and is_active=true order by sort_order,created_at,id',[productId]
     )).rows;
     const unchanged=active.length===variants.length && active.every((row,index)=>{
       const variant=variants[index];
@@ -518,7 +573,7 @@ async function saveVariants(productId,variants){
     }
 
     return (await client.query(
-      'select id,product_id,label,amount,price,stock,reserved_stock,is_active,sort_order,created_at,updated_at from product_variants where product_id=$1 and is_active=true order by sort_order,created_at,id',
+      'select id,product_id,label,amount,price,stock,icon_path,reserved_stock,is_active,sort_order,created_at,updated_at from product_variants where product_id=$1 and is_active=true order by sort_order,created_at,id',
       [productId]
     )).rows;
   });
@@ -640,6 +695,6 @@ async function countAdmin({
   );
 }
 
-module.exports={list,adminList,count,findBySlug,findById,create,update,remove,deletePermanently,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event,listVariants,findVariant,hasReservedVariants,saveVariants,
+module.exports={list,adminList,count,findBySlug,findById,create,update,remove,deletePermanently,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event,listVariants,findVariant,updateVariantIcon,hasReservedVariants,saveVariants,
   countAdmin
 };
