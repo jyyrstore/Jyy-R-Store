@@ -772,6 +772,86 @@ test('Owner product pricing modes render as selectable cards above cover',()=>{
   );
 });
 
+test('Owner product edit and content typography follows create product',()=>{
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+  const ownerView=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+
+  assert.ok(
+    ownerView.includes(
+      "['create_produk','edit_produk','content_produk'].includes(ownerSection)?' owner-product-workflow-page-header':''"
+    ),
+    'Ketiga halaman harus menggunakan header workflow bersama.'
+  );
+
+  const workflow='.owner-product-editor-page:is([data-owner-product-page="create_produk"],[data-owner-product-page="edit_produk"],[data-owner-product-page="content_produk"])';
+
+  assert.ok(css.includes(workflow+' .product-modal-head h2'));
+  assert.ok(css.includes(workflow+' .field>span'));
+  assert.ok(css.includes(workflow+' .product-flow-steps span{'));
+  assert.ok(css.includes(workflow+' .product-flow-steps span.active{'));
+  assert.ok(css.includes('.owner-product-workflow-page-header h1'));
+  assert.ok(
+    css.includes('.owner-product-editor-page[data-owner-product-page="content_produk"] .owner-section-title h3')
+  );
+  assert.ok(
+    css.includes('.owner-product-editor-page[data-owner-product-page="content_produk"] .owner-publish-head h3')
+  );
+});
+
+test('Owner product edit and content layout follows create product',()=>{
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const edit='.owner-product-editor-page:is([data-owner-product-page="create_produk"],[data-owner-product-page="edit_produk"])';
+  const workflow='.owner-product-editor-page:is([data-owner-product-page="create_produk"],[data-owner-product-page="edit_produk"],[data-owner-product-page="content_produk"])';
+
+  assert.match(
+    css,
+    /\.owner-product-editor-page\[data-owner-product-page="create_produk"\]\s+\.product-form-modal\s*\{[^}]*--owner-product-card-gap:\s*15px/
+  );
+  assert.match(
+    css,
+    /\.owner-product-editor-page\[data-owner-product-page="edit_produk"\]\s+\.product-form-modal\s*\{[^}]*gap:\s*15px/
+  );
+  assert.equal(
+    (css.match(/--owner-product-card-gap\s*:\s*15px/g)||[]).length,
+    1,
+    'Variabel jarak card varian hanya boleh didefinisikan pada halaman Tambah Produk.'
+  );
+  assert.ok(
+    css.includes(workflow+' .product-modal-head{'),
+    'Ketiga halaman harus menggunakan card header workflow yang sama.'
+  );
+  assert.ok(
+    css.includes(edit+' .product-modal-section{'),
+    'Section form edit harus menggunakan card yang sama dengan create.'
+  );
+  assert.ok(
+    css.includes(workflow+' .field input,'),
+    'Kontrol input harus konsisten pada ketiga halaman.'
+  );
+  assert.match(
+    css,
+    /\.owner-content-list-section,\s*\.owner-content-form\{[^}]*padding:22px;[^}]*border-radius:18px;[^}]*box-shadow:var\(--shadow-sm\);/
+  );
+  assert.match(
+    css,
+    /\.owner-publish-panel\{[^}]*border-radius:18px;/
+  );
+  assert.match(
+    css,
+    /@media\(max-width:700px\)\{[\s\S]*?\.owner-content-row\{[^}]*flex-direction:column;[^}]*align-items:stretch;[^}]*\}/
+  );
+});
+
 test('Owner product card spacing is aligned only on the create page',()=>{
   const css=fs.readFileSync(
     path.join(root,'public/css/pages.css'),

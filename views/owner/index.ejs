@@ -1,7 +1,7 @@
 <script nonce="<%= cspNonce %>">window.__OWNER_CATEGORIES=<%- JSON.stringify(typeof categories !== "undefined" ? categories : []) %>;window.__OWNER_PRODUCT_EDITOR=<%- JSON.stringify(typeof ownerProduct !== "undefined" && ownerProduct ? {id:ownerProduct.id,name:ownerProduct.name,status:ownerProduct.status,hasThumbnail:!!ownerProduct.thumbnail_path} : null).replace(/</g,'\\u003c') %>;</script>
 <section class="page-shell owner-page">
   <div class="owner-content">
-      <div class="page-header<%= ownerSection==='create_produk'?' owner-product-create-page-header':'' %>">
+      <div class="page-header<%= ['create_produk','edit_produk','content_produk'].includes(ownerSection)?' owner-product-workflow-page-header':'' %><%= ownerSection==='create_produk'?' owner-product-create-page-header':'' %>">
         <div>
           <% if(ownerSection==='create_produk'){ %>
             <div class="owner-product-create-page-header-topline">
