@@ -135,6 +135,30 @@
     `;
   };
 
+  function productPricingModesMarkup(value='FIXED'){
+    const selected=String(value||'FIXED').toUpperCase();
+
+    return `
+      <div class="owner-product-pricing-modes"
+           role="radiogroup"
+           aria-label="Pilih mode harga">
+        <label class="owner-product-pricing-option">
+          <input type="radio" name="pricing_mode" value="FIXED"
+            ${selected==='FIXED'?'checked':''}>
+          <span class="owner-product-pricing-label">Harga tetap</span>
+          <span class="owner-product-pricing-check" aria-hidden="true">✓</span>
+        </label>
+
+        <label class="owner-product-pricing-option">
+          <input type="radio" name="pricing_mode" value="VARIANT"
+            ${selected==='VARIANT'?'checked':''}>
+          <span class="owner-product-pricing-label">Harga per variasi</span>
+          <span class="owner-product-pricing-check" aria-hidden="true">✓</span>
+        </label>
+      </div>
+    `;
+  }
+
   function productVariantRowMarkup(variant={},editingExisting=false){
     return `
       <div
@@ -185,7 +209,16 @@
         data-product-variant-row data-product-variant-card>
         <div class="owner-product-variant-card-values">
           <div class="owner-product-variant-card-value">
-            <small>Nama Varian</small><strong>${esc(label||'—')}</strong>
+            <div class="owner-product-variant-name-row">
+              <small>Nama Varian</small>
+              <button class="button button-secondary" type="button"
+                data-product-variant-edit>Edit</button>
+            </div>
+            <div class="owner-product-variant-name-row owner-product-variant-name-row-value">
+              <strong>${esc(label||'—')}</strong>
+              <button class="button button-secondary" type="button"
+                data-product-variant-remove>Hapus</button>
+            </div>
           </div>
           <div class="owner-product-variant-card-value">
             <small>Jumlah</small><strong>${amount===''?'—':esc(amount)}</strong>
@@ -196,12 +229,6 @@
           <div class="owner-product-variant-card-value">
             <small>Stok</small><strong>${stock===''?'—':esc(stock)}</strong>
           </div>
-        </div>
-        <div class="owner-product-variant-card-actions">
-          <button class="button button-secondary" type="button"
-            data-product-variant-edit>Edit</button>
-          <button class="button button-secondary" type="button"
-            data-product-variant-remove>Hapus</button>
         </div>
         <input type="hidden" data-product-variant-label value="${esc(label)}">
         <input type="hidden" data-product-variant-amount value="${esc(amount)}">
@@ -997,8 +1024,9 @@
                   data-owner-content-product="${esc(productId)}"
                   data-owner-content-name="${esc(productName)}"
                   data-owner-content-status="${esc(productStatus)}"
-                  data-owner-content-has-thumbnail="${coverReady===true?'1':'0'}">${window.JYYRIcon?.('trash-can')||''}
-                  Hapus
+                  data-owner-content-has-thumbnail="${coverReady===true?'1':'0'}"
+                  aria-label="Hapus content"
+                  title="Hapus content">${window.JYYRIcon?.('trash-can')||''}
                 </button>
               </article>
             `;
@@ -2270,21 +2298,7 @@
     <div class="product-flow-steps"><span class="active">1. Data Produk</span><span>2. Content</span><span>3. Publish</span></div>
   </div>
 
-  <div class="owner-product-pricing-modes"
-       role="radiogroup"
-       aria-label="Pilih mode harga">
-    <label class="owner-product-pricing-option">
-      <input type="radio" name="pricing_mode" value="FIXED" checked>
-      <span class="owner-product-pricing-label">Harga tetap</span>
-      <span class="owner-product-pricing-check" aria-hidden="true">✓</span>
-    </label>
-
-    <label class="owner-product-pricing-option">
-      <input type="radio" name="pricing_mode" value="VARIANT">
-      <span class="owner-product-pricing-label">Harga per variasi</span>
-      <span class="owner-product-pricing-check" aria-hidden="true">✓</span>
-    </label>
-  </div>
+${productPricingModesMarkup('FIXED')}
 
   <section class="product-modal-section">
     <div class="product-modal-section-title">
@@ -2420,6 +2434,8 @@
 
           <input type="hidden" name="id" value="${esc(d.id)}">
 
+          ${productPricingModesMarkup(d.pricing_mode||'FIXED')}
+
           <section class="product-modal-section">
             <div class="product-modal-section-title">
               <strong>Cover Produk</strong>
@@ -2507,17 +2523,7 @@
                 <input name="stock" type="number" min="0" value="${Number(d.stock)||0}">
               </label>
 
-              <label class="field">
-                <span>Mode Harga</span>
-                ${pickerSelect({
-                  name:'pricing_mode',
-                  value:d.pricing_mode||'FIXED',
-                  options:[
-                    ['FIXED','Harga tetap'],
-                    ['VARIANT','Harga per variasi']
-                  ]
-                })}
-              </label>
+
 
               <label class="field full">
                 <span>Deskripsi</span>

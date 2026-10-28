@@ -724,7 +724,7 @@ test('Owner product cover status text stays above file trigger',()=>{
   );
 });
 
-test('Owner product pricing modes render as selectable cards above cover',()=>{
+test('Owner product pricing modes use shared selectable cards on create and edit',()=>{
   const pages=fs.readFileSync(
     path.join(root,'public/js/pages.js'),
     'utf8'
@@ -734,38 +734,80 @@ test('Owner product pricing modes render as selectable cards above cover',()=>{
     'utf8'
   );
 
-  const start=pages.indexOf(
+  const helperStart=pages.indexOf(
+    "function productPricingModesMarkup(value='FIXED'){"
+  );
+  const helperEnd=pages.indexOf(
+    '\n  function productVariantRowMarkup',
+    helperStart
+  );
+  assert.ok(
+    helperStart>=0&&helperEnd>helperStart,
+    'Renderer Mode Harga bersama harus ditemukan.'
+  );
+
+  const helper=pages.slice(helperStart,helperEnd);
+  assert.ok(helper.includes('name="pricing_mode" value="FIXED"'));
+  assert.ok(helper.includes('name="pricing_mode" value="VARIANT"'));
+  assert.match(helper,/selected==='FIXED'\?'checked':''/);
+  assert.match(helper,/selected==='VARIANT'\?'checked':''/);
+  assert.ok(helper.includes('Harga tetap'));
+  assert.ok(helper.includes('Harga per variasi'));
+
+  const createStart=pages.indexOf(
     'products:`<form data-owner-product-form class="product-form-modal">'
   );
-  const end=pages.indexOf(
+  const createEnd=pages.indexOf(
     '\n      services:`<form data-owner-service-form',
-    start
+    createStart
   );
-
-  assert.ok(start>=0&&end>start,'Create product form harus ditemukan.');
-
-  const form=pages.slice(start,end);
-  const modes=form.indexOf('<div class="owner-product-pricing-modes"');
-  const cover=form.indexOf('<strong>Cover Produk</strong>',modes);
-
   assert.ok(
-    modes>=0&&cover>modes,
-    'Kartu Mode Harga harus muncul sebelum card Cover Produk.'
+    createStart>=0&&createEnd>createStart,
+    'Create product form harus ditemukan.'
   );
-  assert.match(form,/name="pricing_mode" value="FIXED" checked/);
-  assert.match(form,/name="pricing_mode" value="VARIANT"/);
-  assert.match(form,/>Harga tetap</);
-  assert.match(form,/>Harga per variasi</);
-  assert.doesNotMatch(form,/<span>Mode Harga<\/span>/);
+
+  const createForm=pages.slice(createStart,createEnd);
+  const createModes=createForm.indexOf(
+    "${productPricingModesMarkup('FIXED')}"
+  );
+  const createCover=createForm.indexOf(
+    '<strong>Cover Produk</strong>',
+    createModes
+  );
+  assert.ok(
+    createModes>=0&&createCover>createModes,
+    'Mode Harga Tambah Produk harus tampil sebelum Cover Produk.'
+  );
+
+  const editStart=pages.indexOf(
+    "const ep=e.target.closest('[data-owner-edit-product]');"
+  );
+  const editEnd=pages.indexOf(
+    "const content=e.target.closest('[data-owner-content]');",
+    editStart
+  );
+  assert.ok(editStart>=0&&editEnd>editStart,'Template edit produk harus ditemukan.');
+
+  const edit=pages.slice(editStart,editEnd);
+  const editModes=edit.indexOf(
+    "${productPricingModesMarkup(d.pricing_mode||'FIXED')}"
+  );
+  const editCover=edit.indexOf(
+    '<strong>Cover Produk</strong>',
+    editModes
+  );
+  assert.ok(
+    editModes>=0&&editCover>editModes,
+    'Mode Harga Edit Produk harus tampil sebelum Cover Produk.'
+  );
+  assert.doesNotMatch(edit,/<span>Mode Harga<\/span>/);
+  assert.doesNotMatch(edit,/name:'pricing_mode'/);
 
   assert.match(
     css,
-    /\.owner-product-pricing-modes\s*\{[^}]*grid-template-columns\s*:\s*repeat\(2,minmax\(0,1fr\)\)/
+    /\.owner-product-pricing-modes\s*\{[^}]*grid-template-columns\s*:\s*repeat\(2,minmax\(0,1fr\)/
   );
-  assert.match(
-    css,
-    /\.owner-product-pricing-option:has\(input:checked\)/
-  );
+  assert.match(css,/\.owner-product-pricing-option:has\(input:checked\)/);
   assert.match(
     css,
     /\.owner-product-pricing-option:has\(input:checked\)\s*\.owner-product-pricing-check/
@@ -848,7 +890,7 @@ test('Owner product edit and content layout follows create product',()=>{
   );
   assert.match(
     css,
-    /@media\(max-width:700px\)\{[\s\S]*?\.owner-content-row\{[^}]*flex-direction:column;[^}]*align-items:stretch;[^}]*\}/
+    /@media\(max-width:700px\)\{[\s\S]*?\.owner-content-row\{[^}]*display:grid;[^}]*grid-template-columns:minmax\(0,1fr\) auto;[^}]*\}/
   );
 });
 
@@ -959,6 +1001,28 @@ test('Owner product variants use structured inputs instead of JSON text',()=>{
   const routes=fs.readFileSync(
     path.join(root,'src/routes/index.js'),
     'utf8'
+  );
+
+  const variantCardStart=pages.indexOf(
+    'function productVariantCardMarkup(variant={}){'
+  );
+  const variantCardEnd=pages.indexOf(
+    '\n  function productVariantEditorMarkup(variants=[]){',
+    variantCardStart
+  );
+  assert.ok(
+    variantCardStart>=0&&variantCardEnd>variantCardStart,
+    'Renderer kartu varian harus ditemukan.'
+  );
+
+  const variantCardMarkup=pages.slice(variantCardStart,variantCardEnd);
+  assert.match(
+    variantCardMarkup,
+    /<div class="owner-product-variant-name-row">\s*<small>Nama Varian<\/small>\s*<button[^>]*data-product-variant-edit>/
+  );
+  assert.match(
+    variantCardMarkup,
+    /<div class="owner-product-variant-name-row owner-product-variant-name-row-value">\s*<strong>[\s\S]*?<\/strong>\s*<button[^>]*data-product-variant-remove>/
   );
 
   assert.match(pages,/function productVariantEditorMarkup/);
