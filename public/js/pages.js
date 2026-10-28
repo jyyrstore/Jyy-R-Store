@@ -2519,14 +2519,14 @@
                 })}
               </label>
 
-              ${productVariantEditorMarkup(d.variants||[])}
-
               <label class="field full">
                 <span>Deskripsi</span>
                 <textarea name="description" rows="5" maxlength="5000">${esc(d.description||'')}</textarea>
               </label>
             </div>
           </section>
+
+          ${productVariantEditorMarkup(d.variants||[])}
 
           <div class="product-modal-actions">
             <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Batal</button>

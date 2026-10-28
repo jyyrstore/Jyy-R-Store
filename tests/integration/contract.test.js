@@ -772,6 +772,34 @@ test('Owner product pricing modes render as selectable cards above cover',()=>{
   );
 });
 
+test('Owner product card spacing is aligned only on the create page',()=>{
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  assert.match(
+    css,
+    /\.owner-product-editor-page\[data-owner-product-page="create_produk"\]\s+\.product-form-modal\s*\{[^}]*--owner-product-card-gap:\s*15px/
+  );
+
+  assert.match(
+    css,
+    /\.owner-product-variant-layout\s*\{[^}]*gap:\s*var\(--owner-product-card-gap,\s*10px\)/
+  );
+
+  assert.match(
+    css,
+    /\.owner-product-variant-list\s*\{[^}]*gap:\s*var\(--owner-product-card-gap,\s*10px\)/
+  );
+
+  assert.equal(
+    (css.match(/--owner-product-card-gap\s*:\s*15px/g)||[]).length,
+    1,
+    'Jarak 20px hanya boleh ditetapkan pada halaman Tambah Produk.'
+  );
+});
+
 test('Owner product variant editor stays in title card while saved cards stay below',()=>{
   const pages=fs.readFileSync(
     path.join(root,'public/js/pages.js'),
@@ -799,6 +827,50 @@ test('Owner product variant editor stays in title card while saved cards stay be
   assert.match(pages,/draftHost\.insertAdjacentHTML\('beforeend',productVariantRowMarkup/);
   assert.match(pages,/data-product-variant-editing-card/);
 });
+test('Owner product variant edit section is not nested inside product information',()=>{
+  const pages=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const editStart=pages.indexOf(
+    "const ep=e.target.closest('[data-owner-edit-product]');"
+  );
+  const editEnd=pages.indexOf(
+    "const content=e.target.closest('[data-owner-content]');",
+    editStart
+  );
+
+  assert.ok(editStart>=0&&editEnd>editStart,'Template edit produk harus ditemukan.');
+
+  const editMarkup=pages.slice(editStart,editEnd);
+  const infoTitle=editMarkup.indexOf('<strong>Informasi Produk</strong>');
+  const infoEnd=editMarkup.indexOf('</section>',infoTitle);
+  const variant=editMarkup.indexOf('${productVariantEditorMarkup(d.variants||[])}');
+
+  assert.ok(
+    infoTitle>=0&&infoEnd>infoTitle&&variant>infoEnd,
+    'Card Daftar Varian harus menjadi sibling Informasi Produk.'
+  );
+
+  const editorRules=[
+    ...css.matchAll(/\.owner-product-variant-editor-form\s*\{([^{}]*)\}/g)
+  ].map(match=>match[1]);
+
+  assert.equal(editorRules.length,2,'Rule desktop dan mobile harus tetap tersedia.');
+  for(const rule of editorRules){
+    assert.doesNotMatch(
+      rule,
+      /(^|\n)\s*(?:padding|border(?:-[a-z-]+)?|background(?:-[a-z-]+)?)\s*:/,
+      'Form input varian tidak boleh membuat card tambahan.'
+    );
+  }
+});
+
 test('Owner product variants use structured inputs instead of JSON text',()=>{
   const pages=fs.readFileSync(
     path.join(root,'public/js/pages.js'),
