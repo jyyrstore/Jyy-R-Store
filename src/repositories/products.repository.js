@@ -76,7 +76,7 @@ function filters({
 
   return {
     args,
-    where:`p.status=$1 and ($2='' or p.name ilike '%'||$2||'%' or p.description ilike '%'||$2||'%') and ($3='' or c.slug=$3) and ($4::numeric is null or (case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end) >= $4::numeric) and ($5::numeric is null or (case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end) <= $5::numeric)`,
+    where:`p.status=$1 and ($2='' or p.name ilike '%'||$2||'%' or p.description ilike '%'||$2||'%') and ($3='' or c.slug=$3 or parent_c.slug=$3) and ($4::numeric is null or (case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end) >= $4::numeric) and ($5::numeric is null or (case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end) <= $5::numeric)`,
     order
   };
 }
@@ -84,7 +84,7 @@ async function list(opts={}){
   const f=filters(opts);
   const limit=safeIntRange(opts.limit,20,1,100);
   const offset=safeIntRange(opts.offset,0,0,1000000);
-  const sql=`select p.*,case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end as price,case when p.pricing_mode='VARIANT' then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else greatest(p.stock-p.reserved_stock,0) end as stock,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
+  const sql=`select p.*,case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end as price,case when p.pricing_mode='VARIANT' then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else greatest(p.stock-p.reserved_stock,0) end as stock,c.name category_name,c.slug category_slug,parent_c.name category_parent_name,parent_c.slug category_parent_slug from products p left join categories c on c.id=p.category_id left join categories parent_c on parent_c.id=c.parent_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
   return (await query(sql,f.args)).rows;
 }
 async function adminList({
@@ -141,6 +141,8 @@ async function adminList({
          end as stock,
          c.name category_name,
          c.slug category_slug,
+         parent_c.name category_parent_name,
+         parent_c.slug category_parent_slug,
          coalesce((select json_agg(json_build_object('id',pv.id,'label',pv.label,'amount',pv.amount,'price',pv.price,'stock',pv.stock,'icon_path',pv.icon_path,'reserved_stock',pv.reserved_stock,'is_active',pv.is_active,'sort_order',pv.sort_order) order by pv.sort_order,pv.created_at) from product_variants pv where pv.product_id=p.id and pv.is_active=true),'[]'::json) variants,
          coalesce(
            (
@@ -152,6 +154,7 @@ async function adminList({
          )::int content_count
        from products p
        left join categories c on c.id=p.category_id
+       left join categories parent_c on parent_c.id=c.parent_id
        where ${where.join(' and ')}
        order by ${order}
        limit $${args.length-1}
@@ -161,9 +164,9 @@ async function adminList({
   ).rows;
 }
 
-async function count(opts={}){ const f=filters(opts); return Number((await query(`select count(*)::int count from products p left join categories c on c.id=p.category_id where ${f.where}`,f.args)).rows[0].count); }
-async function findBySlug(slug){ return (await query(`select p.*,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where p.slug=$1`,[slug])).rows[0]||null; }
-async function findById(id){ return (await query('select p.*,c.name category_name,c.slug category_slug from products p left join categories c on c.id=p.category_id where p.id=$1',[id])).rows[0]||null; }
+async function count(opts={}){ const f=filters(opts); return Number((await query(`select count(*)::int count from products p left join categories c on c.id=p.category_id left join categories parent_c on parent_c.id=c.parent_id where ${f.where}`,f.args)).rows[0].count); }
+async function findBySlug(slug){ return (await query(`select p.*,c.name category_name,c.slug category_slug,parent_c.name category_parent_name,parent_c.slug category_parent_slug from products p left join categories c on c.id=p.category_id left join categories parent_c on parent_c.id=c.parent_id where p.slug=$1`,[slug])).rows[0]||null; }
+async function findById(id){ return (await query('select p.*,c.name category_name,c.slug category_slug,parent_c.name category_parent_name,parent_c.slug category_parent_slug from products p left join categories c on c.id=p.category_id left join categories parent_c on parent_c.id=c.parent_id where p.id=$1',[id])).rows[0]||null; }
 async function create(data,client){ const c=client||require('../config/database').db(); return (await c.query('insert into products(category_id,name,slug,description,price,stock,thumbnail_path,status,pricing_mode) values($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *',[data.category_id||null,data.name,data.slug,data.description||'',data.price,data.stock,data.thumbnail_path||null,data.status||'DRAFT',data.pricing_mode||'FIXED'])).rows[0]; }
 async function update(id,data,client){ const c=client||require('../config/database').db(); const allowed=['category_id','name','slug','description','price','stock','thumbnail_path','status','pricing_mode']; const keys=allowed.filter(k=>Object.prototype.hasOwnProperty.call(data,k)); if(!keys.length) return findById(id); const sql=`update products set ${keys.map((k,i)=>`${k}=$${i+2}`).join(',')},updated_at=now() where id=$1 returning *`; return (await c.query(sql,[id,...keys.map(k=>data[k])])).rows[0]; }
 async function remove(id){ return (await query("update products set status='ARCHIVED',updated_at=now() where id=$1 returning *",[id])).rows[0]; }

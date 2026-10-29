@@ -34,7 +34,7 @@
   <section class="section">
     <div class="section-header"><div><h2>Category</h2></div></div>
     <div class="category-grid">
-<% categories.forEach(c=>{ %>
+<% categories.filter(c=>!c.parent_id).forEach(c=>{ %>
   <a href="/store?category=<%= c.slug %>" class="category-card">
     <span class="category-card__content">
       <strong class="category-card__name"><%= c.name %></strong>

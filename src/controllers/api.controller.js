@@ -23,11 +23,11 @@ const { query }=require('../config/database');
 const info=require('../repositories/information.repository');
 const faq=require('../repositories/faq.repository');
 const categories=require('../repositories/categories.repository');
+const categoryService=require('../services/category/category.service');
 const productReviews=require('../repositories/product-reviews.repository');
 const storage=require('../config/storage');
 const { log }=require('../config/logging');
 const { loadEnv }=require('../config/env');
-const makeSlug=require('../utils/slug');
 const { validateUploadDescriptor, validateFile }=require('../utils/file');
 const crypto=require('crypto');
 const {safeNextPath,safeSameOriginUrl}=require('../utils/url');
@@ -557,14 +557,14 @@ return ok(res,p,201)},
  categories:async(req,res)=>ok(res,await categories.list(false)),
  categoryCreate:async(req,res)=>{
    try{
-     return ok(res,await categories.create({...req.body,slug:makeSlug(req.body.slug||req.body.name)}),201);
+     return ok(res,await categoryService.create(req.body),201);
    }catch(error){
      throw normalizeCategoryWriteError(error);
    }
  },
  categoryUpdate:async(req,res)=>{
    try{
-     return ok(res,await categories.update(req.params.id,{...req.body,slug:makeSlug(req.body.slug||req.body.name)}));
+     return ok(res,await categoryService.update(req.params.id,req.body));
    }catch(error){
      throw normalizeCategoryWriteError(error);
    }

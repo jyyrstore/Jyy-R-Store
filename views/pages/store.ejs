@@ -60,8 +60,15 @@
   </button>
   <div class="jyyr-select-menu" role="listbox" data-jyyr-select-menu>
       <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="" data-label="Semua kategori">Semua kategori</button>
-      <% categories.forEach(c=>{ %>
-        <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="<%= c.slug %>" data-label="<%= c.name %>"><%= c.name %></button>
+      <% categories.forEach(c=>{
+        const categoryParent=categories.find(
+          parent=>String(parent.id)===String(c.parent_id)
+        );
+        const categoryLabel=categoryParent
+          ? categoryParent.name+' → '+c.name
+          : c.name;
+      %>
+        <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="<%= c.slug %>" data-label="<%= categoryLabel %>"><%= categoryLabel %></button>
       <% }) %>
   </div>
 </div>

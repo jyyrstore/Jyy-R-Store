@@ -15,8 +15,9 @@ Requirements: Node.js 24.x and a Supabase/PostgreSQL project when real data flow
 ```bash
 cp .env.example .env
 # fill only owner-supplied values
-npm install
+npm ci
 npm run build
+npm run lint
 npm test
 npm run verify
 npm run migrate
@@ -39,5 +40,8 @@ The application ships with a modular `generic-json` provider contract. A real pr
 `npm run build` performs a dependency-free structure/security contract check. `npm test` covers deterministic domain/security helpers. Live database, Supabase Auth/Storage, email, external payment checks, and browser E2E require real owner-supplied environment values plus an installed dependency/runtime environment; unavailable live checks are reported in `docs/requirement-audit.md`.
 
 
-## Verification Note
-At build time the environment could not reach the npm registry, so `package-lock.json` was not generated here. Use `npm install` in a networked development/deployment environment before `npm ci`; after dependencies are installed, run `npm test`, `npm run lint`, and `npm run build`. Live Supabase/payment/email/Vercel checks require owner credentials and are intentionally not embedded in the repository.
+## Verification status
+
+- `package-lock.json` is committed. Use `npm ci` to install the dependency tree recorded by the lockfile. The project targets Node.js `24.x`.
+- `.github/workflows/deploy.yml` currently runs verification checks, not deployment: it installs dependencies and runs build, lint, tests, and project verification. Production deployment is handled by the configured Vercel Git integration.
+- Passing CI and a Vercel deployment in `READY` state do not establish that Supabase, email, payment/webhook, or browser flows have passed end-to-end testing. See `docs/requirement-audit.md` for the audit baseline and outstanding live checks.

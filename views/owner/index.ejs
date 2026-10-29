@@ -1,4 +1,4 @@
-<script nonce="<%= cspNonce %>">window.__OWNER_CATEGORIES=<%- JSON.stringify(typeof categories !== "undefined" ? categories : []) %>;window.__OWNER_PRODUCT_EDITOR=<%- JSON.stringify(typeof ownerProduct !== "undefined" && ownerProduct ? {id:ownerProduct.id,name:ownerProduct.name,status:ownerProduct.status,hasThumbnail:!!ownerProduct.thumbnail_path} : null).replace(/</g,'\\u003c') %>;</script>
+<script nonce="<%= cspNonce %>">window.__OWNER_CATEGORIES=<%- JSON.stringify(typeof categories !== "undefined" ? categories : (ownerSection==='categories' ? (items||[]) : [])) %>;window.__OWNER_PRODUCT_EDITOR=<%- JSON.stringify(typeof ownerProduct !== "undefined" && ownerProduct ? {id:ownerProduct.id,name:ownerProduct.name,status:ownerProduct.status,hasThumbnail:!!ownerProduct.thumbnail_path} : null).replace(/</g,'\\u003c') %>;</script>
 <section class="page-shell owner-page">
   <div class="owner-content">
       <div class="page-header<%= ['create_produk','edit_produk','content_produk'].includes(ownerSection)?' owner-product-workflow-page-header':'' %><%= ownerSection==='create_produk'?' owner-product-create-page-header':'' %>">
@@ -378,10 +378,14 @@
             <div class="empty-state compact"><%- icon('layers') %><h3>Belum ada kategori</h3></div>
           <% } else { %>
             <div class="owner-categories-grid">
-              <% (items||[]).forEach(row=>{ %>
+              <% (items||[]).forEach(row=>{
+                const parentCategory=(items||[]).find(
+                  category=>String(category.id)===String(row.parent_id)
+                );
+              %>
                 <article class="owner-category-card">
                   <div class="owner-category-fields">
-                    <div><span>Name</span><strong><%= row.name %></strong></div>
+                    <div><span><%= parentCategory ? 'Subkategori dari '+parentCategory.name : 'Kategori utama' %></span><strong><%= row.name %></strong></div>
                     <div><span>Slug</span><strong><%= row.slug %></strong></div>
                     <div><span>Active</span><strong><%= row.is_active?'Aktif':'Nonaktif' %></strong></div>
                   </div>

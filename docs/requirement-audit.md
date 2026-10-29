@@ -51,30 +51,28 @@ This audit maps the implementation against `Website Store.md` treated as the mas
 
 ## Verification executed
 
+Audit baseline: branch `main`, commit `c8bdf74032042c8290c7ad16027511248c0a0da3`. Status di bawah merujuk pada validasi lokal yang dilaporkan dan hasil GitHub/Vercel yang diperiksa pada 2026-10-29.
+
 ### Passed
 
-- `npm test` — **66/66 PASS**
-- `node --check` sweep for JS sources — **PASS**
-- `node scripts/build-check.js` — **PASS**
-- `node scripts/verify-project.js` — **PASS**
-- static source scan for service-role exposure in browser/view source — **PASS**
-- browser localStorage role/permission authorization scan — **PASS**
-- webhook raw-body ordering check — **PASS**
-- webhook signature/idempotency source check — **PASS**
-- explicit owner-route contract tests — **PASS**
-- owner order fulfillment status contract — **PASS**
-- service metadata migration contract — **PASS**
-- server-side configuration is not read directly by EJS views — **PASS**
+- `npm test` — **255/255 PASS** pada validasi lokal yang dilaporkan.
+- `npm run lint` — **PASS**.
+- `npm run build` — **PASS**; menjalankan `scripts/build-check.js`.
+- `npm run verify` — **PASS**; menjalankan `scripts/verify-project.js`.
+- GitHub Actions workflow `test`, workflow `deploy` (job bernama `verify`), dan workflow `security` — **SUCCESS** untuk commit audit.
+- Vercel production deployment — **READY** dengan source commit yang sama, `c8bdf74032042c8290c7ad16027511248c0a0da3`.
 
-## Verification blocked
+Catatan: workflow GitHub bernama `deploy` hanya menjalankan pemeriksaan dan tidak melakukan deployment. Deployment production dilakukan melalui integrasi Git Vercel.
 
-1. `package-lock.json` could not be generated because the environment could not reach the npm registry and the packages were not in the local npm cache.
-2. `npm install`/runtime dependency installation therefore could not be completed here; full ESLint and live Express startup were not executed.
-3. Live Supabase database/Auth/Storage/RLS verification requires the owner's project credentials and was not performed.
-4. Live payment gateway/webhook verification requires the real provider endpoint, merchant credentials, and webhook signing secret.
-5. Browser-level visual/e2e testing against a running app could not be completed without the installed runtime dependencies and configured backend.
-6. Vercel production deployment was not performed; the repository contains CI verification workflows but no production credentials were supplied.
+### Not verified end-to-end
 
+1. Perilaku runtime Supabase/PostgreSQL, Auth, Storage, dan RLS terhadap project aktif belum diverifikasi menyeluruh.
+2. Pembayaran melalui provider nyata, penanganan webhook dengan kredensial provider, dan keseluruhan alur checkout belum dinyatakan lulus end-to-end.
+3. Pengiriman email melalui SMTP belum dikonfirmasi langsung.
+4. Browser E2E, pemeriksaan visual/responsif, dan audit aksesibilitas lengkap belum dinyatakan lulus.
+5. Smoke test HTTP independen dan alur pengguna langsung di domain production belum dinyatakan lulus.
+
+Status deployment `READY` menunjukkan deployment tersedia pada platform, bukan bukti bahwa integrasi eksternal dan seluruh perjalanan pengguna telah berhasil diuji.
 ## Security notes
 
 - `SUPABASE_SERVICE_ROLE_KEY`, payment secrets, SMTP password, session/cookie/CSRF secrets, and other sensitive configuration remain server-side environment variables.

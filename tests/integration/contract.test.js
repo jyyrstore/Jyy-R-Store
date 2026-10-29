@@ -27,7 +27,7 @@ test('Owner category edit omits an empty optional slug',()=>{
   );
 
   assert.ok(browser.includes(
-    "const categoryPayload={name:fd.name,is_active:fd.is_active};" +
+    "const categoryPayload={name:fd.name,is_active:fd.is_active,subcategory:String(fd.subcategory||'').trim()};" +
     "const categorySlug=String(fd.slug||'').trim();" +
     "if(categorySlug)categoryPayload.slug=categorySlug;"
   ));
@@ -43,6 +43,42 @@ test('Owner category edit omits an empty optional slug',()=>{
   );
 });
 
+
+test('Owner category hierarchy uses text inputs and transactional persistence',()=>{
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const route=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+  const service=fs.readFileSync(
+    path.join(root,'src/services/category/category.service.js'),
+    'utf8'
+  );
+  const repository=fs.readFileSync(
+    path.join(root,'src/repositories/categories.repository.js'),
+    'utf8'
+  );
+
+  assert.ok(browser.includes('<input name="name"'));
+  assert.ok(browser.includes('<input name="subcategory"'));
+  assert.ok(browser.includes('<input name="slug"'));
+  assert.ok(browser.includes(
+    "subcategory:String(fd.subcategory||'').trim()"
+  ));
+  assert.equal(
+    browser.includes("name:'parent_id',value:'',options:[['','Kategori utama']"),
+    false
+  );
+  assert.ok(route.includes(
+    'subcategory:z.string().trim().max(120).optional()'
+  ));
+  assert.ok(service.includes('repo.createWithSubcategory'));
+  assert.ok(service.includes('repo.updateHierarchy'));
+  assert.ok(repository.includes('withTransaction(async(client)=>{'));
+});
 
 test('Owner category deletion is owner-protected and keeps products',()=>{
   const repository=fs.readFileSync(
@@ -356,6 +392,78 @@ test('BuatQris production config has no Xendit token dependency',()=>{
 });
 
 // END JYYR BUATQRIS CONTRACT TESTS
+
+test('Owner product create/edit selects subcategories',()=>{
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.match(
+    browser,
+    /<span>Subkategori<\/span>\s*\$\{pickerSelect\(\{\s*name:'category_id',\s*value:'',/
+  );
+  assert.match(
+    browser,
+    /<span>Subkategori<\/span>\s*\$\{pickerSelect\(\{\s*name:'category_id',\s*value:d\.category_id\|\|''/
+  );
+  assert.match(browser, /\.filter\(c=>!!c\.parent_id\)/);
+  assert.match(
+    browser,
+    /\.filter\(c=>!!c\.parent_id \|\| String\(c\.id\)===String\(d\.category_id\)\)/
+  );
+  assert.match(browser, /'Kategori lama · '\+c\.name/);
+});
+
+test('category hierarchy supports one-level subcategories',()=>{
+  const categoryRepository=fs.readFileSync(
+    path.join(root,'src/repositories/categories.repository.js'),
+    'utf8'
+  );
+  const categoryService=fs.readFileSync(
+    path.join(root,'src/services/category/category.service.js'),
+    'utf8'
+  );
+  const productRepository=fs.readFileSync(
+    path.join(root,'src/repositories/products.repository.js'),
+    'utf8'
+  );
+  const ownerView=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const storeView=fs.readFileSync(
+    path.join(root,'views/pages/store.ejs'),
+    'utf8'
+  );
+  const homeView=fs.readFileSync(
+    path.join(root,'views/pages/home.ejs'),
+    'utf8'
+  );
+
+  assert.match(
+    migrations,
+    /alter table categories\s+add column if not exists parent_id uuid\s+references categories\(id\) on delete set null/i
+  );
+  assert.match(
+    route,
+    /parent_id:z\.string\(\)\.uuid\(\)\.nullable\(\)\.optional\(\)/
+  );
+  assert.match(categoryRepository,/parent_id/);
+  assert.match(categoryService,/CATEGORY_DEPTH_LIMIT/);
+  assert.match(productRepository,/parent_c\.slug=\$3/);
+  assert.match(ownerView,/Subkategori dari/);
+  assert.ok(browser.includes(
+    "subcategory:String(fd.subcategory||'').trim()"
+  ));
+  assert.match(storeView,/categoryParent/);
+  assert.match(storeView,/categoryLabel/);
+  assert.match(homeView,/categories\.filter\(c=>!c\.parent_id\)/);
+});
 
 test('owner APIs require auth + owner middleware',()=>assert.match(route,/const ownerApi=express\.Router\(\); ownerApi\.use\(requireAuth,requireOwner\)/));
 

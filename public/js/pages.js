@@ -2535,7 +2535,7 @@
     const service=e.target.closest('[data-service-order]');if(service){open(`<form data-service-order-form class="stack-form"><h2>Pesan ${esc(service.dataset.serviceName)}</h2><p class="muted">Harga ${money(service.dataset.servicePrice)} akan dipotong dari saldo setelah konfirmasi.</p><input type="hidden" name="serviceId" value="${esc(service.dataset.serviceOrder)}"><label class="field"><span>Username (opsional)</span><input name="username"></label><label class="field"><span>URL (opsional)</span><input name="url" type="url"></label><label class="field"><span>Quantity</span><input name="quantity" type="number" min="1" value="1"></label><label class="field"><span>Target (opsional)</span><input name="target"></label><label class="field"><span>Notes</span><textarea name="notes"></textarea></label>${formButtons('Konfirmasi Service')}</form>`)}
 
     const dep2=e.target.closest('[data-owner-create]');if(dep2){const section=dep2.dataset.ownerCreate;if(section==='products'&&location.pathname==='/owner/products'){location.href='/owner/products/create_produk';return;}const forms={
-      categories:`<form data-owner-category-form class="stack-form"><h2>Tambah Kategori</h2><label class="field"><span>Nama</span><input name="name" required maxlength="80"></label><label class="field"><span>Slug (opsional)</span><input name="slug" maxlength="100"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" checked></label>${formButtons()}</form>`,
+      categories:`<form data-owner-category-form class="stack-form"><h2>Tambah Kategori / Subkategori</h2><label class="field"><span>Nama Kategori</span><input name="name" required maxlength="80"></label><label class="field"><span>Subkategori</span><input name="subcategory" maxlength="80"></label><label class="field"><span>Slug (opsional)</span><input name="slug" maxlength="100"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" checked></label>${formButtons()}</form>`,
       products:`<form data-owner-product-form class="product-form-modal">
   <div class="product-modal-head">
     <div class="product-modal-kicker">Owner Store · Langkah 1</div>
@@ -2602,15 +2602,20 @@ ${productPricingModesMarkup('FIXED')}
       </label>
 
       <label class="field">
-        <span>Kategori</span>
+        <span>Subkategori</span>
         ${pickerSelect({
       name:'category_id',
       value:'',
       options:[
-        ['','Tanpa kategori'],
-        ...(window.__OWNER_CATEGORIES||[]).map(
-          c=>[c.id,c.name]
-        )
+        ['','Tanpa subkategori'],
+        ...(window.__OWNER_CATEGORIES||[])
+          .filter(c=>!!c.parent_id)
+          .map(c=>{
+            const categoryParent=(window.__OWNER_CATEGORIES||[]).find(
+              parent=>String(parent.id)===String(c.parent_id)
+            );
+            return [c.id,categoryParent?categoryParent.name+' → '+c.name:c.name];
+          })
       ]
     })}
       </label>
@@ -2746,15 +2751,23 @@ ${productPricingModesMarkup('FIXED')}
               </label>
 
               <label class="field">
-                <span>Kategori</span>
+                <span>Subkategori</span>
                 ${pickerSelect({
       name:'category_id',
       value:d.category_id||'',
       options:[
-        ['','Tanpa kategori'],
-        ...(window.__OWNER_CATEGORIES||[]).map(
-          c=>[c.id,c.name]
-        )
+        ['','Tanpa subkategori'],
+        ...(window.__OWNER_CATEGORIES||[])
+          .filter(c=>!!c.parent_id || String(c.id)===String(d.category_id))
+          .map(c=>{
+            const categoryParent=(window.__OWNER_CATEGORIES||[]).find(
+              parent=>String(parent.id)===String(c.parent_id)
+            );
+            const categoryLabel=categoryParent
+              ? categoryParent.name+' → '+c.name
+              : 'Kategori lama · '+c.name;
+            return [c.id,categoryLabel];
+          })
       ]
     })}
               </label>
@@ -2851,7 +2864,7 @@ ${productPricingModesMarkup('FIXED')}
       ]
     })}</label><button class="button button-primary" data-user-role="${id}">Change Role</button></div>`)}
     const deleteCat=e.target.closest('[data-owner-delete-category]');if(deleteCat){if(!(await window.JYYRModal.confirm('Hapus kategori ini? Produk yang menggunakan kategori ini akan tetap ada tanpa kategori.')))return;deleteCat.disabled=true;try{await ownerAction('/api/owner/categories/'+encodeURIComponent(deleteCat.dataset.ownerDeleteCategory),{},'DELETE','Kategori dihapus.');location.reload()}catch(err){toast.error(err.message);deleteCat.disabled=false}}
-    const editCat=e.target.closest('[data-owner-edit-category]');if(editCat){let d;try{d=JSON.parse(editCat.dataset.ownerEditCategory)}catch{return}open(`<form data-owner-category-edit class="stack-form"><h2>Edit Kategori</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Slug</span><input name="slug" value="${esc(d.slug)}"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" ${d.is_active?'checked':''}></label>${formButtons()}</form>`)}
+    const editCat=e.target.closest('[data-owner-edit-category]');if(editCat){let d;try{d=JSON.parse(editCat.dataset.ownerEditCategory)}catch{return}const parentCategory=d.parent_id?(window.__OWNER_CATEGORIES||[]).find(c=>String(c.id)===String(d.parent_id)):null;const editParent=parentCategory||d;const isSubcategory=!!parentCategory;open(`<form data-owner-category-edit class="stack-form"><h2>Edit Kategori / Subkategori</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama Kategori</span><input name="name" value="${esc(editParent.name)}" required maxlength="80"></label><label class="field"><span>Subkategori</span><input name="subcategory" value="${esc(isSubcategory?d.name:'')}" ${isSubcategory?'required':''} maxlength="80"></label><label class="field"><span>Slug (opsional)</span><input name="slug" value="${esc(editParent.slug||'')}" maxlength="100"></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" ${d.is_active?'checked':''}></label>${formButtons()}</form>`)}
     const editSvc=e.target.closest('[data-owner-edit-service]');if(editSvc){let d;try{d=JSON.parse(editSvc.dataset.ownerEditService)}catch{return}open(`<form data-owner-service-edit class="stack-form"><h2>Edit Service</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Nama</span><input name="name" value="${esc(d.name)}" required></label><label class="field"><span>Kategori</span><input name="category" value="${esc(d.category||'')}"></label><label class="field"><span>Harga</span><input name="price" type="number" value="${Number(d.price)||0}" min="0"></label><label class="field"><span>Description</span><textarea name="description">${esc(d.description||'')}</textarea></label><label class="switch-row"><span>Aktif</span><input type="checkbox" name="is_active" ${d.is_active?'checked':''}></label>${formButtons()}</form>`)}
     const editFaq=e.target.closest('[data-owner-edit-faq]');if(editFaq){let d;try{d=JSON.parse(editFaq.dataset.ownerEditFaq)}catch{return}open(`<form data-owner-faq-edit class="stack-form"><h2>Edit FAQ</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Category</span><input name="category" value="${esc(d.category)}"></label><label class="field"><span>Question</span><input name="question" value="${esc(d.question)}"></label><label class="field"><span>Answer</span><textarea name="answer">${esc(d.answer)}</textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" ${d.is_published?'checked':''}></label>${formButtons()}</form>`)}
     const editInfo=e.target.closest('[data-owner-edit-info]');if(editInfo){let d;try{d=JSON.parse(editInfo.dataset.ownerEditInfo)}catch{return}open(`<form data-owner-info-edit class="stack-form"><h2>Edit Information</h2><input type="hidden" name="id" value="${esc(d.id)}"><label class="field"><span>Type</span><input name="type" value="${esc(d.type)}"></label><label class="field"><span>Title</span><input name="title" value="${esc(d.title)}"></label><label class="field"><span>Body</span><textarea name="body">${esc(d.body)}</textarea></label><label class="switch-row"><span>Published</span><input type="checkbox" name="is_published" ${d.is_published?'checked':''}></label>${formButtons()}</form>`)}
@@ -3034,7 +3047,7 @@ ${productPricingModesMarkup('FIXED')}
     const msg=e.target.closest('[data-message-form]');if(msg){e.preventDefault();const body=new FormData(msg).get('body');const btn=msg.querySelector('button');btn.disabled=true;try{await api.request('/api/messages',{method:'POST',body:{body}});toast.success('Pesan terkirim.');location.reload()}catch(err){toast.error(err.message)}finally{btn.disabled=false}}
     const maint=e.target.closest('[data-owner-maintenance]');if(maint){e.preventDefault();const fd=new FormData(maint);const body={enabled:fd.get('enabled')==='on',title:fd.get('title'),message:fd.get('message'),scheduled_start:fd.get('scheduled_start')||null,scheduled_end:fd.get('scheduled_end')||null,allow_owner_access:fd.get('allow_owner_access')==='on'};try{await api.request('/api/owner/maintenance',{method:'PUT',body});toast.success('Maintenance setting tersimpan.')}catch(err){toast.error(err.message)}}
     const form=e.target.closest('[data-deposit-submit]');if(form){e.preventDefault()}
-    const category=e.target.closest('[data-owner-category-form], [data-owner-category-edit]');if(category){e.preventDefault();const fd=Object.fromEntries(new FormData(category));fd.is_active=fd.is_active==='on';const categoryPayload={name:fd.name,is_active:fd.is_active};const categorySlug=String(fd.slug||'').trim();if(categorySlug)categoryPayload.slug=categorySlug;try{const id=fd.id;if(id)await ownerAction('/api/owner/categories/'+id,categoryPayload,'PUT','Kategori diperbarui.');else await ownerAction('/api/owner/categories',categoryPayload,'POST','Kategori dibuat.');location.reload()}catch(err){if(err.code==='CATEGORY_ALREADY_EXISTS')toast.error(err.message,{title:'Category Sudah Dimiliki'});else toast.error(err.message)}}
+    const category=e.target.closest('[data-owner-category-form], [data-owner-category-edit]');if(category){e.preventDefault();const fd=Object.fromEntries(new FormData(category));fd.is_active=fd.is_active==='on';const categoryPayload={name:fd.name,is_active:fd.is_active,subcategory:String(fd.subcategory||'').trim()};const categorySlug=String(fd.slug||'').trim();if(categorySlug)categoryPayload.slug=categorySlug;try{const id=fd.id;if(id)await ownerAction('/api/owner/categories/'+id,categoryPayload,'PUT','Kategori diperbarui.');else await ownerAction('/api/owner/categories',categoryPayload,'POST','Kategori dibuat.');location.reload()}catch(err){if(err.code==='CATEGORY_ALREADY_EXISTS')toast.error(err.message,{title:'Category Sudah Dimiliki'});else toast.error(err.message)}}
     const pfm=e.target.closest('[data-owner-product-form]');
     if(pfm){
       e.preventDefault();

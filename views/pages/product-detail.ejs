@@ -39,7 +39,7 @@
       <div class="detail-product-stat">
         <span class="detail-product-stat-value">
           <%- icon('category-management') %>
-          <span><%= product.category_name || 'Produk' %></span>
+          <span><%= product.category_parent_name ? product.category_parent_name+' / '+product.category_name : (product.category_name || 'Produk') %></span>
         </span>
       </div>
       <div class="detail-product-stat">
