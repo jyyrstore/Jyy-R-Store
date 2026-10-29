@@ -1,1 +1,73 @@
-const {loadEnv}=require('../src/config/env');const {initSupabase}=require('../src/config/supabase');const {initStorage}=require('../src/config/storage');const {supabaseAdmin}=require('../src/config/supabase');(async()=>{const env=loadEnv();if(!env.SUPABASE_URL||!(env.SUPABASE_SECRET_KEY||env.SUPABASE_SERVICE_ROLE_KEY)){console.error('Supabase server configuration = missing');process.exitCode=1;return}initSupabase(env);await initStorage(env);const b=(await supabaseAdmin().storage.listBuckets()).data||[];console.log('Buckets:',b.map(x=>`${x.name}:${x.public?'public':'private'}`).join(', '));const privateBucket=b.find(x=>x.name===env.PRIVATE_PRODUCT_BUCKET);if(!privateBucket||privateBucket.public)process.exitCode=1})().catch(e=>{console.error('Storage verification failed:',e.message);process.exitCode=1});
+const {loadEnv}=require('../src/config/env');
+const {initSupabase,supabaseAdmin}=require('../src/config/supabase');
+
+async function verifyStorage(){
+  try{
+    const env=loadEnv();
+
+    if(
+      !env.SUPABASE_URL||
+      !(env.SUPABASE_SECRET_KEY||env.SUPABASE_SERVICE_ROLE_KEY)
+    ){
+      throw new Error('Supabase server configuration is missing');
+    }
+
+    initSupabase(env);
+
+    // Read-only: do not call initStorage(), which creates missing buckets.
+    const {data,error}=await supabaseAdmin().storage.listBuckets();
+
+    if(error)throw error;
+
+    const buckets=new Map((data||[]).map(bucket=>[bucket.name,bucket]));
+    const required=[
+      {name:env.PUBLIC_ASSET_BUCKET,isPublic:true},
+      {name:env.PRIVATE_PRODUCT_BUCKET,isPublic:false},
+      {name:env.USER_UPLOAD_BUCKET,isPublic:false}
+    ];
+
+    if(new Set(required.map(bucket=>bucket.name)).size!==required.length){
+      throw new Error('Configured Storage bucket names must be distinct');
+    }
+
+    let failed=false;
+
+    for(const expected of required){
+      const actual=buckets.get(expected.name);
+
+      if(!actual){
+        console.error(`Missing bucket: ${expected.name}`);
+        failed=true;
+        continue;
+      }
+
+      if(Boolean(actual.public)!==expected.isPublic){
+        console.error(
+          `Incorrect visibility for ${expected.name}: expected ${
+            expected.isPublic?'public':'private'
+          }, got ${actual.public?'public':'private'}`
+        );
+        failed=true;
+        continue;
+      }
+
+      console.log(
+        `Bucket OK: ${expected.name} (${
+          expected.isPublic?'public':'private'
+        })`
+      );
+    }
+
+    if(failed){
+      process.exitCode=1;
+      return;
+    }
+
+    console.log('Storage verification passed.');
+  }catch(error){
+    console.error('Storage verification failed:',error.message);
+    process.exitCode=1;
+  }
+}
+
+verifyStorage();

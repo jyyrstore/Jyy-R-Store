@@ -201,8 +201,15 @@
   border-color:#3478D4;
   box-shadow:0 0 0 2px rgba(52,120,212,.25);
 }
-.owner-page .owner-categories-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;min-width:0}
+.owner-page .owner-categories-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%;overflow:visible;padding:0}
 
+.owner-page .owner-category-item{display:flex;flex-direction:column;gap:8px;min-width:0;max-width:100%}
+.owner-page .owner-category-card{min-width:0;padding:14px;border:1px solid var(--border);border-radius:15px 0 15px 0;background:var(--surface)}
+.owner-page .owner-category-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;min-width:0}
+@media(max-width:600px){.owner-page .owner-category-fields{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.owner-page .owner-category-fields>div{min-width:0;text-align:center}
+.owner-page .owner-category-fields span{display:block;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}
+.owner-page .owner-category-fields strong{display:block;min-width:0;font-size:13px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .owner-page .owner-product-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;min-width:0}
 .owner-page .owner-product-card{display:flex;flex-direction:column;min-width:0;padding:14px;border:1px solid var(--border);border-radius:15px 0 15px 0;background:var(--surface)}
 .owner-page .owner-product-card-title{margin:0 0 12px;text-align:center;font-size:16px;line-height:1.4;overflow-wrap:anywhere;word-break:break-word}
@@ -219,12 +226,20 @@
 .owner-page .owner-product-card-actions .button{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;max-width:100%;min-height:32px;padding:6px 8px;box-sizing:border-box;white-space:normal}
 .owner-page .owner-product-card-actions .button:last-child{grid-column:1 / -1}
 
-.owner-page .owner-category-card{min-width:0;padding:14px;border:1px solid var(--border);border-radius:15px 0 15px 0;background:var(--surface)}
-.owner-page .owner-category-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0;padding-bottom:12px;border-bottom:1px solid var(--border)}
-.owner-page .owner-category-fields>div{min-width:0;text-align:center}
-.owner-page .owner-category-fields span{display:block;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}
-.owner-page .owner-category-fields strong{display:block;min-width:0;font-size:13px;line-height:1.4;overflow-wrap:anywhere;word-break:break-word}
-.owner-page .owner-category-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%;max-width:100%;margin:14px 0 0}
+.owner-categories-table-panel{padding-top:12px;min-width:0}
+.owner-categories-table-panel .table-scroll{overflow-x:auto;overflow-y:hidden;min-width:0;max-width:100%;width:100%;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.owner-page .owner-categories-table-panel .table-scroll table{display:table;min-width:640px!important;width:100%!important;max-width:none!important;table-layout:fixed;border-collapse:collapse}
+.owner-page .owner-categories-table-panel .table-scroll thead{display:table-header-group;position:static;left:auto;top:auto;width:auto;max-width:none}
+.owner-page .owner-categories-table-panel .table-scroll tbody{display:table-row-group;width:auto;max-width:none}
+.owner-page .owner-categories-table-panel .table-scroll tr{display:table-row;width:auto;max-width:none;margin:0;border:0;border-radius:0;background:transparent;padding:0}
+.owner-page .owner-categories-table-panel .table-scroll th,.owner-page .owner-categories-table-panel .table-scroll td{display:table-cell;width:auto;min-width:0;max-width:none;padding:10px 12px;white-space:normal;overflow-wrap:anywhere;word-break:break-word;vertical-align:middle;border:1px solid var(--border)}
+.owner-page .owner-categories-table-panel .table-scroll th{text-align:center;color:var(--muted);font-size:11px;text-transform:uppercase}
+.owner-page .owner-categories-table-panel .table-scroll th:nth-child(1),.owner-page .owner-categories-table-panel .table-scroll td:nth-child(1){width:25%}
+.owner-page .owner-categories-table-panel .table-scroll th:nth-child(2),.owner-page .owner-categories-table-panel .table-scroll td:nth-child(2){width:29%}
+.owner-page .owner-categories-table-panel .table-scroll th:nth-child(3),.owner-page .owner-categories-table-panel .table-scroll td:nth-child(3){width:28%}
+.owner-page .owner-categories-table-panel .table-scroll th:nth-child(4),.owner-page .owner-categories-table-panel .table-scroll td:nth-child(4){width:18%;text-align:center}
+.owner-page .owner-categories-table-panel .table-scroll td::before{display:none;content:none}
+.owner-page .owner-category-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%;max-width:100%;margin:20px 0 0}
 .owner-page .owner-category-actions .button{width:100%;min-width:0;max-width:100%;height:32px;min-height:32px;padding:0 10px;font-size:12px;box-sizing:border-box;white-space:nowrap}
 :is(.owner-deposits-table-panel,.owner-payments-table-panel)>h2{text-align:center;margin:0 0 14px}
 .owner-users-table-panel{padding-top:12px}

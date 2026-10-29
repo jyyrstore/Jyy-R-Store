@@ -80,6 +80,149 @@ test('Owner category hierarchy uses text inputs and transactional persistence',(
   assert.ok(repository.includes('withTransaction(async(client)=>{'));
 });
 
+test('category update preserves omitted metadata',async()=>{
+  const Module=require('module');
+  const databasePath=require.resolve(
+    path.join(root,'src/config/database.js')
+  );
+  const repositoryPath=require.resolve(
+    path.join(root,'src/repositories/categories.repository.js')
+  );
+
+  const previousDatabaseModule=require.cache[databasePath];
+  const previousRepositoryModule=require.cache[repositoryPath];
+  const calls=[];
+
+  const databaseModule=new Module(databasePath);
+  databaseModule.filename=databasePath;
+  databaseModule.loaded=true;
+  databaseModule.exports={
+    query:async(sql,values=[])=>{
+      calls.push({sql,values});
+      return {rows:[{id:values[0]}]};
+    },
+    withTransaction:async callback=>callback()
+  };
+
+  try{
+    require.cache[databasePath]=databaseModule;
+    delete require.cache[repositoryPath];
+
+    const repository=require(repositoryPath);
+
+    const updated=await repository.update('category-1',{
+      name:'Updated',
+      slug:'updated',
+      unexpected:'ignored'
+    });
+
+    assert.equal(updated.id,'category-1');
+    assert.equal(calls.length,1);
+    assert.equal(
+      calls[0].sql,
+      'update categories set name=$2,slug=$3 where id=$1 returning *'
+    );
+    assert.deepEqual(
+      calls[0].values,
+      ['category-1','Updated','updated']
+    );
+
+    calls.length=0;
+
+    await repository.update('category-2',{
+      description:'',
+      sort_order:0,
+      is_active:false,
+      parent_id:null
+    });
+
+    assert.equal(calls.length,1);
+    assert.equal(
+      calls[0].sql,
+      'update categories set description=$2,sort_order=$3,is_active=$4,parent_id=$5 where id=$1 returning *'
+    );
+    assert.deepEqual(
+      calls[0].values,
+      ['category-2',null,0,false,null]
+    );
+
+    calls.length=0;
+
+    await repository.update('category-3',{
+      unexpected:'ignored'
+    });
+
+    assert.equal(calls.length,1);
+    assert.equal(
+      calls[0].sql,
+      'select * from categories where id=$1'
+    );
+    assert.deepEqual(calls[0].values,['category-3']);
+  }finally{
+    delete require.cache[repositoryPath];
+
+    if(previousRepositoryModule){
+      require.cache[repositoryPath]=previousRepositoryModule;
+    }
+
+    if(previousDatabaseModule){
+      require.cache[databasePath]=previousDatabaseModule;
+    }else{
+      delete require.cache[databasePath];
+    }
+  }
+});
+
+test('Owner category actions stay inside each card under the values',()=>{
+  const ownerView=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+  const responsive=fs.readFileSync(
+    path.join(root,'public/css/responsive.css'),
+    'utf8'
+  );
+
+  const start=ownerView.indexOf(
+    "      <% } else if(ownerSection==='categories'){ %>"
+  );
+  const end=ownerView.indexOf(
+    "      <% } else if(ownerSection==='users'){ %>"
+  );
+  assert.ok(start!==-1 && end>start);
+  const section=ownerView.slice(start,end);
+
+  assert.match(
+    section,
+    /<div class="owner-category-card">[\s\S]*?<div class="owner-category-fields">[\s\S]*?<\/div>\s*<div class="owner-category-actions">[\s\S]*?<\/div>\s*<\/div>\s*<\/article>/
+  );
+  for(const label of ['Kategori','Subkategori','Slug','Active']){
+    assert.ok(section.includes(`<span>${label}</span>`),label);
+  }
+  assert.ok(section.includes('data-owner-edit-category='));
+  assert.ok(section.includes('data-owner-delete-category='));
+  assert.equal(section.includes('owner-category-data-row'),false);
+  assert.equal(section.includes('owner-category-actions-row'),false);
+
+  assert.ok(responsive.includes(
+    '.owner-page .owner-categories-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%;overflow:visible;padding:0}'
+  ));
+  assert.ok(responsive.includes(
+    '.owner-page .owner-category-item{display:flex;flex-direction:column;gap:8px;min-width:0;max-width:100%}'
+  ));
+  assert.ok(responsive.includes(
+    '.owner-page .owner-category-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;min-width:0}'
+  ));
+  assert.ok(responsive.includes(
+    '@media(max-width:600px){.owner-page .owner-category-fields{grid-template-columns:repeat(4,minmax(0,1fr))}}'
+  ));
+  assert.equal(
+    responsive.includes('owner-category-item{display:flex;flex:0 0 min(86vw,320px)'),
+    false
+  );
+  assert.match(responsive,/\.owner-page \.owner-category-fields strong\{[^}]*overflow:hidden[^}]*text-overflow:ellipsis[^}]*white-space:nowrap[^}]*\}/);
+});
+
 test('Owner category deletion is owner-protected and keeps products',()=>{
   const repository=fs.readFileSync(
     path.join(root,'src/repositories/categories.repository.js'),
@@ -456,7 +599,8 @@ test('category hierarchy supports one-level subcategories',()=>{
   assert.match(categoryRepository,/parent_id/);
   assert.match(categoryService,/CATEGORY_DEPTH_LIMIT/);
   assert.match(productRepository,/parent_c\.slug=\$3/);
-  assert.match(ownerView,/Subkategori dari/);
+  assert.match(ownerView,/parentCategory \? parentCategory\.name : row\.name/);
+  assert.match(ownerView,/parentCategory \? row\.name : '—'/);
   assert.ok(browser.includes(
     "subcategory:String(fd.subcategory||'').trim()"
   ));
@@ -1292,6 +1436,21 @@ test('owner variant icons remain separate from the product cover',()=>{
   assert.match(browser,/contentType:'VARIANT_ICON'/);
   assert.match(detail,/data-icon="<%= iconUrl %>"/);
   assert.match(cron,/select icon_path[\s\S]*from product_variants/);
+});
+
+test('product detail shows only the main category under the cover',()=>{
+  const detail=fs.readFileSync(
+    path.join(root,'views/pages/product-detail.ejs'),
+    'utf8'
+  );
+
+  assert.ok(detail.includes(
+    "<span><%= product.category_parent_name || product.category_name || 'Produk' %></span>"
+  ));
+  assert.equal(
+    detail.includes("product.category_parent_name+' / '+product.category_name"),
+    false
+  );
 });
 
 test('product detail variant choices render in a standalone card after statistics',()=>{

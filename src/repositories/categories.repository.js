@@ -43,18 +43,38 @@ async function create(data){
 }
 
 async function update(id,data){
-  return (await query(
-    'update categories set name=$2,slug=$3,description=$4,sort_order=$5,is_active=$6,parent_id=$7 where id=$1 returning *',
-    [
-      id,
-      data.name,
-      data.slug,
-      data.description||null,
-      data.sort_order||0,
-      data.is_active!==false,
-      data.parent_id||null
-    ]
-  )).rows[0];
+  const allowed=[
+    'name',
+    'slug',
+    'description',
+    'sort_order',
+    'is_active',
+    'parent_id'
+  ];
+
+  const keys=allowed.filter(
+    k=>Object.prototype.hasOwnProperty.call(data,k)
+  );
+
+  if(!keys.length)return findById(id);
+
+  const values=[
+    id,
+    ...keys.map(k=>{
+      if(k==='description')return data[k]||null;
+      if(k==='sort_order')return data[k]??0;
+      if(k==='is_active')return data[k]!==false;
+      if(k==='parent_id')return data[k]||null;
+
+      return data[k];
+    })
+  ];
+
+  const sql=`update categories set ${
+    keys.map((k,i)=>`${k}=$${i+2}`).join(',')
+  } where id=$1 returning *`;
+
+  return (await query(sql,values)).rows[0]||null;
 }
 
 async function createWithSubcategory(data){
