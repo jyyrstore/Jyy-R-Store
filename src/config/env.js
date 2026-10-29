@@ -127,7 +127,11 @@ function loadEnv() {
         'BUATQRIS_CALLBACK_URL'
       );
     } else if (paymentProvider === 'generic-json') {
-      required.push('PAYMENT_WEBHOOK_SECRET');
+      required.push(
+        'PAYMENT_API_BASE_URL',
+        'PAYMENT_API_KEY',
+        'PAYMENT_WEBHOOK_SECRET'
+      );
     } else {
       throw new Error('Unsupported PAYMENT_PROVIDER: ' + paymentProvider);
     }
@@ -152,6 +156,23 @@ function loadEnv() {
       ) {
         throw new Error(
           'BUATQRIS_CALLBACK_URL must use HTTPS and end with /api/payment/webhook/buatqris.'
+        );
+      }
+    }
+    if (paymentProvider === 'generic-json') {
+      let paymentApiUrl;
+
+      try {
+        paymentApiUrl = new URL(env.PAYMENT_API_BASE_URL);
+      } catch {
+        throw new Error(
+          'PAYMENT_API_BASE_URL must be a valid absolute URL.'
+        );
+      }
+
+      if (paymentApiUrl.protocol !== 'https:') {
+        throw new Error(
+          'PAYMENT_API_BASE_URL must use HTTPS in production.'
         );
       }
     }

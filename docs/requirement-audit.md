@@ -1,86 +1,73 @@
 # Jyyr Store — Requirement Audit
 
-This audit maps the implementation against `Website Store.md` treated as the master specification.
+This document records implementation evidence and distinguishes source-level
+coverage from external end-to-end verification.
 
-## Status legend
+## Status definitions
 
-- **CONFIRMED** — verified from the generated source, schema, route map, static security checks, and/or executable deterministic tests in this environment.
-- **LIKELY** — implementation is present and internally consistent, but depends on an external system/configuration that was not available for live verification.
-- **UNKNOWN** — evidence is insufficient to assert behavior.
-- **BLOCKED** — verification could not be performed because a required external dependency/credential/runtime was unavailable.
+- **CONFIRMED (static)** — implementation and its code contract are present in
+  source and/or covered by deterministic tests. This does not assert that the
+  corresponding live external service is correctly configured.
+- **LIKELY** — the application flow is implemented, but external dependencies
+  or real user journeys have not been fully verified.
+- **NOT VERIFIED E2E** — no evidence here establishes the complete runtime flow
+  against the active external service or a real browser.
 
-## Requirement coverage
+## Architecture and feature coverage
 
-| Area | Status | Evidence |
+| Area | Source-level status | Evidence and boundary |
 |---|---|---|
-| Greenfield Express/EJS architecture | CONFIRMED | `server.js`, `src/routes`, `src/controllers`, `src/services`, `src/repositories` |
-| Supabase/PostgreSQL schema | CONFIRMED | `database/migrations/*`, `database/policies/*` |
-| Session-based authentication | LIKELY | `src/services/auth/auth.service.js`, `src/middleware/auth.middleware.js`, session config |
-| Server-side roles/authorization | CONFIRMED | `src/middleware/role.middleware.js`, owner API router, profile role checks |
-| Product catalog/search/filter/sort | CONFIRMED | product service/repository, `/store`, `/api/products`, search API |
-| Multi-content products FILE/IMAGE/VIDEO/AUDIO/TEXT/LINK | CONFIRMED | `product_contents`, product service, owner content/upload UI |
-| Thumbnail upload + public rendering | CONFIRMED | public-assets bucket flow and product thumbnail URL generation |
-| Persistent cart | CONFIRMED | carts/cart_items schema + cart service/repository |
-| Checkout | CONFIRMED | checkout page + server order preview/create |
-| Wallet/balance/ledger | CONFIRMED | wallet repositories/services + transactional mutations |
-| Deposit flow | LIKELY | deposit service + payment/webhook path; live provider not configured |
-| Server-authoritative payment | CONFIRMED | payment service, webhook signature check, payment event idempotency |
-| Payment gateway integration | BLOCKED | generic provider contract implemented; real provider URL/credentials are intentionally absent |
-| Payment webhook | LIKELY | raw-body route + HMAC + idempotency + transaction processing; live provider test blocked |
-| Entitlement + secure delivery | CONFIRMED | entitlement checks + signed URL generation; live Storage blocked |
-| Ticket/support system | CONFIRMED | tickets/ticket_messages + user/owner APIs/UI |
-| Direct messages | CONFIRMED | messages table + user send + owner reply + UI |
-| Notifications | CONFIRMED | notifications/preferences + UI/API + owner broadcast |
-| Profile/security/login history | CONFIRMED | profile service/API/UI + login history table |
-| Top Order product ranking | CONFIRMED | analytics repository/service + user and owner views |
-| Services/service orders | CONFIRMED | service catalog + transactional balance debit + service_orders + icon/order metadata |
-| Maintenance mode | CONFIRMED | maintenance middleware + owner controls; webhook/health bypass preserved |
-| Owner products/users/orders/payments/deposits/tickets | CONFIRMED | owner page/API actions, fulfillment status transitions, refund flow, and server authorization |
-| Owner roles/storage/system/login-history | CONFIRMED | explicit routes, owner UI sections, API handlers, and centralized configuration locals |
-| Analytics Revenue/Orders/Deposit/New Users/Status | LIKELY | SQL-backed analytics service + chart UI; live DB/browser rendering blocked |
-| Custom analytics period | LIKELY | backend accepts from/to and UI controls exist; live browser verification blocked |
-| RLS | CONFIRMED (static) | policies present; direct sensitive client writes removed where server authority is required |
-| Private storage | CONFIRMED (static) | private bucket + signed URL path + delivery authorization |
-| CSRF/rate limiting/input validation | CONFIRMED (static) | middleware + Zod validation + sensitive endpoint limiters |
-| Audit logging | CONFIRMED (static) | `activity_logs` + owner/security actions + payment/webhook audit |
-| Idempotency | CONFIRMED (static) | payment/deposit/order/webhook flows + idempotency tables/keys |
-| Responsive/mobile-first UI | LIKELY | responsive CSS + bottom nav + mobile table adaptation implemented; visual browser test blocked |
-| SVG-only UI icons / no emoji UI | CONFIRMED (static) | `src/utils/icons.js`, source scan |
-| Accessibility basics | LIKELY | semantic forms, labels, focus states, dialog escape/ARIA labels implemented; full accessibility audit blocked |
-| Documentation | CONFIRMED | README + docs/* + security/deployment/config docs |
+| Express/EJS application | CONFIRMED (static) | `server.js`, `src/routes`, controllers, services, repositories, and `views` |
+| Environment validation | CONFIRMED (static) | `src/config/env.js`; provider-specific production configuration |
+| PostgreSQL schema | CONFIRMED (static) | `database/migrations/*`; applied state still needs remote verification |
+| Session authentication | CONFIRMED (static) | Supabase Auth service, regenerated session on login, auth middleware |
+| Role authorization | CONFIRMED (static) | Server-side role middleware and protected Owner API router |
+| Product catalog and variants | CONFIRMED (static) | Product service/repository and product routes |
+| Cart and checkout | CONFIRMED (static) | Cart/order services and transactional repository operations |
+| Wallet and deposits | CONFIRMED (static) | Wallet/deposit services and ledger-related database contracts |
+| Payment adapters | CONFIRMED (static) | Generic JSON, Xendit, and BuatQris provider implementations |
+| Payment and deposit reconciliation | CONFIRMED (static) | Payment service plus scheduled expiration/reconciliation jobs |
+| Payment provider E2E | NOT VERIFIED E2E | Real transaction, callback delivery, signing, and settlement must be tested separately |
+| Delivery entitlement checks | CONFIRMED (static) | `src/services/delivery/delivery.service.js` and `access-control.service.js` |
+| Signed delivery URLs | CONFIRMED (static) | `src/config/storage.js` and delivery service; live Storage not proven by source alone |
+| Bucket startup guard | CONFIRMED (static after remediation) | Configured names and existing visibility are checked before startup continues |
+| Storage live verification | SEPARATE CHECK | `scripts/verify-storage.js` is read-only and checks existence/visibility, not all RLS behavior |
+| RLS policies | CONFIRMED (static) | SQL policy files; effective remote policies require separate project verification |
+| Input validation and CSRF | CONFIRMED (static) | Zod validation and security middleware |
+| Rate limiting | CONFIRMED (static) | General and sensitive limiters; production sensitive routes require configured distributed limiting |
+| Webhook signatures/idempotency | CONFIRMED (static) | Raw-body routes, provider verification, payment-event handling |
+| Support, messaging, notifications | CONFIRMED (static) | Services, repositories, APIs, and views |
+| Responsive UI | LIKELY | Responsive styles exist; visual browser tests are still needed |
+| Accessibility | LIKELY | Semantic controls and accessibility hooks exist; no full accessibility audit is claimed |
+| Documentation | Updated with implementation boundaries | See related architecture, database, storage, delivery, and deployment documents |
 
-## Verification executed
+## Verification commands and what they prove
 
-Audit baseline: branch `main`, commit `c8bdf74032042c8290c7ad16027511248c0a0da3`. Status di bawah merujuk pada validasi lokal yang dilaporkan dan hasil GitHub/Vercel yang diperiksa pada 2026-10-29.
+- `npm test`: deterministic unit, integration-contract, and security tests.
+- `npm run lint`: ESLint checks.
+- `npm run build`: `scripts/build-check.js` structure/security contract checks.
+- `npm run verify`: source-level project contract checks.
+- `npm run verify:env`: validates the selected provider's environment configuration.
+- `npm run verify:db`: checks connectivity and required critical table presence.
+- `npm run verify:storage`: read-only live bucket existence and visibility checks.
+- `npm run verify:payment`: checks provider configuration; it does not create a real transaction unless the explicit sandbox probe is requested.
 
-### Passed
+The standard GitHub verification workflow runs build, lint, tests, and project verification. Separate checks that need live database or Storage credentials must be run with the intended deployment environment.
 
-- `npm test` — **255/255 PASS** pada validasi lokal yang dilaporkan.
-- `npm run lint` — **PASS**.
-- `npm run build` — **PASS**; menjalankan `scripts/build-check.js`.
-- `npm run verify` — **PASS**; menjalankan `scripts/verify-project.js`.
-- GitHub Actions workflow `test`, workflow `deploy` (job bernama `verify`), dan workflow `security` — **SUCCESS** untuk commit audit.
-- Vercel production deployment — **READY** dengan source commit yang sama, `c8bdf74032042c8290c7ad16027511248c0a0da3`.
+## Not verified end-to-end
 
-Catatan: workflow GitHub bernama `deploy` hanya menjalankan pemeriksaan dan tidak melakukan deployment. Deployment production dilakukan melalui integrasi Git Vercel.
+The following must not be marked PASS based only on static tests, CI, or deployment status:
 
-### Not verified end-to-end
+1. Complete checkout and deposit flows through the real payment provider.
+2. Production webhook delivery, signature handling, retries, and final settlement.
+3. Effective RLS behavior and authorization against the active Supabase project.
+4. Real upload, bucket permissions, signed URL access, and file delivery lifecycle.
+5. SMTP delivery and email-provider behavior.
+6. Full browser E2E, visual responsive behavior, and comprehensive accessibility.
+7. Real production user journeys through independent HTTP/browser smoke tests.
 
-1. Perilaku runtime Supabase/PostgreSQL, Auth, Storage, dan RLS terhadap project aktif belum diverifikasi menyeluruh.
-2. Pembayaran melalui provider nyata, penanganan webhook dengan kredensial provider, dan keseluruhan alur checkout belum dinyatakan lulus end-to-end.
-3. Pengiriman email melalui SMTP belum dikonfirmasi langsung.
-4. Browser E2E, pemeriksaan visual/responsif, dan audit aksesibilitas lengkap belum dinyatakan lulus.
-5. Smoke test HTTP independen dan alur pengguna langsung di domain production belum dinyatakan lulus.
+## Operational interpretation
 
-Status deployment `READY` menunjukkan deployment tersedia pada platform, bukan bukti bahwa integrasi eksternal dan seluruh perjalanan pengguna telah berhasil diuji.
-## Security notes
+The `test`, `security`, and verification workflows provide automated code checks. The workflow named `deploy.yml` does not itself deploy the application; deployment is handled by the configured Vercel Git integration. A successful CI run or deployment status proves neither full external integration nor all production user journeys.
 
-- `SUPABASE_SERVICE_ROLE_KEY`, payment secrets, SMTP password, session/cookie/CSRF secrets, and other sensitive configuration remain server-side environment variables.
-- Premium content is not exposed as a permanent public URL; access is checked server-side before signed URL generation.
-- Owner API routes are protected by authentication and server-side owner authorization.
-- Sensitive mutations are rate-limited, validated, and audited.
-- Authentication callback redirects are constrained to internal application paths.
-
-## Final assessment
-
-The project is a substantial greenfield implementation matching the master specification's architecture and major functional domains. It is **not yet live-production-verified** in this environment because external Supabase, payment, email, deployment, and npm registry dependencies were unavailable. The remaining work is integration/configuration verification rather than replacing the application architecture with a mockup.
+After changes, rerun the validation commands and review the exact commit's CI and deployment status before declaring the remediation complete.

@@ -59,7 +59,6 @@ const {initPaymentProvider}=require('../src/config/payment');
       env.BUATQRIS_SIGNING_SECRET,
       env.BUATQRIS_CALLBACK_URL
     ];
-    if(env.NODE_ENV==='production') required.push(env.XENDIT_WEBHOOK_TOKEN);
     if(required.some(value=>!value)) process.exitCode=1;
   }else{
     console.log(`PAYMENT_API_BASE_URL = ${env.PAYMENT_API_BASE_URL?'configured':'missing'}`);

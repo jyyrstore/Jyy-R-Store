@@ -1,22 +1,102 @@
 const { supabaseAdmin } = require('./supabase');
 let envRef;
+
+function validateBucketNames(targets) {
+  const names = targets.map(({name}) => String(name || ''));
+
+  if (names.some(name => !name || name.trim() !== name)) {
+    throw new Error(
+      'Storage bucket names must be non-empty and have no surrounding whitespace.'
+    );
+  }
+
+  if (new Set(names).size !== names.length) {
+    throw new Error('Configured Storage bucket names must be distinct.');
+  }
+}
+
+function validateBucketVisibility(buckets, targets, {requireAll = false} = {}) {
+  const byName = new Map(
+    (buckets || []).map(bucket => [bucket.name, bucket])
+  );
+
+  for (const target of targets) {
+    const actual = byName.get(target.name);
+
+    if (!actual) {
+      if (requireAll) {
+        throw new Error(
+          `Required Storage bucket "${target.name}" was not found after initialization.`
+        );
+      }
+      continue;
+    }
+
+    if (Boolean(actual.public) !== target.isPublic) {
+      throw new Error(
+        `Storage bucket "${target.name}" has incorrect visibility: expected ${
+          target.isPublic ? 'public' : 'private'
+        }.`
+      );
+    }
+  }
+}
+
 async function initStorage(env) {
   envRef = env;
-  if (!env.SUPABASE_URL || !(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY)) return;
-  const client = supabaseAdmin();
-  const existing = await client.storage.listBuckets();
-  if (existing.error) throw existing.error;
-  const names = new Set((existing.data || []).map((b) => b.name));
+
   const targets = [
     { name: env.PUBLIC_ASSET_BUCKET, isPublic: true },
     { name: env.PRIVATE_PRODUCT_BUCKET, isPublic: false },
     { name: env.USER_UPLOAD_BUCKET, isPublic: false }
   ];
+
+  validateBucketNames(targets);
+
+  if (!env.SUPABASE_URL ||
+      !(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY)) {
+    return;
+  }
+
+  const client = supabaseAdmin();
+  const {data: existing, error: listError} =
+    await client.storage.listBuckets();
+
+  if (listError) throw listError;
+
+  // Fail before creating anything if an existing bucket is unsafe.
+  validateBucketVisibility(existing, targets);
+
+  const names = new Set((existing || []).map(bucket => bucket.name));
+  let needsVerification = false;
+
   for (const bucket of targets) {
-    if (!names.has(bucket.name)) {
-      const { error } = await client.storage.createBucket(bucket.name, { public: bucket.isPublic, fileSizeLimit: `${env.MAX_UPLOAD_MB}MB` });
-      if (error && !/already exists/i.test(error.message)) throw error;
+    if (names.has(bucket.name)) continue;
+
+    const {error} = await client.storage.createBucket(
+      bucket.name,
+      {
+        public: bucket.isPublic,
+        fileSizeLimit: `${env.MAX_UPLOAD_MB}MB`
+      }
+    );
+
+    if (error && !/already exists/i.test(String(error.message || error))) {
+      throw error;
     }
+
+    names.add(bucket.name);
+    needsVerification = true;
+  }
+
+  // Re-read after create operations, including an "already exists" race.
+  if (needsVerification) {
+    const {data: verified, error: verifyError} =
+      await client.storage.listBuckets();
+
+    if (verifyError) throw verifyError;
+
+    validateBucketVisibility(verified, targets, {requireAll: true});
   }
 }
 function getBucket(name) { return name || envRef?.PRIVATE_PRODUCT_BUCKET; }

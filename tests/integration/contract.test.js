@@ -1755,6 +1755,208 @@ test('owner publish UI has readiness checklist',()=>{
   );
 });
 
+
+test('Storage startup rejects unsafe bucket names and visibility',async()=>{
+  const Module=require('node:module');
+  const supabasePath=require.resolve(
+    path.join(root,'src/config/supabase.js')
+  );
+  const storagePath=require.resolve(
+    path.join(root,'src/config/storage.js')
+  );
+  const previousSupabase=require.cache[supabasePath];
+  const previousStorage=require.cache[storagePath];
+
+  let buckets=[];
+  let listCalls=0;
+  const createCalls=[];
+
+  const client={
+    storage:{
+      listBuckets:async()=>{
+        listCalls++;
+        return {data:buckets.map(bucket=>({...bucket})),error:null};
+      },
+      createBucket:async(name,options)=>{
+        createCalls.push({name,options});
+        buckets.push({name,public:options.public});
+        return {data:{name},error:null};
+      }
+    }
+  };
+
+  const mockedSupabase=new Module(supabasePath);
+  mockedSupabase.filename=supabasePath;
+  mockedSupabase.loaded=true;
+  mockedSupabase.exports={supabaseAdmin:()=>client};
+
+  const env={
+    SUPABASE_URL:'https://project.example.test',
+    SUPABASE_SECRET_KEY:'test-secret',
+    PUBLIC_ASSET_BUCKET:'public-assets',
+    PRIVATE_PRODUCT_BUCKET:'private-products',
+    USER_UPLOAD_BUCKET:'user-uploads',
+    MAX_UPLOAD_MB:100
+  };
+
+  try{
+    require.cache[supabasePath]=mockedSupabase;
+    delete require.cache[storagePath];
+    const storage=require(storagePath);
+
+    await assert.rejects(
+      storage.initStorage({
+        ...env,
+        PRIVATE_PRODUCT_BUCKET:'public-assets'
+      }),
+      /bucket names must be distinct/i
+    );
+    assert.equal(listCalls,0);
+    assert.equal(createCalls.length,0);
+
+    buckets=[{name:'public-assets',public:false}];
+    listCalls=0;
+    createCalls.length=0;
+
+    await assert.rejects(
+      storage.initStorage(env),
+      /incorrect visibility/i
+    );
+    assert.equal(listCalls,1);
+    assert.equal(createCalls.length,0);
+
+    buckets=[{name:'public-assets',public:true}];
+    listCalls=0;
+    createCalls.length=0;
+
+    await storage.initStorage(env);
+
+    assert.equal(listCalls,2);
+    assert.deepEqual(
+      createCalls.map(({name,options})=>[name,options.public]),
+      [['private-products',false],['user-uploads',false]]
+    );
+
+    const actual=new Map(
+      buckets.map(bucket=>[bucket.name,Boolean(bucket.public)])
+    );
+    assert.equal(actual.get('public-assets'),true);
+    assert.equal(actual.get('private-products'),false);
+    assert.equal(actual.get('user-uploads'),false);
+  }finally{
+    if(previousSupabase){
+      require.cache[supabasePath]=previousSupabase;
+    }else{
+      delete require.cache[supabasePath];
+    }
+
+    if(previousStorage){
+      require.cache[storagePath]=previousStorage;
+    }else{
+      delete require.cache[storagePath];
+    }
+  }
+
+  const verifier=fs.readFileSync(
+    path.join(root,'scripts/verify-storage.js'),
+    'utf8'
+  );
+
+  assert.match(verifier,/storage\.listBuckets\(\)/);
+  assert.match(
+    verifier,
+    /new Set\(required\.map\(bucket=>bucket\.name\)\)\.size!==required\.length/
+  );
+  assert.match(verifier,/Boolean\(actual\.public\)!==expected\.isPublic/);
+  assert.equal((verifier.match(/await\s+initStorage\s*\(/g)||[]).length,0);
+});
+
+test('production generic-json requires API URL, API key, and HTTPS',()=>{
+  const {spawnSync}=require('node:child_process');
+
+  const baseEnv={
+    ...process.env,
+    NODE_ENV:'production',
+    APP_URL:'https://store.example.test',
+    SUPABASE_URL:'https://project.example.test',
+    SUPABASE_PUBLISHABLE_KEY:'test-publishable-key',
+    SUPABASE_SECRET_KEY:'test-server-key',
+    DATABASE_URL:'postgres://test:test@127.0.0.1:5432/test',
+    SESSION_SECRET:'test-session-secret',
+    COOKIE_SECRET:'test-cookie-secret',
+    CSRF_SECRET:'test-csrf-secret',
+    CRON_SECRET:'test-cron-secret',
+    PAYMENT_PROVIDER:'generic-json',
+    PAYMENT_API_BASE_URL:'',
+    PAYMENT_API_KEY:'',
+    PAYMENT_WEBHOOK_SECRET:'test-webhook-secret',
+    ENCRYPTION_KEY:'',
+    BUATQRIS_SECRET_TOKEN:'',
+    BUATQRIS_FEE_BY:'user',
+    BUATQRIS_QRIS_METHOD:''
+  };
+
+  const run=overrides=>spawnSync(
+    process.execPath,
+    ['-e',"require('./src/config/env').loadEnv()"],
+    {
+      cwd:root,
+      env:{...baseEnv,...overrides},
+      encoding:'utf8'
+    }
+  );
+
+  const missing=run();
+  assert.notEqual(missing.status,0);
+  assert.match(
+    `${missing.stdout}\n${missing.stderr}`,
+    /Missing required production environment variables:[\s\S]*PAYMENT_API_BASE_URL[\s\S]*PAYMENT_API_KEY/
+  );
+
+  const http=run({
+    PAYMENT_API_BASE_URL:'http://payments.example.test',
+    PAYMENT_API_KEY:'test-payment-key'
+  });
+  assert.notEqual(http.status,0);
+  assert.match(
+    `${http.stdout}\n${http.stderr}`,
+    /PAYMENT_API_BASE_URL must use HTTPS/
+  );
+
+  const valid=run({
+    PAYMENT_API_BASE_URL:'https://payments.example.test',
+    PAYMENT_API_KEY:'test-payment-key'
+  });
+  assert.equal(valid.status,0,`${valid.stdout}\n${valid.stderr}`);
+});
+
+test('BuatQris payment verification has no Xendit token dependency',()=>{
+  const verifier=fs.readFileSync(
+    path.join(root,'scripts/verify-payment.js'),
+    'utf8'
+  );
+
+  const start=verifier.indexOf(
+    "}else if(String(env.PAYMENT_PROVIDER||'').toLowerCase()==='buatqris'){"
+  );
+  const end=verifier.indexOf('}else{',start+1);
+
+  assert.ok(start>=0&&end>start,'BuatQris verification branch is absent.');
+
+  const block=verifier.slice(start,end);
+
+  for(const key of [
+    'BUATQRIS_ACCOUNT_ID',
+    'BUATQRIS_SECRET_TOKEN',
+    'BUATQRIS_SIGNING_SECRET',
+    'BUATQRIS_CALLBACK_URL'
+  ]){
+    assert.ok(block.includes(key),`${key} must still be checked.`);
+  }
+
+  assert.doesNotMatch(block,/XENDIT_WEBHOOK_TOKEN/);
+});
+
 test('Supabase Auth is isolated from admin Storage client',()=>{
   const supabase=fs.readFileSync(
     path.join(root,'src/config/supabase.js'),
