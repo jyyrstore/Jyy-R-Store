@@ -1477,7 +1477,7 @@ body.no-scroll{
   color:var(--primary-2);
 }
 
-.jyyr-select-option.active::after{
+.jyyr-select-option.active:not(.product-variant-card-option)::after{
   content:'✓';
   font-weight:800;
 }

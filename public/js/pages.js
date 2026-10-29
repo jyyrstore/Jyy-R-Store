@@ -160,6 +160,12 @@
   }
 
   function productVariantRowMarkup(variant={},editingExisting=false){
+    const iconUrl=String(variant.icon_url||'');
+    const iconStatus=variant.icon_pending
+      ?'Ikon baru siap diunggah saat produk disimpan.'
+      :iconUrl
+        ?'Ikon tersimpan. Pilih file baru untuk mengganti.'
+        :'Belum ada ikon dipilih.';
     return `
       <div
         class="product-modal-grid owner-product-variant-editor-form"
@@ -169,6 +175,35 @@
         data-product-variant-source-id="${esc(variant.icon_source_id||variant.id||'')}"
         data-product-variant-original="${esc(JSON.stringify(variant))}"
       >
+        <div class="owner-product-variant-icon-control" data-product-variant-icon-field>
+          <div class="owner-product-variant-icon-preview">
+            <img
+              data-product-variant-icon-preview
+              data-current-icon-url="${esc(iconUrl)}"
+              alt=""
+              ${iconUrl?`src="${esc(iconUrl)}"`:''}
+              ${iconUrl?'':'hidden'}
+            >
+            <span data-product-variant-icon-empty ${iconUrl?'hidden':''}>Icon</span>
+          </div>
+          <div class="owner-product-variant-icon-content">
+            <div class="owner-product-variant-icon-heading">
+              <strong>Upload Icon Varian</strong>
+              <small class="owner-product-variant-icon-formats">(JPG,PNG,WebP)</small>
+            </div>
+            <div class="owner-product-variant-icon-meta">
+              <small data-product-variant-icon-status>${esc(iconStatus)}</small>
+              <small class="owner-product-variant-icon-limit">Maks. 5 MB</small>
+            </div>
+            ${pickerFile({
+              name:'variant_icon',
+              accept:'image/jpeg,image/png,image/webp',
+              attrs:'data-product-variant-icon-input',
+              triggerText:'Pilih File'
+            })}
+            <progress data-product-variant-icon-progress value="0" max="100" hidden></progress>
+          </div>
+        </div>
         <label class="field">
           <span>Nama Varian</span>
           <input type="text" data-product-variant-label maxlength="120"
@@ -215,29 +250,6 @@
         data-product-variant-source-id="${esc(variant.icon_source_id||variant.id||'')}"
         data-product-variant-icon-path="${esc(iconPath)}"
         data-product-variant-icon-url="${esc(iconUrl)}">
-        <div class="owner-product-variant-icon-control" data-product-variant-icon-field>
-          <div class="owner-product-variant-icon-preview">
-            <img
-              data-product-variant-icon-preview
-              data-current-icon-url="${esc(iconUrl)}"
-              alt=""
-              ${iconUrl?`src="${esc(iconUrl)}"`:''}
-              ${iconUrl?'':'hidden'}
-            >
-            <span data-product-variant-icon-empty ${iconUrl?'hidden':''}>Icon</span>
-          </div>
-          <div class="owner-product-variant-icon-content">
-            <strong>Icon Varian</strong>
-            <small>Opsional · JPG, PNG, WebP · Maks. 5 MB</small>
-            ${pickerFile({
-              name:'variant_icon',
-              accept:'image/jpeg,image/png,image/webp',
-              attrs:'data-product-variant-icon-input'
-            })}
-            <progress data-product-variant-icon-progress value="0" max="100" hidden></progress>
-            <small data-product-variant-icon-status>${iconUrl?'Ikon tersimpan. Pilih file baru untuk mengganti.':'Belum ada ikon dipilih.'}</small>
-          </div>
-        </div>
         <div class="owner-product-variant-card-values">
           <div class="owner-product-variant-card-value">
             <div class="owner-product-variant-name-row">
@@ -261,6 +273,7 @@
             <small>Stok</small><strong>${stock===''?'—':esc(stock)}</strong>
           </div>
         </div>
+        ${variant.icon_pending?'<small class="owner-product-variant-icon-pending">Ikon baru siap diunggah saat produk disimpan.</small>':''}
         <input type="hidden" data-product-variant-label value="${esc(label)}">
         <input type="hidden" data-product-variant-amount value="${esc(amount)}">
         <input type="hidden" data-product-variant-price value="${esc(price)}">
@@ -386,7 +399,8 @@
     accept='',
     attrs='',
     mainClass='',
-    statusText=''
+    statusText='',
+    triggerText='Pilih file'
   }={})=>`
     <div
       class="jyyr-file-picker"
@@ -419,7 +433,7 @@
           type="button"
           class="button button-secondary jyyr-file-trigger"
           data-jyyr-file-trigger
-        >Pilih file</button>
+        >${esc(triggerText)}</button>
 
         ${statusText?'':`
           <span
@@ -1390,11 +1404,11 @@
   document.addEventListener('change',e=>{
     const variantIconInput=e.target.closest('[data-product-variant-icon-input]');
     if(variantIconInput){
-      const card=variantIconInput.closest('[data-product-variant-card]');
+      const owner=variantIconInput.closest('[data-product-variant-row]');
       const file=variantIconInput.files?.[0]||null;
-      const preview=card?.querySelector('[data-product-variant-icon-preview]');
-      const empty=card?.querySelector('[data-product-variant-icon-empty]');
-      const status=card?.querySelector('[data-product-variant-icon-status]');
+      const preview=owner?.querySelector('[data-product-variant-icon-preview]');
+      const empty=owner?.querySelector('[data-product-variant-icon-empty]');
+      const status=owner?.querySelector('[data-product-variant-icon-status]');
       const currentUrl=String(preview?.dataset.currentIconUrl||'');
 
       const restorePreview=()=>{
@@ -1418,7 +1432,15 @@
       };
 
       if(!file){
-        if(card)productVariantIconFiles.delete(card);
+        if(owner)productVariantIconFiles.delete(owner);
+
+        if(owner?.dataset.productVariantEditExisting==='1'){
+          const originalCard=owner
+            .closest('[data-product-variant-editor]')
+            ?.querySelector('[data-product-variant-editing-card]');
+          if(originalCard)productVariantIconFiles.delete(originalCard);
+        }
+
         restorePreview();
         if(status)status.textContent=currentUrl
           ?'Ikon tersimpan. Pilih file baru untuk mengganti.'
@@ -1432,16 +1454,15 @@
       ){
         variantIconInput.value='';
         window.JYYRPicker?.syncFile?.(variantIconInput);
-        if(card)productVariantIconFiles.delete(card);
         restorePreview();
         if(status)status.textContent='Ikon harus JPG, PNG, atau WebP, maksimal 5 MB.';
         toast.error('Ikon varian harus JPG, PNG, atau WebP dengan ukuran maksimal 5 MB.');
         return;
       }
 
-      if(!card)return;
+      if(!owner)return;
 
-      productVariantIconFiles.set(card,file);
+      productVariantIconFiles.set(owner,file);
       restorePreview();
 
       if(preview){
@@ -1466,6 +1487,14 @@
       const stockNode=document.querySelector('[data-product-stock-count]');
       const stockState=document.querySelector('[data-product-stock-state]');
       const selected=Boolean(variantSelect.value);
+      const selectedVariantNode=document.querySelector('[data-product-selected-variant]');
+      if(selectedVariantNode){
+        const selectedLabel=String(option?.dataset.label||'').trim();
+        selectedVariantNode.textContent=selected&&selectedLabel
+          ? `${selectedLabel}`
+          : '';
+        selectedVariantNode.hidden=!(selected&&selectedLabel);
+      }
       const selectedIcon=picker?.querySelector('[data-product-variant-selected-icon]');
       const iconUrl=String(option?.dataset.icon||'');
 
@@ -1481,10 +1510,10 @@
 
       const price=Number(option?.dataset.price||0);
       const stock=Number(option?.dataset.stock||0);
-      if(priceNode)priceNode.textContent=selected?money(price):'Pilih nominal';
+      if(priceNode)priceNode.textContent=selected?money(price):'';
       if(stockNode)stockNode.textContent=selected?String(stock):'—';
       if(stockState){
-        stockState.textContent=!selected?'Pilih nominal':stock>0?'Tersedia':'Habis';
+        stockState.textContent=!selected?'':stock>0?'Tersedia':'Habis';
         stockState.classList.toggle('is-available',selected&&stock>0);
         stockState.classList.toggle('is-unavailable',!selected||stock<1);
       }
@@ -1791,57 +1820,35 @@
         const originalIndex=originalCard
           ?[...list.querySelectorAll('[data-product-variant-card]')].indexOf(originalCard)
           :-1;
-        const stagedIcon=originalCard
-          ?productVariantIconFiles.get(originalCard)||
-            originalCard.querySelector('[data-product-variant-icon-input]')?.files?.[0]||
-            null
-          :null;
-        const iconPath=originalCard?.dataset.productVariantIconPath||'';
-        const iconUrl=originalCard?.dataset.productVariantIconUrl||'';
-        const oldObjectUrl=originalCard
-          ?.querySelector('[data-product-variant-icon-preview]')?.dataset.objectUrl;
+        const stagedIcon=productVariantIconFiles.get(row)||
+          row.querySelector('[data-product-variant-icon-input]')?.files?.[0]||
+          (originalCard?productVariantIconFiles.get(originalCard)||null:null);
+        const iconPath=originalCard?.dataset.productVariantIconPath||variant.icon_path||'';
+        const iconUrl=originalCard?.dataset.productVariantIconUrl||variant.icon_url||'';
+        const oldObjectUrl=row.querySelector('[data-product-variant-icon-preview]')?.dataset.objectUrl;
 
         if(oldObjectUrl)URL.revokeObjectURL(oldObjectUrl);
         row.remove();
 
+        const savedVariant={
+          ...variant,
+          icon_path:iconPath,
+          icon_url:iconUrl,
+          icon_pending:Boolean(stagedIcon)
+        };
+        let nextCard=null;
+
         if(originalCard){
-          originalCard.outerHTML=productVariantCardMarkup({
-            ...variant,
-            icon_path:iconPath,
-            icon_url:iconUrl
-          });
-
-          const nextCard=list.querySelectorAll('[data-product-variant-card]')[originalIndex];
-
-          if(stagedIcon&&nextCard){
-            productVariantIconFiles.set(nextCard,stagedIcon);
-
-            const preview=nextCard.querySelector('[data-product-variant-icon-preview]');
-            if(preview){
-              const objectUrl=URL.createObjectURL(stagedIcon);
-              preview.src=objectUrl;
-              preview.dataset.objectUrl=objectUrl;
-              preview.hidden=false;
-            }
-
-            const empty=nextCard.querySelector('[data-product-variant-icon-empty]');
-            if(empty)empty.hidden=true;
-
-            const picker=nextCard.querySelector('[data-jyyr-file-picker]');
-            picker?.classList.add('has-file');
-
-            const filename=picker?.querySelector('[data-jyyr-file-name]');
-            if(filename)filename.textContent=stagedIcon.name;
-
-            const clearButton=picker?.querySelector('[data-jyyr-file-clear]');
-            if(clearButton)clearButton.hidden=false;
-
-            const status=nextCard.querySelector('[data-product-variant-icon-status]');
-            if(status)status.textContent=
-              `${stagedIcon.name} · ikon baru akan diunggah saat produk disimpan.`;
-          }
+          originalCard.outerHTML=productVariantCardMarkup(savedVariant);
+          nextCard=list.querySelectorAll('[data-product-variant-card]')[originalIndex]||null;
         }else{
-          list.insertAdjacentHTML('beforeend',productVariantCardMarkup(variant));
+          list.insertAdjacentHTML('beforeend',productVariantCardMarkup(savedVariant));
+          const cards=list.querySelectorAll('[data-product-variant-card]');
+          nextCard=cards[cards.length-1]||null;
+        }
+
+        if(stagedIcon&&nextCard){
+          productVariantIconFiles.set(nextCard,stagedIcon);
         }
 
         const add=section.querySelector('[data-product-variant-add]');
@@ -1879,14 +1886,44 @@
         icon_path:row.dataset.productVariantIconPath||null,
         icon_url:row.dataset.productVariantIconUrl||null,
         icon_source_id:row.dataset.productVariantSourceId||null,
+        icon_pending:Boolean(productVariantIconFiles.get(row)),
         sort_order:[...list.querySelectorAll('[data-product-variant-card]')].indexOf(row)
       };
 
+      const stagedIcon=productVariantIconFiles.get(row)||null;
       row.hidden=true;
       row.removeAttribute('data-product-variant-row');
       row.setAttribute('data-product-variant-editing-card','');
 
       draftHost.insertAdjacentHTML('beforeend',productVariantRowMarkup(variant,true));
+      const draftRow=draftHost.querySelector('[data-product-variant-draft]');
+
+      if(stagedIcon&&draftRow){
+        productVariantIconFiles.set(draftRow,stagedIcon);
+        const preview=draftRow.querySelector('[data-product-variant-icon-preview]');
+        if(preview){
+          const objectUrl=URL.createObjectURL(stagedIcon);
+          preview.src=objectUrl;
+          preview.dataset.objectUrl=objectUrl;
+          preview.hidden=false;
+        }
+
+        const empty=draftRow.querySelector('[data-product-variant-icon-empty]');
+        if(empty)empty.hidden=true;
+
+        const picker=draftRow.querySelector('[data-jyyr-file-picker]');
+        picker?.classList.add('has-file');
+
+        const filename=picker?.querySelector('[data-jyyr-file-name]');
+        if(filename)filename.textContent=stagedIcon.name;
+
+        const clearButton=picker?.querySelector('[data-jyyr-file-clear]');
+        if(clearButton)clearButton.hidden=false;
+
+        const status=draftRow.querySelector('[data-product-variant-icon-status]');
+        if(status)status.textContent='Ikon baru siap diunggah saat produk disimpan.';
+      }
+
       const add=section.querySelector('[data-product-variant-add]');
       if(add)add.hidden=true;
       draftHost.querySelector('[data-product-variant-label]')?.focus();
@@ -1899,6 +1936,9 @@
       const section=row?.closest('[data-product-variant-editor]');
       const list=section?.querySelector('[data-product-variant-list]');
       if(!row||!section||!list)return;
+
+      const objectUrl=row.querySelector('[data-product-variant-icon-preview]')?.dataset.objectUrl;
+      if(objectUrl)URL.revokeObjectURL(objectUrl);
 
       if(row.dataset.productVariantEditExisting==='1'){
         const originalCard=list.querySelector('[data-product-variant-editing-card]');
@@ -2994,7 +3034,7 @@ ${productPricingModesMarkup('FIXED')}
     const msg=e.target.closest('[data-message-form]');if(msg){e.preventDefault();const body=new FormData(msg).get('body');const btn=msg.querySelector('button');btn.disabled=true;try{await api.request('/api/messages',{method:'POST',body:{body}});toast.success('Pesan terkirim.');location.reload()}catch(err){toast.error(err.message)}finally{btn.disabled=false}}
     const maint=e.target.closest('[data-owner-maintenance]');if(maint){e.preventDefault();const fd=new FormData(maint);const body={enabled:fd.get('enabled')==='on',title:fd.get('title'),message:fd.get('message'),scheduled_start:fd.get('scheduled_start')||null,scheduled_end:fd.get('scheduled_end')||null,allow_owner_access:fd.get('allow_owner_access')==='on'};try{await api.request('/api/owner/maintenance',{method:'PUT',body});toast.success('Maintenance setting tersimpan.')}catch(err){toast.error(err.message)}}
     const form=e.target.closest('[data-deposit-submit]');if(form){e.preventDefault()}
-    const category=e.target.closest('[data-owner-category-form], [data-owner-category-edit]');if(category){e.preventDefault();const fd=Object.fromEntries(new FormData(category));fd.is_active=fd.is_active==='on';try{const id=fd.id;if(id)await ownerAction('/api/owner/categories/'+id,{name:fd.name,slug:fd.slug,is_active:fd.is_active},'PUT','Kategori diperbarui.');else await ownerAction('/api/owner/categories',{name:fd.name,slug:fd.slug,is_active:fd.is_active},'POST','Kategori dibuat.');location.reload()}catch(err){if(err.code==='CATEGORY_ALREADY_EXISTS')toast.error(err.message,{title:'Category Sudah Dimiliki'});else toast.error(err.message)}}
+    const category=e.target.closest('[data-owner-category-form], [data-owner-category-edit]');if(category){e.preventDefault();const fd=Object.fromEntries(new FormData(category));fd.is_active=fd.is_active==='on';const categoryPayload={name:fd.name,is_active:fd.is_active};const categorySlug=String(fd.slug||'').trim();if(categorySlug)categoryPayload.slug=categorySlug;try{const id=fd.id;if(id)await ownerAction('/api/owner/categories/'+id,categoryPayload,'PUT','Kategori diperbarui.');else await ownerAction('/api/owner/categories',categoryPayload,'POST','Kategori dibuat.');location.reload()}catch(err){if(err.code==='CATEGORY_ALREADY_EXISTS')toast.error(err.message,{title:'Category Sudah Dimiliki'});else toast.error(err.message)}}
     const pfm=e.target.closest('[data-owner-product-form]');
     if(pfm){
       e.preventDefault();

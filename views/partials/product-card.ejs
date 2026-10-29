@@ -7,7 +7,7 @@
       aria-label="Lihat produk <%= product.name %>"
     >
       <% if (product.thumbnail_url || product.thumbnail_path) { %><img loading="lazy" class="product-thumb" src="<%= product.thumbnail_url || assetUrl(publicAssetBucket, product.thumbnail_path) %>" alt="<%= product.name %>" data-image-fallback><div class="image-fallback" hidden><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } else { %><div class="image-fallback"><%- icon('image') %><span>Gambar tidak tersedia</span></div><% } %>
-      <span class="product-category-badge"><%= product.category_name || 'Produk' %></span>
+
       <span
         class="product-stock product-stock--<%= stock >= 500 ? 'green' : stock >= 250 ? 'blue' : stock > 0 ? 'orange' : 'sold-out' %> product-stock--cover"
         aria-label="<%= stock > 0 ? stock + ' produk tersedia' : 'Produk habis' %>"
@@ -18,42 +18,17 @@
       </span>
     </a>
 
-    <a
-      href="/product/<%= product.slug %>"
-      class="product-title product-title--cover"
-    ><%= product.name %></a>
-    <% if (currentUser && product.stock>0 && product.pricing_mode!=='VARIANT') { %>
-      <button
-        type="button"
-        class="product-cover-cart"
-        data-add-cart="<%= product.id %>"
-        aria-label="Tambah <%= product.name %> ke keranjang"
-        title="Tambah ke keranjang"
-      >
-        <%- icon('cart') %>
-      </button>
-    <% } %>
+
+
   </div>
   <div class="product-body">
-
-    <div class="product-price"><%= product.pricing_mode==='VARIANT'?'Mulai dari ':'' %><%= formatIDR(product.price) %></div>
 
     <div class="product-actions">
       <div class="product-action-row">
         <a
-          class="product-detail-link"
           href="/product/<%= product.slug %>"
-        >
-          Detail
-        </a>
-        <% if (currentUser && product.stock>0 && product.pricing_mode!=='VARIANT') { %>
-          <button
-            class="button button-primary button-small"
-            data-buy-now="<%= product.id %>"
-          >
-            Beli
-          </button>
-        <% } %>
+          class="product-title"
+        ><%= product.name %></a>
       </div>
     </div>
   </div>

@@ -20,6 +20,30 @@ test('duplicate Owner category names return a dedicated toast',()=>{
 });
 
 
+test('Owner category edit omits an empty optional slug',()=>{
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.ok(browser.includes(
+    "const categoryPayload={name:fd.name,is_active:fd.is_active};" +
+    "const categorySlug=String(fd.slug||'').trim();" +
+    "if(categorySlug)categoryPayload.slug=categorySlug;"
+  ));
+  assert.ok(browser.includes(
+    "ownerAction('/api/owner/categories/'+id,categoryPayload,'PUT','Kategori diperbarui.')"
+  ));
+  assert.ok(browser.includes(
+    "ownerAction('/api/owner/categories',categoryPayload,'POST','Kategori dibuat.')"
+  ));
+  assert.equal(
+    browser.includes("name:fd.name,slug:fd.slug,is_active:fd.is_active"),
+    false
+  );
+});
+
+
 test('Owner category deletion is owner-protected and keeps products',()=>{
   const repository=fs.readFileSync(
     path.join(root,'src/repositories/categories.repository.js'),
@@ -1162,6 +1186,109 @@ test('owner variant icons remain separate from the product cover',()=>{
   assert.match(cron,/select icon_path[\s\S]*from product_variants/);
 });
 
+test('product detail variant choices render in a standalone card after statistics',()=>{
+  const detail=fs.readFileSync(
+    path.join(root,'views/pages/product-detail.ejs'),
+    'utf8'
+  );
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const stats=detail.indexOf(
+    '<div class="detail-product-stats" aria-label="Statistik produk">'
+  );
+  const statsToVariant=detail.indexOf(
+    "    </div>\n    <% if(product.pricing_mode==='VARIANT'){ const availableVariants=",
+    stats
+  );
+  const variant=detail.indexOf(
+    '<section class="detail-variant-card" aria-labelledby="product-variant-title">'
+  );
+  const copy=detail.indexOf('<div class="detail-copy">');
+
+  assert.ok(
+    stats>=0&&statsToVariant>stats&&variant>statsToVariant&&copy>variant,
+    'Card Pilih Nominal harus berada tepat setelah statistik dan sebelum detail-copy.'
+  );
+
+  const cardEnd=detail.indexOf('</section>',variant);
+  assert.ok(cardEnd>variant,'Card nominal harus memiliki penutup section.');
+
+  const markup=detail.slice(variant,cardEnd);
+
+  assert.match(markup,/data-product-variant-select/);
+  assert.match(markup,/data-jyyr-select-option/);
+  assert.match(markup,/data-price=/);
+  assert.match(markup,/data-stock=/);
+  assert.match(markup,/data-icon=/);
+  assert.match(markup,/product-variant-card-price/);
+  assert.match(markup,/product-variant-card-stock/);
+  assert.doesNotMatch(markup,/jyyr-select-trigger|jyyr-select-menu/);
+
+  const detailTitle=detail.indexOf(
+    '<div class="detail-title-row">',
+    copy
+  );
+  assert.ok(
+    copy>=0&&detailTitle>copy,
+    'Area detail produk harus tetap tersedia setelah card nominal.'
+  );
+  assert.doesNotMatch(
+    detail.slice(copy,detailTitle),
+    /data-product-variant-select|data-product-variant-field/
+  );
+
+  assert.match(css,/\.detail-variant-card\s*\{/);
+  assert.match(css,/\.detail-variant-options\s*\{/);
+  assert.match(css,/\.product-variant-card-option/);
+  assert.match(
+    css,
+    /\.product-detail \.detail-variant-card \[data-product-variant-picker\] \.product-variant-card-option\s*\{[^}]*position:\s*relative;/
+  );
+  assert.match(
+    css,
+    /\.product-variant-card-price\s*\{[^}]*grid-column:\s*1;[^}]*grid-row:\s*2;/
+  );
+  assert.match(
+    css,
+    /\.product-variant-card-stock\s*\{[^}]*position:\s*absolute;[^}]*top:\s*10px;[^}]*right:\s*12px;/
+  );
+
+  assert.match(
+    css,
+    /\.product-detail\s+\.detail-variant-card\s+\[data-product-variant-picker\]\s+\.product-variant-card-option\.active\s+\.product-variant-card-price::after\s*\{[^}]*content:\s*["']✓["'];/
+  );
+  assert.match(
+    css,
+    /\.product-variant-card-price\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*center;[^}]*justify-content:\s*space-between;/
+  );
+
+  const componentsCss = fs.readFileSync(
+    path.join(root, 'public/css/components.css'),
+    'utf8'
+  );
+  assert.match(
+    componentsCss,
+    /\.jyyr-select-option\.active:not\(\.product-variant-card-option\)::after\s*\{[^}]*content:\s*['"]✓['"]\s*;/
+  );
+  assert.match(
+    css,
+    /\.product-variant-card-details\s*\{[^}]*flex:\s*1 1 0;/
+  );
+
+  assert.match(
+    css,
+    /\.detail-variant-options\s*\{[^}]*align-items:\s*start;/
+  );
+  assert.match(
+    css,
+    /\.product-detail\s+\.detail-variant-card\s+\[data-product-variant-picker\]\s+\.product-variant-card-option\s*\{[^}]*min-height:\s*0;/
+  );
+});
+
+
 test('renaming a variant preserves its source icon reference',()=>{
   const routes=fs.readFileSync(
     path.join(root,'src/routes/index.js'),
@@ -1196,6 +1323,45 @@ test('renaming a variant preserves its source icon reference',()=>{
   assert.match(
     repository,
     /sort_order,icon_path\) values\(\$1,\$2,\$3,\$4,\$5,0,true,\$6,\$7\)/
+  );
+});
+
+test('variant icon uploader is above the variant input fields',()=>{
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const css=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const rowStart=browser.indexOf('function productVariantRowMarkup(');
+  const cardStart=browser.indexOf('function productVariantCardMarkup(',rowStart);
+  const editorStart=browser.indexOf('function productVariantEditorMarkup(',cardStart);
+
+  assert.ok(rowStart>=0&&cardStart>rowStart,'Variant editor markup is absent.');
+  assert.ok(editorStart>cardStart,'Variant summary markup is absent.');
+
+  const editorMarkup=browser.slice(rowStart,cardStart);
+  const uploaderPosition=editorMarkup.indexOf('data-product-variant-icon-field');
+  const inputPosition=editorMarkup.indexOf('<label class="field">');
+
+  assert.ok(
+    uploaderPosition>=0&&inputPosition>uploaderPosition,
+    'Icon uploader must appear above the variant inputs.'
+  );
+
+  const summaryMarkup=browser.slice(cardStart,editorStart);
+  assert.doesNotMatch(
+    summaryMarkup,
+    /data-product-variant-icon-field/,
+    'Variant summary cards must not contain the upload card.'
+  );
+
+  assert.match(
+    css,
+    /\.owner-product-variant-editor-form\s*>\s*\.owner-product-variant-icon-control\s*\{\s*grid-column:1\/-1;/
   );
 });
 

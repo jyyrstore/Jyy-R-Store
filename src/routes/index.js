@@ -7,6 +7,7 @@ const api=require('../controllers/api.controller');
 const {validate}=require('../middleware/validation.middleware');
 const {sensitiveRateLimit}=require('../middleware/security.middleware');
 const {z}=require('zod');
+const makeSlug=require('../utils/slug');
 const {loadEnv}=require('../config/env');
 const {safeNextPath}=require('../utils/url');
 const {ok}=require('../utils/response');
@@ -18,7 +19,7 @@ const zBool=z.preprocess(
 );
 const ownerCategorySchema=z.object({
   name:z.string().trim().min(2).max(120),
-  slug:z.string().trim().min(1).max(140).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+  slug:z.string().trim().min(1).max(140).transform(makeSlug).pipe(z.string().min(1).max(140).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)).optional(),
   description:z.string().max(2000).optional(),
   sort_order:z.coerce.number().int().min(0).max(10000).optional(),
   is_active:zBool.optional()
