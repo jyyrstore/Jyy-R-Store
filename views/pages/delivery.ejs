@@ -7,11 +7,22 @@
     <% entitlements.forEach(e=>{ %>
       <a class="list-card delivery-card"
          href="/orders/<%= e.order_id %>"
-         aria-label="Buka order: <%= e.product_name || e.product_id %>">
-        <span class="eyebrow accent delivery-card-label">Akses digital</span>
-        <span class="delivery-card-status"><%= labelStatus(e.status) %></span>
-        <strong class="delivery-card-product"><%= e.product_name || e.product_id %></strong>
-        <span class="delivery-card-date"><%= formatDate(e.granted_at) %></span>
+         aria-label="Buka order: <%= e.variant_id ? (e.variant_label || e.product_name || e.product_id) : (e.product_name || e.product_id) %>">
+        <div class="delivery-card-main">
+          <% if(e.variant_icon_path || e.product_thumbnail_path){ %>
+            <img class="order-item-product-image"
+                 src="<%= assetUrl(publicAssetBucket,e.variant_icon_path || e.product_thumbnail_path) %>"
+                 alt="" width="44" height="44" loading="lazy" decoding="async">
+          <% } %>
+          <div class="delivery-card-copy">
+            <span class="eyebrow accent delivery-card-label">Akses digital</span>
+            <strong class="delivery-card-product"><%= e.variant_id ? (e.variant_label || e.product_name || e.product_id) : (e.product_name || e.product_id) %></strong>
+          </div>
+        </div>
+        <div class="delivery-card-side">
+          <span class="delivery-card-status"><%= labelStatus(e.status) %></span>
+          <span class="delivery-card-date"><%= formatDate(e.granted_at) %></span>
+        </div>
       </a>
     <% }) %>
 

@@ -192,10 +192,12 @@ test('Owner category actions stay inside each card under the values',()=>{
   assert.ok(start!==-1 && end>start);
   const section=ownerView.slice(start,end);
 
-  assert.match(
-    section,
-    /<div class="owner-category-card">[\s\S]*?<div class="owner-category-fields">[\s\S]*?<\/div>\s*<div class="owner-category-actions">[\s\S]*?<\/div>\s*<\/div>\s*<\/article>/
-  );
+  assert.ok(section.includes('const rootCategories=categoryRows.filter(row=>'));
+  assert.ok(section.includes('const subcategories=categoryRows.filter('));
+  assert.ok(section.includes('class="owner-category-sublist"'));
+  assert.ok(section.includes('subcategories.forEach(subcategory=>{'));
+  assert.ok(section.includes('data-owner-delete-category="<%= row.id %>"'));
+  assert.ok(section.includes('data-owner-delete-category="<%= subcategory.id %>"'));
   for(const label of ['Kategori','Subkategori','Slug','Active']){
     assert.ok(section.includes(`<span>${label}</span>`),label);
   }
@@ -220,6 +222,12 @@ test('Owner category actions stay inside each card under the values',()=>{
     responsive.includes('owner-category-item{display:flex;flex:0 0 min(86vw,320px)'),
     false
   );
+  assert.ok(responsive.includes(
+    '.owner-page .owner-category-sublist{display:flex;flex-direction:column;gap:8px;margin-left:12px;padding-left:12px;border-left:1px solid var(--border-strong);min-width:0}'
+  ));
+  assert.ok(responsive.includes(
+    '.owner-page .owner-category-subcard .owner-category-fields{grid-template-columns:repeat(3,minmax(0,1fr))}'
+  ));
   assert.match(responsive,/\.owner-page \.owner-category-fields strong\{[^}]*overflow:hidden[^}]*text-overflow:ellipsis[^}]*white-space:nowrap[^}]*\}/);
 });
 
@@ -599,14 +607,58 @@ test('category hierarchy supports one-level subcategories',()=>{
   assert.match(categoryRepository,/parent_id/);
   assert.match(categoryService,/CATEGORY_DEPTH_LIMIT/);
   assert.match(productRepository,/parent_c\.slug=\$3/);
-  assert.match(ownerView,/parentCategory \? parentCategory\.name : row\.name/);
-  assert.match(ownerView,/parentCategory \? row\.name : '—'/);
+  assert.match(ownerView,/const rootCategories=categoryRows\.filter\(row=>/);
+  assert.match(ownerView,/const subcategories=categoryRows\.filter\(/);
+  assert.match(ownerView,/class="owner-category-sublist"/);
+  assert.match(ownerView,/subcategories\.forEach\(subcategory=>\{/);
   assert.ok(browser.includes(
     "subcategory:String(fd.subcategory||'').trim()"
   ));
   assert.match(storeView,/categoryParent/);
   assert.match(storeView,/categoryLabel/);
   assert.match(homeView,/categories\.filter\(c=>!c\.parent_id\)/);
+});
+
+
+test('homepage displays latest products under their subcategory names',()=>{
+  const repository=fs.readFileSync(
+    path.join(root,'src/repositories/products.repository.js'),
+    'utf8'
+  );
+  const service=fs.readFileSync(
+    path.join(root,'src/services/product/product.service.js'),
+    'utf8'
+  );
+  const controller=fs.readFileSync(
+    path.join(root,'src/controllers/page.controller.js'),
+    'utf8'
+  );
+  const homeView=fs.readFileSync(
+    path.join(root,'views/pages/home.ejs'),
+    'utf8'
+  );
+  const homeStyles=fs.readFileSync(
+    path.join(root,'public/css/store.css'),
+    'utf8'
+  );
+
+  assert.match(repository,/async function listSubcategoryHighlights\(limitPerCategory=6\)/);
+  assert.match(repository,/cross join lateral/);
+  assert.match(repository,/source_product\.status='PUBLISHED'/);
+  assert.match(repository,/\(count\(\*\) over\(\)\)::int as category_product_count/);
+  assert.match(service,/async function subcategoryHighlights\(limitPerCategory=6\)/);
+  assert.match(service,/products\.listSubcategoryHighlights\(limitPerCategory\)/);
+  assert.match(service,/total:categoryTotals\.get\(String\(category\.slug\)\)\|\|0/);
+  assert.match(controller,/products\.subcategoryHighlights\(6\)/);
+  assert.match(controller,/total:group\.total/);
+  assert.match(homeView,/subcategoryGroups\.forEach\(group=>/);
+  assert.match(homeView,/<h2><%= group\.category\.name %><\/h2>[\s\S]*?home-subcategory-count/);
+  assert.match(homeView,/home-subcategory-count" aria-label="<%= group\.total %> item produk">[\s\S]*?<%= group\.total %>/);
+  assert.match(homeStyles,/\.home-page \.home-subcategory-rule[\s\S]*?height:1px/);
+  assert.match(homeStyles,/\.home-page \.home-subcategory-count\{[\s\S]*?\bborder:1px solid var\(--border\);[\s\S]*?\}/);
+  assert.match(homeStyles,/\.home-page \.home-subcategory-count\{(?=[^{}]*border-radius:999px;)(?=[^{}]*padding:2px 7px;)[^{}]*\}/);
+  assert.match(homeView,/group\.products\.forEach\(product=>/);
+  assert.doesNotMatch(homeView,/<h2>New Product<\/h2>/);
 });
 
 test('owner APIs require auth + owner middleware',()=>assert.match(route,/const ownerApi=express\.Router\(\); ownerApi\.use\(requireAuth,requireOwner\)/));
@@ -1078,6 +1130,11 @@ test('Owner product pricing modes use shared selectable cards on create and edit
   );
   assert.doesNotMatch(edit,/<span>Mode Harga<\/span>/);
   assert.doesNotMatch(edit,/name:'pricing_mode'/);
+  assert.ok(edit.includes("${productVariantEditorMarkup(d.variants||[],d.pricing_mode||'FIXED')}"));
+  assert.match(pages,/function productVariantEditorMarkup\(variants=\[\],pricingMode='FIXED'\)/);
+  assert.match(pages,/const showAddVariant=String\(pricingMode\|\|'FIXED'\)\.toUpperCase\(\)==='VARIANT'/);
+  assert.match(pages,/\u0024\{showAddVariant\?'':'hidden'\}/);
+  assert.match(pages,/const pricingModeInput=e\.target\.closest\('input\[name="pricing_mode"\]'\)/);
 
   assert.match(
     css,
@@ -1204,7 +1261,7 @@ test('Owner product variant editor stays in title card while saved cards stay be
     'utf8'
   );
 
-  const start=pages.indexOf('function productVariantEditorMarkup(variants=[]){');
+  const start=pages.indexOf('function productVariantEditorMarkup(');
   const end=pages.indexOf('\n  function readProductVariants(form){',start);
   assert.ok(start>=0&&end>start,'Renderer varian harus ditemukan.');
 
@@ -1248,7 +1305,7 @@ test('Owner product variant edit section is not nested inside product informatio
   const editMarkup=pages.slice(editStart,editEnd);
   const infoTitle=editMarkup.indexOf('<strong>Informasi Produk</strong>');
   const infoEnd=editMarkup.indexOf('</section>',infoTitle);
-  const variant=editMarkup.indexOf('${productVariantEditorMarkup(d.variants||[])}');
+  const variant=editMarkup.indexOf("${productVariantEditorMarkup(d.variants||[],d.pricing_mode||'FIXED')}");
 
   assert.ok(
     infoTitle>=0&&infoEnd>infoTitle&&variant>infoEnd,
@@ -1283,7 +1340,7 @@ test('Owner product variants use structured inputs instead of JSON text',()=>{
     'function productVariantCardMarkup(variant={}){'
   );
   const variantCardEnd=pages.indexOf(
-    '\n  function productVariantEditorMarkup(variants=[]){',
+    '\n  function productVariantEditorMarkup(',
     variantCardStart
   );
   assert.ok(
@@ -1303,7 +1360,7 @@ test('Owner product variants use structured inputs instead of JSON text',()=>{
 
   assert.match(pages,/function productVariantEditorMarkup/);
   const editorMarkupStart=pages.indexOf(
-    'function productVariantEditorMarkup(variants=[]){'
+    "function productVariantEditorMarkup("
   );
   const editorMarkupEnd=pages.indexOf(
     '\n  function readProductVariants(form){',
@@ -1327,7 +1384,7 @@ test('Owner product variants use structured inputs instead of JSON text',()=>{
   assert.match(pages,/function readProductVariants/);
   assert.match(pages,/data-product-variant-add/);
   assert.match(pages,/data-product-variant-remove/);
-  assert.match(pages,/productVariantEditorMarkup\(d\.variants\|\|\[\]\)/);
+  assert.match(pages,/productVariantEditorMarkup\(d\.variants\|\|\[\],d\.pricing_mode\|\|'FIXED'\)/);
   assert.match(pages,/variants=readProductVariants\(pfm\)/);
   assert.match(pages,/variants=readProductVariants\(pem\)/);
   assert.doesNotMatch(pages,/variants_json/);

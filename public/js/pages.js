@@ -282,8 +282,9 @@
     `;
   }
 
-  function productVariantEditorMarkup(variants=[]){
+  function productVariantEditorMarkup(variants=[],pricingMode='FIXED'){
     const items=Array.isArray(variants)?variants:[];
+    const showAddVariant=String(pricingMode||'FIXED').toUpperCase()==='VARIANT';
 
     return `
       <div
@@ -297,6 +298,7 @@
               class="button button-secondary"
               type="button"
               data-product-variant-add
+              ${showAddVariant?'':'hidden'}
               ${items.length>=100?'disabled':''}
             >Tambah Varian</button>
           </div>
@@ -1402,6 +1404,18 @@
 
   document.addEventListener('error',e=>{const img=e.target;if(img?.matches?.('[data-image-fallback]')){img.hidden=true;img.nextElementSibling?.removeAttribute('hidden')} if(img?.matches?.('[data-image-fallback-hide]'))img.hidden=true;},{capture:true});
   document.addEventListener('change',e=>{
+    const pricingModeInput=e.target.closest('input[name="pricing_mode"]');
+    if(pricingModeInput){
+      const form=pricingModeInput.closest('form');
+      const add=form?.querySelector('[data-product-variant-add]');
+      if(add){
+        add.hidden=String(
+          form.querySelector('input[name="pricing_mode"]:checked')?.value||'FIXED'
+        ).toUpperCase()!=='VARIANT';
+      }
+      return;
+    }
+
     const variantIconInput=e.target.closest('[data-product-variant-icon-input]');
     if(variantIconInput){
       const owner=variantIconInput.closest('[data-product-variant-row]');
@@ -2791,7 +2805,7 @@ ${productPricingModesMarkup('FIXED')}
             </div>
           </section>
 
-          ${productVariantEditorMarkup(d.variants||[])}
+          ${productVariantEditorMarkup(d.variants||[],d.pricing_mode||'FIXED')}
 
           <div class="product-modal-actions">
             <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Batal</button>
@@ -4047,7 +4061,7 @@ ${productPricingModesMarkup('FIXED')}
       Array.isArray(order.items)
         ? order.items
         : []
-    ).filter(item=>item?.product_id);
+    ).filter(item=>item?.product_id && !item.has_review);
 
     if(!items.length){
       cleanPaymentReviewQuery();
@@ -4088,37 +4102,11 @@ ${productPricingModesMarkup('FIXED')}
         data-payment-review-prompt-form
         data-order-id="${esc(order.id)}"
       >
-        <div class="eyebrow accent">
-          Pembayaran berhasil ✓
-        </div>
-
         <h2>Pembelian berhasil ✓</h2>
 
         <p class="muted">
-          Bagaimana pengalaman kamu?
+          Beri rating untuk membantu pembeli lain mengetahui pengalaman kamu.
         </p>
-
-        <div class="list-card payment-review-order-summary">
-          <div class="payment-review-order-product">
-            <div class="payment-review-product-title">
-              <strong>${esc(item.product_name||'Produk')}</strong>
-              <small>${Number(item.quantity||1)} ×</small>
-            </div>
-            <strong class="payment-review-product-price">
-              ${money(item.unit_price||0)}
-            </strong>
-          </div>
-          <div class="payment-review-order-date">
-            <strong>${esc(orderDateLabel)}</strong>
-            <small>${esc(orderTimeLabel)}</small>
-          </div>
-        </div>
-
-        <input
-          type="hidden"
-          name="productId"
-          value="${esc(item.product_id)}"
-        >
 
         <div
           class="product-review-rating-picker"
@@ -4136,6 +4124,48 @@ ${productPricingModesMarkup('FIXED')}
           `).join('')}
         </div>
 
+        <div class="list-card payment-review-order-summary">
+          <div class="payment-review-summary-main">
+            <div class="payment-review-summary-image">
+              ${item.review_image_url ? `
+                <img
+                  src="${esc(item.review_image_url)}"
+                  alt=""
+                  loading="lazy"
+                  data-image-fallback
+                >
+                <span
+                  class="payment-review-summary-image-fallback"
+                  hidden
+                >${window.JYYRIcon?.('image')||''}</span>
+              ` : `
+                <span class="payment-review-summary-image-fallback">
+                  ${window.JYYRIcon?.('image')||''}
+                </span>
+              `}
+            </div>
+            <div class="payment-review-order-product">
+            <div class="payment-review-product-title">
+              <strong>${esc(item.variant_id ? (item.variant_label||'Varian produk') : (item.product_name||'Produk'))}</strong>
+              <small>${Number(item.quantity||1)} ×</small>
+            </div>
+            <strong class="payment-review-product-price">
+              ${money(item.unit_price||0)}
+            </strong>
+            </div>
+          </div>
+          <div class="payment-review-order-date">
+            <strong>${esc(orderDateLabel)}</strong>
+            <small>${esc(orderTimeLabel)}</small>
+          </div>
+        </div>
+
+        <input
+          type="hidden"
+          name="productId"
+          value="${esc(item.product_id)}"
+        >
+
         <input
           type="hidden"
           name="rating"
@@ -4144,8 +4174,8 @@ ${productPricingModesMarkup('FIXED')}
         >
 
         <label class="field">
-          <span>Tulis komentar</span>
           <textarea
+            aria-label="Komentar opsional"
             name="comment"
             rows="4"
             maxlength="100"
@@ -4182,25 +4212,59 @@ ${productPricingModesMarkup('FIXED')}
   document.addEventListener(
     'click',
     event=>{
+      const modal=document.querySelector(
+        '.modal.payment-review-modal'
+      );
+      if(!modal)return;
+
+      const backdrop=document.querySelector(
+        '#modal-root [data-modal-backdrop]'
+      );
       const skip=event.target.closest(
         '[data-payment-review-skip]'
       );
-
-      if(!skip)return;
-
-      const form=skip.closest(
-        '[data-payment-review-prompt-form]'
+      const closeButton=event.target.closest(
+        '.modal.payment-review-modal [data-modal-close]'
       );
 
-      const orderId=
-        form?.dataset.orderId||'';
+      if(!skip&&!closeButton&&event.target!==backdrop)return;
+
+      const form=modal.querySelector(
+        '[data-payment-review-prompt-form]'
+      );
+      const orderId=form?.dataset.orderId||'';
 
       if(orderId){
         dismissPaymentReview(orderId);
       }
 
       cleanPaymentReviewQuery();
-    }
+    },
+    true
+  );
+
+  window.addEventListener(
+    'keydown',
+    event=>{
+      if(event.key!=='Escape')return;
+
+      const modal=document.querySelector(
+        '.modal.payment-review-modal'
+      );
+      if(!modal)return;
+
+      const form=modal.querySelector(
+        '[data-payment-review-prompt-form]'
+      );
+      const orderId=form?.dataset.orderId||'';
+
+      if(orderId){
+        dismissPaymentReview(orderId);
+      }
+
+      cleanPaymentReviewQuery();
+    },
+    true
   );
 
   document.addEventListener(

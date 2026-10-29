@@ -49,12 +49,22 @@ function configurationPage(req,res) {
 async function home(req,res,next){
   if(!isConfigured()) return configurationPage(req,res);
   try {
-    const [latest,service,ann] = await Promise.all([
-      products.catalog({limit:8,sort:'newest'}), services.list(true), infoRepo.listPublic()
+    const [homeData,service,ann] = await Promise.all([
+      products.subcategoryHighlights(6), services.list(true), infoRepo.listPublic()
     ]);
-    const cat=latest.categories;
-    latest.items=latest.items.map(p=>({...p,thumbnail_url:p.thumbnail_path?storage.publicUrl(loadEnv().PUBLIC_ASSET_BUCKET,p.thumbnail_path):null}));
-    res.render('app', base(req,{view:'pages/home',categories:cat,products:latest.items,services:service.slice(0,6),announcements:ann.slice(0,5)}));
+    const cat=homeData.categories;
+    const publicAssetBucket=loadEnv().PUBLIC_ASSET_BUCKET;
+    const subcategoryGroups=homeData.groups.map(group=>({
+      category:group.category,
+      total:group.total,
+      products:group.products.map(p=>({
+        ...p,
+        thumbnail_url:p.thumbnail_path
+          ? storage.publicUrl(publicAssetBucket,p.thumbnail_path)
+          : null
+      }))
+    }));
+    res.render('app', base(req,{view:'pages/home',categories:cat,subcategoryGroups,services:service.slice(0,6),announcements:ann.slice(0,5)}));
   } catch(e){ next(e); }
 }
 async function store(req,res,next){
@@ -341,7 +351,6 @@ async function orderDetail(req,res,next){
         const [
           contents,
           owned,
-          reviewViewer,
           product
         ]=await Promise.all([
           productRepo.contents(item.product_id,{
@@ -351,10 +360,6 @@ async function orderDetail(req,res,next){
           accessControl.canAccess(
             req.user.id,
             item.product_id
-          ),
-          productReviews.viewerState(
-            item.product_id,
-            req.user.id
           ),
           productRepo.findById(item.product_id)
         ]);
@@ -394,17 +399,27 @@ async function orderDetail(req,res,next){
 
         return {
           ...item,
-          contents:mappedContents,
-          viewerReview:reviewViewer.review,
-          canReview:reviewViewer.canReview
+          contents:mappedContents
         };
       })
     );
 
-    const payment=await require('../repositories/payments.repository').findLatestForOrderForUser(
+    const storedPayment=await require('../repositories/payments.repository').findLatestForOrderForUser(
       orderId,
       req.user.id
     );
+    const isBalanceOrder=String(order.payment_method||'').trim().toUpperCase()==='BALANCE';
+    const payment=isBalanceOrder
+      ? {
+          payment_method:'BALANCE',
+          provider:'wallet',
+          amount:order.total,
+          raw_reference:{paymentMode:'BALANCE'},
+          reference:order.order_number,
+          status:'COMPLETED',
+          created_at:order.paid_at||order.created_at
+        }
+      : storedPayment;
     const viewOrder={...order,items};
     res.render(
       'app',

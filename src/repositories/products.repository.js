@@ -87,6 +87,12 @@ async function list(opts={}){
   const sql=`select p.*,case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end as price,case when p.pricing_mode='VARIANT' then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else greatest(p.stock-p.reserved_stock,0) end as stock,c.name category_name,c.slug category_slug,parent_c.name category_parent_name,parent_c.slug category_parent_slug from products p left join categories c on c.id=p.category_id left join categories parent_c on parent_c.id=c.parent_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
   return (await query(sql,f.args)).rows;
 }
+async function listSubcategoryHighlights(limitPerCategory=6){
+  const limit=safeIntRange(limitPerCategory,6,1,12);
+  const sql=`select p.*,case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end as price,case when p.pricing_mode='VARIANT' then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else greatest(p.stock-p.reserved_stock,0) end as stock,c.name category_name,c.slug category_slug,parent_c.name category_parent_name,parent_c.slug category_parent_slug from categories c join categories parent_c on parent_c.id=c.parent_id and parent_c.is_active=true cross join lateral (select source_product.*,(count(*) over())::int as category_product_count from products source_product where source_product.category_id=c.id and source_product.status='PUBLISHED' order by source_product.created_at desc,source_product.id desc limit $1) p where c.parent_id is not null and c.is_active=true order by c.sort_order,c.name,p.created_at desc,p.id desc`;
+  return (await query(sql,[limit])).rows;
+}
+
 async function adminList({
   search='',
   status='',
@@ -701,6 +707,6 @@ async function countAdmin({
   );
 }
 
-module.exports={list,adminList,count,findBySlug,findById,create,update,remove,deletePermanently,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event,listVariants,findVariant,updateVariantIcon,hasReservedVariants,saveVariants,
+module.exports={list,listSubcategoryHighlights,adminList,count,findBySlug,findById,create,update,remove,deletePermanently,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event,listVariants,findVariant,updateVariantIcon,hasReservedVariants,saveVariants,
   countAdmin
 };

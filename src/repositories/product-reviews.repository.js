@@ -1,5 +1,5 @@
 const {query}=require('../config/database');
-const {badRequest,forbidden,notFound}=require('../utils/error');
+const {AppError,badRequest,forbidden,notFound}=require('../utils/error');
 
 const PURCHASE_STATUSES=['PAID','PROCESSING','COMPLETED'];
 
@@ -214,27 +214,32 @@ async function upsertForBuyer(productId,userId,input){
     );
   }
 
-  return (
-    await query(
-      `insert into product_reviews(
-         product_id,user_id,rating,comment
-       )
-       values($1,$2,$3,$4)
-       on conflict(product_id,user_id)
-       do update set
-         rating=excluded.rating,
-         comment=excluded.comment,
-         updated_at=now()
-       returning
-         id,product_id,user_id,rating,comment,created_at,updated_at`,
-      [
-        productId,
-        userId,
-        normalized.rating,
-        normalized.comment
-      ]
-    )
-  ).rows[0];
+  const inserted=await query(
+    `insert into product_reviews(
+       product_id,user_id,rating,comment
+     )
+     values($1,$2,$3,$4)
+     on conflict(product_id,user_id)
+     do nothing
+     returning
+       id,product_id,user_id,rating,comment,created_at,updated_at`,
+    [
+      productId,
+      userId,
+      normalized.rating,
+      normalized.comment
+    ]
+  );
+
+  if(!inserted.rows[0]){
+    throw new AppError(
+      409,
+      'REVIEW_ALREADY_EXISTS',
+      'Rating untuk produk ini sudah diberikan dan tidak dapat diubah lagi.'
+    );
+  }
+
+  return inserted.rows[0];
 }
 
 module.exports={

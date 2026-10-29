@@ -377,25 +377,50 @@
           <% if(!items?.length){ %>
             <div class="empty-state compact"><%- icon('layers') %><h3>Belum ada kategori</h3></div>
           <% } else { %>
-            <div class="owner-categories-grid" aria-label="Daftar kategori">
-              <% (items||[]).forEach(row=>{
-                const parentCategory=(items||[]).find(
+            <%
+              const categoryRows=items||[];
+              const rootCategories=categoryRows.filter(row=>
+                !row.parent_id||!categoryRows.some(
                   category=>String(category.id)===String(row.parent_id)
+                )
+              );
+            %>
+            <div class="owner-categories-grid" aria-label="Daftar kategori">
+              <% rootCategories.forEach(row=>{
+                const subcategories=categoryRows.filter(
+                  category=>String(category.parent_id)===String(row.id)
                 );
               %>
                 <article class="owner-category-item">
                   <div class="owner-category-card">
                     <div class="owner-category-fields">
-                      <div><span>Kategori</span><strong><%= parentCategory ? parentCategory.name : row.name %></strong></div>
-                      <div><span>Subkategori</span><strong><%= parentCategory ? row.name : '—' %></strong></div>
+                      <div><span>Kategori</span><strong><%= row.name %></strong></div>
+                      <div><span>Subkategori</span><strong><%= subcategories.length ? subcategories.length+' subkategori' : '—' %></strong></div>
                       <div><span>Slug</span><strong><%= row.slug %></strong></div>
                       <div><span>Active</span><strong><%= row.is_active?'Aktif':'Nonaktif' %></strong></div>
                     </div>
                     <div class="owner-category-actions">
-                    <button class="button button-secondary button-small" data-owner-edit-category='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button>
-                    <button class="button button-danger button-small" type="button" data-owner-delete-category="<%= row.id %>"><%- icon('trash-can') %>Hapus</button>
+                      <button class="button button-secondary button-small" data-owner-edit-category='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button>
+                      <button class="button button-danger button-small" type="button" data-owner-delete-category="<%= row.id %>"><%- icon('trash-can') %>Hapus</button>
                     </div>
                   </div>
+                  <% if(subcategories.length){ %>
+                    <div class="owner-category-sublist" aria-label="Daftar subkategori <%= row.name %>">
+                      <% subcategories.forEach(subcategory=>{ %>
+                        <div class="owner-category-card owner-category-subcard">
+                          <div class="owner-category-fields">
+                            <div><span>Subkategori</span><strong><%= subcategory.name %></strong></div>
+                            <div><span>Slug</span><strong><%= subcategory.slug %></strong></div>
+                            <div><span>Active</span><strong><%= subcategory.is_active?'Aktif':'Nonaktif' %></strong></div>
+                          </div>
+                          <div class="owner-category-actions">
+                            <button class="button button-secondary button-small" data-owner-edit-category='<%- JSON.stringify(subcategory).replace(/'/g,"&#39;") %>'>Edit</button>
+                            <button class="button button-danger button-small" type="button" data-owner-delete-category="<%= subcategory.id %>"><%- icon('trash-can') %>Hapus</button>
+                          </div>
+                        </div>
+                      <% }) %>
+                    </div>
+                  <% } %>
                 </article>
               <% }) %>
             </div>

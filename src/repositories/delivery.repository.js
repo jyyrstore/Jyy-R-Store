@@ -9,9 +9,21 @@ async function entitlements(userId,options={}){
   const offset=Number(options.offset||0);
 
   return (await query(
-    `select e.*,p.name product_name,p.slug
+    `select e.*,p.name product_name,p.slug,
+            oi.variant_id,oi.variant_label,
+            p.thumbnail_path product_thumbnail_path,
+            pv.icon_path variant_icon_path
        from entitlements e
        join products p on p.id=e.product_id
+       left join (
+         select order_id,product_id,
+                case when count(*)=1 then max(variant_id::text)::uuid end variant_id,
+                case when count(*)=1 then max(variant_label) end variant_label
+           from order_items
+          group by order_id,product_id
+       ) oi on oi.order_id=e.order_id and oi.product_id=e.product_id
+       left join product_variants pv
+         on pv.id=oi.variant_id and pv.product_id=e.product_id
       where e.user_id=$1
         and e.status='ACTIVE'
       order by e.granted_at desc

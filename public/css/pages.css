@@ -4376,14 +4376,12 @@ button[aria-busy="true"]{
   height:14px;
 }
 
-/* DELIVERY CARD — TWO-COLUMN LAYOUT */
+/* DELIVERY CARD — THUMBNAIL AND TWO-LINE CONTENT */
 a.delivery-card{
   display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  grid-template-rows:auto auto;
+  grid-template-columns:minmax(0,1fr) auto;
   align-items:center;
   column-gap:12px;
-  row-gap:5px;
   color:var(--text);
   text-decoration:none;
   cursor:pointer;
@@ -4392,18 +4390,39 @@ a.delivery-card:focus-visible{
   outline:2px solid var(--focus);
   outline-offset:2px;
 }
-.delivery-card .delivery-card-label{
+.delivery-card-main{
   grid-column:1;
-  grid-row:1;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.delivery-card-main>.order-item-product-image{
+  flex:0 0 44px;
+}
+.delivery-card-copy{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  flex:1 1 auto;
+  min-width:0;
+}
+.delivery-card .delivery-card-label{
   min-width:0;
   margin:0;
   font-size:10px;
 }
-.delivery-card .delivery-card-status{
+.delivery-card-side{
   grid-column:2;
-  grid-row:1;
-  justify-self:end;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:space-between;
+  align-self:stretch;
+  gap:6px;
   min-width:0;
+}
+.delivery-card .delivery-card-status{
   margin:0;
   color:var(--success);
   font-size:11px;
@@ -4413,8 +4432,6 @@ a.delivery-card:focus-visible{
   overflow-wrap:anywhere;
 }
 .delivery-card .delivery-card-product{
-  grid-column:1;
-  grid-row:2;
   min-width:0;
   margin:0;
   font-size:13px;
@@ -4423,9 +4440,6 @@ a.delivery-card:focus-visible{
   word-break:break-word;
 }
 .delivery-card .delivery-card-date{
-  grid-column:2;
-  grid-row:2;
-  justify-self:end;
   min-width:0;
   margin:0;
   color:var(--muted);
@@ -4438,7 +4452,9 @@ a.delivery-card:focus-visible{
 
 /* HISTORY ORDER STATUS ALIGNMENT */
 body[data-view="pages/history"] [data-tab="orders"] .list-card .align-right > .badge{font-size:10px;padding:3px 5px;transform:translateX(3px);}
-body[data-view="pages/orders"] .list-card > div:first-child{flex:1 1 auto;min-width:0}
+body[data-view="pages/orders"] .order-list-main{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
+body[data-view="pages/orders"] .order-list-main>.order-item-product-image{flex:0 0 44px}
+body[data-view="pages/orders"] .order-list-copy{flex:1 1 auto;min-width:0}
 body[data-view="pages/orders"] .list-card > .align-right{flex:0 0 auto}
 body[data-view="pages/orders"] .list-card .align-right > .badge{transform:translateX(3px);white-space:nowrap;overflow-wrap:normal;word-break:normal}
 

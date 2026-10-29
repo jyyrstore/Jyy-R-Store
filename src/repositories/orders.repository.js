@@ -33,9 +33,11 @@ async function listForUser(userId,{limit=50,offset=0}={}){
    and lower(p.provider)='buatqris'
  order by p.created_at desc, p.id desc
  limit 1) as pending_payment_provider,
-       coalesce(json_agg(json_build_object('product_id',oi.product_id,'product_name',oi.product_name,'variant_label',oi.variant_label,'variant_amount',oi.variant_amount,'unit_price',oi.unit_price,'quantity',oi.quantity,'line_total',oi.line_total)) filter(where oi.id is not null),'[]') items
+       coalesce(json_agg(json_build_object('product_id',oi.product_id,'product_name',oi.product_name,'variant_id',oi.variant_id,'variant_label',oi.variant_label,'variant_amount',oi.variant_amount,'unit_price',oi.unit_price,'quantity',oi.quantity,'line_total',oi.line_total,'product_thumbnail_path',p.thumbnail_path,'variant_icon_path',pv.icon_path) order by oi.id) filter(where oi.id is not null),'[]') items
        from orders o
        left join order_items oi on oi.order_id=o.id
+       left join products p on p.id=oi.product_id
+       left join product_variants pv on pv.id=oi.variant_id and pv.product_id=oi.product_id
        where o.user_id=$1
        group by o.id
        order by o.created_at desc
@@ -66,13 +68,24 @@ async function findForUser(id,userId){
         'product_name',coalesce(oi.product_name,p.name),
         'variant_label',oi.variant_label,
         'variant_amount',oi.variant_amount,
+        'pricing_mode',p.pricing_mode,
+        'product_thumbnail_path',p.thumbnail_path,
+        'variant_icon_path',pv.icon_path,
         'quantity',oi.quantity,
         'unit_price',oi.unit_price,
-        'line_total',oi.line_total
+        'line_total',oi.line_total,
+        'has_review',exists(
+          select 1
+          from product_reviews pr
+          where pr.product_id=oi.product_id
+            and pr.user_id=o.user_id
+        )
       )) filter(where oi.id is not null),'[]') items
        from orders o
        left join order_items oi on oi.order_id=o.id
        left join products p on p.id=oi.product_id
+       left join product_variants pv
+         on pv.id=oi.variant_id and pv.product_id=oi.product_id
        where o.id=$1 and o.user_id=$2
        group by o.id`,
       [id,userId]

@@ -86,22 +86,17 @@ test('product reviews repository enforces verified purchases and one review per 
 
   assert.match(
     source,
-    /on conflict\(product_id,user_id\)/
+    /on conflict\(product_id,user_id\)\s*do nothing/
   );
 
   assert.match(
     source,
-    /rating=excluded\.rating/
+    /new AppError\(\s*409,\s*'REVIEW_ALREADY_EXISTS'/
   );
 
-  assert.match(
+  assert.doesNotMatch(
     source,
-    /comment=excluded\.comment/
-  );
-
-  assert.match(
-    source,
-    /updated_at=now\(\)/
+    /rating=excluded\.rating|comment=excluded\.comment/
   );
 
   assert.match(
@@ -190,67 +185,66 @@ test('product detail keeps review summary but no longer contains the review edit
   );
 });
 
-test('order detail contains the per-product review editor',()=>{
+test('order detail displays variant labels and product image data',()=>{
+  const view=read('views/pages/order-detail.ejs');
+  const repository=read('src/repositories/orders.repository.js');
+  const styles=read('public/css/store.css');
+
+  assert.ok(view.includes(
+    "<span><%= item.variant_id ? (item.variant_label || '—') : item.product_name %></span>"
+  ));
+  assert.match(
+    repository,
+    /'variant_id',oi\.variant_id,[\s\S]*'product_name',coalesce\(oi\.product_name,p\.name\),[\s\S]*'variant_label',oi\.variant_label/
+  );
+  assert.match(repository, /'product_thumbnail_path',p\.thumbnail_path/);
+  assert.match(repository, /'variant_icon_path',pv\.icon_path/);
+  assert.match(
+    repository,
+    /left join product_variants pv\s+on pv\.id=oi\.variant_id and pv\.product_id=oi\.product_id/
+  );
+
+  assert.match(
+    view,
+    /item\.variant_icon_path \|\| item\.product_thumbnail_path/
+  );
+  assert.match(
+    view,
+    /item\.variant_id \? \(item\.variant_label \|\| item\.product_name\) : item\.product_name/
+  );
+  assert.match(view, /class="order-item-content-copy"/);
+  assert.match(view, /class="order-item-content-meta"/);
+  assert.doesNotMatch(view, /<span><%= c\.title %><\/span>/);
+  assert.match(view, /class="badge order-item-content-status"/);
+  assert.match(
+    styles,
+    /\.order-item-product-image\{[\s\S]*?aspect-ratio:\s*1\s*\/\s*1/
+  );
+});
+
+test('order detail does not expose a rating editor',()=>{
   const source=read(
     'views/pages/order-detail.ejs'
   );
 
-  assert.match(
-    source,
-    /order-product-review/
-  );
-
-  assert.match(
-    source,
-    /data-product-review-form/
-  );
-
-  assert.match(
-    source,
-    /data-product-id/
-  );
-
-  assert.match(
-    source,
-    /Rate Bintang/
-  );
-
-  assert.match(
-    source,
-    /Perbarui ulasan Anda/
-  );
-
-  assert.match(
-    source,
-    /data-review-rating/
-  );
-
-  assert.match(
-    source,
-    /data-review-rating-value/
-  );
+  assert.doesNotMatch(source,/order-product-review/);
+  assert.doesNotMatch(source,/data-product-review-form/);
+  assert.doesNotMatch(source,/Rate Bintang/);
+  assert.doesNotMatch(source,/Perbarui ulasan Anda/);
+  assert.doesNotMatch(source,/data-review-rating/);
 });
 
-test('order detail controller attaches review state to each purchased product',()=>{
+
+test('order detail controller does not load review-editor state',()=>{
   const source=read(
     'src/controllers/page.controller.js'
   );
 
-  assert.match(
-    source,
-    /productReviews\.viewerState\(/
-  );
-
-  assert.match(
-    source,
-    /viewerReview:reviewViewer\.review/
-  );
-
-  assert.match(
-    source,
-    /canReview:reviewViewer\.canReview/
-  );
+  assert.doesNotMatch(source,/productReviews\.viewerState\(/);
+  assert.doesNotMatch(source,/viewerReview:reviewViewer\.review/);
+  assert.doesNotMatch(source,/canReview:reviewViewer\.canReview/);
 });
+
 
 test('product review frontend is wired to the authenticated API',()=>{
   const source=read('public/js/pages.js');

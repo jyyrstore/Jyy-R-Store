@@ -62,6 +62,36 @@ async function catalog(q={}){
   };
 }
 
+async function subcategoryHighlights(limitPerCategory=6){
+  const [categoryList,items]=await Promise.all([
+    categories.list(true),
+    products.listSubcategoryHighlights(limitPerCategory)
+  ]);
+
+  const byCategory=new Map();
+  const categoryTotals=new Map();
+
+  for(const item of items){
+    const categorySlug=String(item.category_slug||'');
+    if(!categorySlug)continue;
+
+    categoryTotals.set(categorySlug,Number(item.category_product_count||0));
+    if(!byCategory.has(categorySlug))byCategory.set(categorySlug,[]);
+    byCategory.get(categorySlug).push(item);
+  }
+
+  const groups=categoryList
+    .filter(category=>Boolean(category.parent_id))
+    .map(category=>({
+      category,
+      total:categoryTotals.get(String(category.slug))||0,
+      products:byCategory.get(String(category.slug))||[]
+    }))
+    .filter(group=>group.products.length>0);
+
+  return {categories:categoryList,groups};
+}
+
 async function detailBySlug(slugValue,userId){
   const product=await products.findBySlug(slugValue);
   if(!product||product.status!=='PUBLISHED')
@@ -162,4 +192,4 @@ async function saveVariants(id,variants){
   return products.saveVariants(id,variants||[]);
 }
 
-module.exports={catalog,detailBySlug,create,update,saveVariants,categories};
+module.exports={catalog,subcategoryHighlights,detailBySlug,create,update,saveVariants,categories};

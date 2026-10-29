@@ -23,13 +23,21 @@
     </div>
   </section>
 
-  <section class="section">
-    <div class="section-header">
-      <div><h2>New Product</h2></div>
-      <a href="/store" class="text-link">Lihat semua</a>
-    </div>
-    <div class="product-grid"><% products.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>
-  </section>
+  <% subcategoryGroups.forEach(group=>{ %>
+    <section class="section">
+      <% const parentCategory=categories.find(category=>String(category.id)===String(group.category.parent_id)); %>
+      <div class="section-header home-subcategory-header">
+        <span class="home-parent-category-name"><%= parentCategory ? parentCategory.name : '' %></span>
+        <div class="home-subcategory-heading">
+          <h2><%= group.category.name %></h2>
+          <span class="home-subcategory-count" aria-label="<%= group.total %> item produk"><%= group.total %></span>
+        </div>
+        <span class="home-subcategory-rule" aria-hidden="true"></span>
+        <a href="/store?category=<%= group.category.slug %>" class="text-link">Lihat semua</a>
+      </div>
+      <div class="product-grid"><% group.products.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>
+    </section>
+  <% }) %>
 
   <section class="section">
     <div class="section-header"><div><h2>Category</h2></div></div>

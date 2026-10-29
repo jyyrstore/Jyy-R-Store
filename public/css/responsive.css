@@ -240,6 +240,8 @@
 .owner-page .owner-categories-table-panel .table-scroll th:nth-child(4),.owner-page .owner-categories-table-panel .table-scroll td:nth-child(4){width:18%;text-align:center}
 .owner-page .owner-categories-table-panel .table-scroll td::before{display:none;content:none}
 .owner-page .owner-category-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%;max-width:100%;margin:20px 0 0}
+.owner-page .owner-category-sublist{display:flex;flex-direction:column;gap:8px;margin-left:12px;padding-left:12px;border-left:1px solid var(--border-strong);min-width:0}
+.owner-page .owner-category-subcard .owner-category-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
 .owner-page .owner-category-actions .button{width:100%;min-width:0;max-width:100%;height:32px;min-height:32px;padding:0 10px;font-size:12px;box-sizing:border-box;white-space:nowrap}
 :is(.owner-deposits-table-panel,.owner-payments-table-panel)>h2{text-align:center;margin:0 0 14px}
 .owner-users-table-panel{padding-top:12px}
@@ -557,7 +559,7 @@
 /* Mobile UI refinements */
 @media(max-width:860px){
 
-  .home-page .section-header h2,
+  .home-page .section-header:not(.home-subcategory-header) h2,
   .home-page .two-column h2{
     font-size:20px;
     line-height:1.25;
@@ -567,7 +569,7 @@
 
 @media(max-width:480px){
 
-  .home-page .section-header h2,
+  .home-page .section-header:not(.home-subcategory-header) h2,
   .home-page .two-column h2{
     font-size:20px;
   }

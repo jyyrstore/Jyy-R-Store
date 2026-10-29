@@ -261,7 +261,29 @@ const orderController={
    if(!['PAID','PROCESSING','COMPLETED'].includes(String(o.status||'').trim().toUpperCase())){
      throw Object.assign(new Error('Order detail is only available for confirmed orders.'),{status:403,code:'ORDER_DETAIL_LOCKED',expose:true});
    }
-   return ok(res,o)
+   const publicAssetBucket=loadEnv().PUBLIC_ASSET_BUCKET;
+   const items=(Array.isArray(o.items)?o.items:[]).map(item=>{
+     const {
+       product_thumbnail_path,
+       variant_icon_path,
+       pricing_mode,
+       ...orderItem
+     }=item;
+
+     const imagePath=
+       String(pricing_mode||'').toUpperCase()==='VARIANT'
+         ? (variant_icon_path||product_thumbnail_path)
+         : product_thumbnail_path;
+
+     return {
+       ...orderItem,
+       review_image_url:imagePath
+         ? storage.publicUrl(publicAssetBucket,imagePath)
+         : null
+     };
+   });
+
+   return ok(res,{...o,items})
  }
 };
 const paymentController={
