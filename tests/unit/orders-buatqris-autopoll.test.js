@@ -37,6 +37,45 @@ test('orders page polls pending BuatQris status through the server API', () => {
   assert.match(view, /window\.location\.reload\(\)/);
 });
 
+test('history order tab uses the same customer order card structure as orders', () => {
+  const history = fs.readFileSync(
+    path.join(root, 'views/pages/history.ejs'),
+    'utf8'
+  );
+  const orders = view;
+  const styles = fs.readFileSync(
+    path.join(root, 'public/css/pages.css'),
+    'utf8'
+  );
+
+  for (const marker of [
+    'class="order-list-main"',
+    'class="order-list-copy"',
+    'class="order-item-product-image"',
+    'o.items?.map(i=>',
+    'labelStatus(o.status)',
+    'formatIDR(o.total)'
+  ]) {
+    assert.ok(history.includes(marker), `History harus memiliki ${marker}`);
+    assert.ok(orders.includes(marker), `Orders harus memiliki ${marker}`);
+  }
+
+  assert.match(
+    history,
+    /include\('\.\.\/partials\/empty',\{title:'Belum ada pesanan'/
+  );
+
+  assert.match(
+    styles,
+    /body\[data-view="pages\/history"\] \[data-tab="orders"\] \.order-list-main/
+  );
+
+  assert.match(
+    styles,
+    /body\[data-view="pages\/orders"\] \.order-list-main/
+  );
+});
+
 test('payment status polling reads the persisted status without querying BuatQris', () => {
   assert.match(
     api,

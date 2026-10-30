@@ -2397,13 +2397,8 @@ button[aria-busy="true"]{
   align-items:center;
   gap:13px;
   padding:16px;
-  background:
-    linear-gradient(
-      135deg,
-      rgba(139,92,246,.07),
-      rgba(139,92,246,.02)
-    );
-  border:1px solid rgba(167,139,250,.18);
+  background:var(--surface);
+  border:1px solid var(--border);
   border-radius:15px 0 15px 0;
 }
 
@@ -4450,13 +4445,17 @@ a.delivery-card:focus-visible{
   word-break:break-word;
 }
 
-/* HISTORY ORDER STATUS ALIGNMENT */
-body[data-view="pages/history"] [data-tab="orders"] .list-card .align-right > .badge{font-size:10px;padding:3px 5px;transform:translateX(3px);}
-body[data-view="pages/orders"] .order-list-main{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
-body[data-view="pages/orders"] .order-list-main>.order-item-product-image{flex:0 0 44px}
-body[data-view="pages/orders"] .order-list-copy{flex:1 1 auto;min-width:0}
-body[data-view="pages/orders"] .list-card > .align-right{flex:0 0 auto}
-body[data-view="pages/orders"] .list-card .align-right > .badge{transform:translateX(3px);white-space:nowrap;overflow-wrap:normal;word-break:normal}
+/* SHARED CUSTOMER ORDER LIST LAYOUT */
+body[data-view="pages/orders"] .order-list-main,
+body[data-view="pages/history"] [data-tab="orders"] .order-list-main{display:flex;align-items:center;gap:10px;flex:1 1 auto;min-width:0}
+body[data-view="pages/orders"] .order-list-main>.order-item-product-image,
+body[data-view="pages/history"] [data-tab="orders"] .order-list-main>.order-item-product-image{flex:0 0 44px}
+body[data-view="pages/orders"] .order-list-copy,
+body[data-view="pages/history"] [data-tab="orders"] .order-list-copy{flex:1 1 auto;min-width:0}
+body[data-view="pages/orders"] .list-card > .align-right,
+body[data-view="pages/history"] [data-tab="orders"] .list-card > .align-right{flex:0 0 auto}
+body[data-view="pages/orders"] .list-card .align-right > .badge,
+body[data-view="pages/history"] [data-tab="orders"] .list-card .align-right > .badge{font-size:10px;padding:3px 5px;transform:translateX(3px);white-space:nowrap;overflow-wrap:normal;word-break:normal}
 
 /* HISTORY BALANCE TRANSACTION LAYOUT */
 .history-mutation-card{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto auto;align-items:center;column-gap:10px;row-gap:5px;padding:12px}

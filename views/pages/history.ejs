@@ -11,12 +11,13 @@
 </button></div><section
   data-tab="orders"
   class="tab-panel <%= activeHistoryTab==='orders'?'active':'' %>"
-><div class="stack-list"><% orders.forEach(o=>{ %><a class="list-card" href="/orders/<%= o.id %>"><div><strong><%= o.order_number %></strong><span><%= formatDate(o.created_at) %></span></div><div class="align-right"><span class="badge badge-<%= String(o.status||'').toLowerCase() %>"><%= labelStatus(o.status) %></span><b><%= formatIDR(o.total) %></b></div></a><% }) %></div>
+><div class="stack-list"><% orders.forEach(o=>{ %><a class="list-card" href="/orders/<%= o.id %>"><div class="order-list-main"><% if(o.items?.[0]?.variant_icon_path || o.items?.[0]?.product_thumbnail_path){ %><img class="order-item-product-image" src="<%= assetUrl(publicAssetBucket,o.items[0].variant_icon_path || o.items[0].product_thumbnail_path) %>" alt="" width="44" height="44" loading="lazy" decoding="async"><% } %><div class="order-list-copy"><strong><%= o.order_number %></strong><span><%= o.items?.map(i=>`${i.variant_id ? (i.variant_label || i.product_name) : i.product_name} × ${i.quantity}`).join(', ') %></span></div></div><div class="align-right"><span class="badge badge-<%= String(o.status||'').toLowerCase() %>"><%= labelStatus(o.status) %></span><b><%= formatIDR(o.total) %></b></div></a><% }) %><% if(!orders.length){ %><%- include('../partials/empty',{title:'Belum ada pesanan',description:'Order akan muncul setelah checkout.'}) %><% } %>
 <%- include('../partials/pagination',{
   pagination:ordersPagination,
   param:'ordersPage',
   query:{tab:'orders'}
 }) %>
+</div>
 </section>
 
 <section
