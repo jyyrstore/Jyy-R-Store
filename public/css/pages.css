@@ -2,7 +2,7 @@
   position:relative;
   overflow:hidden;
   background:
-    radial-gradient(circle at 18% 12%, rgba(139,92,246,.12), transparent 28%),
+    radial-gradient(circle at 18% 12%, rgba(59,130,246,.12), transparent 28%),
     radial-gradient(circle at 84% 88%, rgba(113,167,242,.07), transparent 24%),
     var(--bg);
 }
@@ -42,8 +42,8 @@
   min-width:0;
   padding:42px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(139,92,246,.18), transparent 34%),
-    linear-gradient(160deg, rgba(139,92,246,.10), rgba(20,23,32,.12));
+    radial-gradient(circle at 0% 0%, rgba(59,130,246,.18), transparent 34%),
+    linear-gradient(160deg, rgba(59,130,246,.10), rgba(20,23,32,.12));
   border-right:1px solid var(--border);
 }
 
@@ -127,9 +127,9 @@
   min-width:36px;
   display:grid;
   place-items:center;
-  border:1px solid rgba(167,139,250,.18);
+  border:1px solid rgba(147,197,253,.18);
   border-radius:11px;
-  background:rgba(139,92,246,.08);
+  background:rgba(59,130,246,.08);
   color:var(--primary-2);
 }
 
@@ -206,7 +206,7 @@
 
 .auth-login-form .field input:focus{
   border-color:var(--primary-2);
-  box-shadow:inset 0 0 0 3px rgba(167,139,250,.10);
+  box-shadow:inset 0 0 0 3px rgba(147,197,253,.10);
 }
 
 .auth-login-meta{
@@ -329,7 +329,7 @@
 /* Owner Store product flow */
 .product-flow-steps{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem}
 .product-flow-steps span{display:inline-flex;align-items:center;padding:.45rem .7rem;border:1px solid var(--border,#141720);border-radius:999px;font-size:.78rem;color:var(--muted,#9da3b1);background:var(--surface,#2B313F)}
-.product-flow-steps span.active{color:#fff;border-color:rgba(130,88,220,.65);background:rgba(110,70,190,.18)}
+.product-flow-steps span.active{color:#fff;border-color:rgba(37,99,235,.65);background:rgba(30,64,175,.18)}
 .product-flow-note{display:flex;flex-direction:column;gap:.3rem;padding:.8rem 1rem;border:1px solid var(--border,#141720);border-radius:12px;background:rgba(43,49,63,.55)}
 .product-flow-note span{color:var(--muted,#9da3b1);font-size:.9rem}
 .owner-content-manager .owner-content-row{align-items:center}
@@ -672,7 +672,7 @@
 }
 
 .product-detail .detail-variant-card [data-product-variant-picker] .product-variant-card-option.active{
-  background:rgba(139,92,246,.12);
+  background:rgba(59,130,246,.12);
   border-color:var(--primary-2);
 }
 
@@ -748,7 +748,7 @@
   height:38px;
   overflow:hidden;
   border-radius:8px;
-  background:rgba(139,92,246,.1);
+  background:rgba(59,130,246,.1);
   color:var(--primary-2);
 }
 
@@ -938,9 +938,9 @@
   align-items:center;
   width:max-content;
   padding:6px 10px;
-  border:1px solid rgba(167,139,250,.24);
+  border:1px solid rgba(147,197,253,.24);
   border-radius:var(--radius-full);
-  background:rgba(139,92,246,.09);
+  background:rgba(59,130,246,.09);
   color:var(--primary-2);
   font-size:11px;
   font-weight:800;
@@ -1029,16 +1029,16 @@
   border-color:var(--primary-2);
   background:linear-gradient(
     135deg,
-    rgba(139,92,246,.2),
+    rgba(59,130,246,.2),
     rgba(43,49,63,.85)
   );
   box-shadow:
-    0 0 0 1px rgba(167,139,250,.25),
-    0 0 8px rgba(139,92,246,.12);
+    0 0 0 1px rgba(147,197,253,.25),
+    0 0 8px rgba(59,130,246,.12);
 }
 
 .owner-product-pricing-option:has(input:checked) .owner-product-pricing-check {
-  border-color:rgba(167,139,250,.7);
+  border-color:rgba(147,197,253,.7);
   background:var(--primary-2);
   color:#fff;
   opacity:1;
@@ -1089,15 +1089,15 @@
 
 .owner-product-editor-page:is([data-owner-product-page="create_produk"],[data-owner-product-page="edit_produk"],[data-owner-product-page="content_produk"]) .product-modal-head{
   padding:24px;
-  border:1px solid rgba(167,139,250,.2);
+  border:1px solid rgba(147,197,253,.2);
   border-radius:18px;
-  background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(43,49,63,.78) 65%);
+  background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(43,49,63,.78) 65%);
   box-shadow:var(--shadow-sm);
 }
 
 .owner-product-editor-page:is([data-owner-product-page="create_produk"],[data-owner-product-page="edit_produk"],[data-owner-product-page="content_produk"]) .product-modal-kicker{
   padding:6px 10px;
-  border:1px solid rgba(167,139,250,.2);
+  border:1px solid rgba(147,197,253,.2);
   border-radius:var(--radius-full);
   background:rgba(20,23,32,.38);
   font-size:10px;
@@ -1131,8 +1131,8 @@
 }
 
 .owner-product-editor-page:is([data-owner-product-page="create_produk"],[data-owner-product-page="edit_produk"],[data-owner-product-page="content_produk"]) .product-flow-steps span.active{
-  border-color:rgba(167,139,250,.5);
-  background:rgba(139,92,246,.2);
+  border-color:rgba(147,197,253,.5);
+  background:rgba(59,130,246,.2);
   color:#fff;
 }
 
@@ -1190,7 +1190,7 @@
 .owner-product-editor-page:is([data-owner-product-page="create_produk"],[data-owner-product-page="edit_produk"],[data-owner-product-page="content_produk"]) .field textarea:focus,
 .owner-product-editor-page:is([data-owner-product-page="create_produk"],[data-owner-product-page="edit_produk"],[data-owner-product-page="content_produk"]) .field select:focus{
   border-color:var(--primary-2);
-  box-shadow:0 0 0 3px rgba(167,139,250,.14);
+  box-shadow:0 0 0 3px rgba(147,197,253,.14);
 }
 
 .owner-product-editor-page:is([data-owner-product-page="create_produk"],[data-owner-product-page="edit_produk"],[data-owner-product-page="content_produk"]) .field textarea{
@@ -1462,7 +1462,7 @@
   display:grid;
   place-items:center;
   border-radius:10px;
-  background:rgba(139,92,246,.1);
+  background:rgba(59,130,246,.1);
   color:var(--primary-2);
 }
 
@@ -1538,7 +1538,7 @@
   display:grid;
   place-items:center;
   border-radius:12px;
-  background:rgba(139,92,246,.1);
+  background:rgba(59,130,246,.1);
   color:var(--primary-2);
 }
 
@@ -1606,7 +1606,7 @@
   padding:20px;
   border:1px solid var(--border-strong);
   border-radius:18px;
-  background:linear-gradient(135deg,rgba(139,92,246,.09),rgba(43,49,63,.72) 68%);
+  background:linear-gradient(135deg,rgba(59,130,246,.09),rgba(43,49,63,.72) 68%);
   box-shadow:var(--shadow-sm);
   min-width:0;
 }
@@ -1828,8 +1828,8 @@
   height:100%;
   transform:translateX(-120%);
   transform-origin:left center;
-  background:#8b5cf6;
-  box-shadow:0 0 12px rgba(139,92,246,.45);
+  background:#3b82f6;
+  box-shadow:0 0 12px rgba(59,130,246,.45);
 }
 
 #jyyr-request-progress.active{
@@ -2014,12 +2014,12 @@ button[aria-busy="true"]{
   display:grid;
   place-items:center;
   border-radius:24px;
-  border:1px solid rgba(167,139,250,.32);
+  border:1px solid rgba(147,197,253,.32);
   background:
     linear-gradient(
       135deg,
-      rgba(139,92,246,.22),
-      rgba(167,139,250,.08)
+      rgba(59,130,246,.22),
+      rgba(147,197,253,.08)
     );
   color:var(--primary-2);
   font-size:20px;
@@ -2111,7 +2111,7 @@ button[aria-busy="true"]{
   display:grid;
   place-items:center;
   border-radius:11px;
-  background:rgba(139,92,246,.09);
+  background:rgba(59,130,246,.09);
   color:var(--primary-2);
 }
 
@@ -2264,8 +2264,8 @@ button[aria-busy="true"]{
 }
 
 .profile-edit-disclosure[open] .profile-account-edit-summary{
-  border-color:rgba(167,139,250,.32);
-  background:rgba(139,92,246,.07);
+  border-color:rgba(147,197,253,.32);
+  background:rgba(59,130,246,.07);
 }
 
 .profile-edit-disclosure .profile-form{
@@ -2410,7 +2410,7 @@ button[aria-busy="true"]{
   place-items:center;
   border-radius:12px;
   color:var(--primary-2);
-  background:rgba(139,92,246,.1);
+  background:rgba(59,130,246,.1);
 }
 
 .profile-security-icon svg{
@@ -2729,7 +2729,7 @@ button[aria-busy="true"]{
 .owner-users-filter-field input:focus,
 .owner-users-filter-field .jyyr-select-trigger:focus-visible{
   border-color:var(--primary-2);
-  box-shadow:inset 0 0 0 3px rgba(167,139,250,.10);
+  box-shadow:inset 0 0 0 3px rgba(147,197,253,.10);
 }
 
 .owner-users-filter-submit,
@@ -3221,8 +3221,8 @@ button[aria-busy="true"]{
 }
 
 .messages-filter.active{
-  border-color:rgba(167,139,250,.32);
-  background:rgba(139,92,246,.09);
+  border-color:rgba(147,197,253,.32);
+  background:rgba(59,130,246,.09);
   color:var(--text);
 }
 
@@ -3291,10 +3291,10 @@ button[aria-busy="true"]{
 }
 
 .message-chat-avatar.is-support{
-  border:1px solid rgba(167,139,250,.28);
+  border:1px solid rgba(147,197,253,.28);
   background:
-    radial-gradient(circle at 30% 25%,rgba(167,139,250,.20),transparent 55%),
-    rgba(139,92,246,.09);
+    radial-gradient(circle at 30% 25%,rgba(147,197,253,.20),transparent 55%),
+    rgba(59,130,246,.09);
   color:var(--primary-2);
 }
 
@@ -3341,9 +3341,9 @@ button[aria-busy="true"]{
   align-items:center;
   min-height:18px;
   padding:0 6px;
-  border:1px solid rgba(167,139,250,.18);
+  border:1px solid rgba(147,197,253,.18);
   border-radius:999px;
-  background:rgba(139,92,246,.07);
+  background:rgba(59,130,246,.07);
   color:var(--primary-2);
   font-size:8px;
   font-weight:800;
@@ -3419,9 +3419,9 @@ button[aria-busy="true"]{
   display:grid;
   place-items:center;
   margin-bottom:11px;
-  border:1px solid rgba(167,139,250,.18);
+  border:1px solid rgba(147,197,253,.18);
   border-radius:50%;
-  background:rgba(139,92,246,.08);
+  background:rgba(59,130,246,.08);
   color:var(--primary-2);
 }
 
@@ -3595,8 +3595,8 @@ button[aria-busy="true"]{
 
 .messages-search:focus-within{
   background:rgba(255,255,255,.045);
-  border-color:rgba(167,139,250,.30);
-  box-shadow:0 0 0 3px rgba(167,139,250,.06);
+  border-color:rgba(147,197,253,.30);
+  box-shadow:0 0 0 3px rgba(147,197,253,.06);
 }
 
 .messages-search-icon{
@@ -4002,9 +4002,9 @@ button[aria-busy="true"]{
   min-width:38px;
   display:grid;
   place-items:center;
-  border:1px solid rgba(167,139,250,.20);
+  border:1px solid rgba(147,197,253,.20);
   border-radius:50%;
-  background:rgba(139,92,246,.075);
+  background:rgba(59,130,246,.075);
   color:var(--primary-2);
 }
 
@@ -4050,7 +4050,7 @@ button[aria-busy="true"]{
   background:
     radial-gradient(
       circle at 50% 0%,
-      rgba(139,92,246,.035),
+      rgba(59,130,246,.035),
       transparent 42%
     );
 }
@@ -4107,9 +4107,9 @@ button[aria-busy="true"]{
 
 .message-bubble.is-mine{
   align-self:flex-end;
-  border:1px solid rgba(139,92,246,.15);
+  border:1px solid rgba(59,130,246,.15);
   border-top-right-radius:5px;
-  background:rgba(139,92,246,.075);
+  background:rgba(59,130,246,.075);
 }
 
 .message-bubble-text{
@@ -4630,7 +4630,7 @@ a.profile-security-card{
 }
 
 a.profile-security-card:hover{
-  border-color:rgba(167,139,250,.48);
+  border-color:rgba(147,197,253,.48);
 }
 
 a.profile-security-card:focus-visible{
