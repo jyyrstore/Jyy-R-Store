@@ -432,7 +432,7 @@ async function removeUnusedProductStorage(inputPath,defaultBucket){
     :path;
 
   const referenced=(await query(
-    'select 1 where exists(select 1 from product_contents where storage_path=$1) or exists(select 1 from products where thumbnail_path=$1) or exists(select 1 from product_variants where icon_path=$1 and is_active=true)',
+    'select 1 where exists(select 1 from product_contents where storage_path=$1) or exists(select 1 from products where thumbnail_path=$1) or exists(select 1 from product_variants pv where pv.icon_path=$1 and (pv.is_active=true or exists(select 1 from order_items oi where oi.variant_id=pv.id)))',
     [path]
   )).rowCount;
 

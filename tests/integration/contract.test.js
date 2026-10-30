@@ -6,7 +6,18 @@ const route=fs.readFileSync(path.join(root,'src/routes/index.js'),'utf8');
 const page=fs.readFileSync(path.join(root,'src/controllers/page.controller.js'),'utf8');
 const migrations=fs.readdirSync(path.join(root,'database/migrations')).filter(x=>x.endsWith('.sql')).map(x=>fs.readFileSync(path.join(root,'database/migrations',x),'utf8')).join('\n');
 for(const r of ['/','/store','/product/:slug','/dashboard','/cart','/checkout','/orders','/deposit','/history','/profile','/tickets','/notifications','/messages','/services','/faq','/security','/owner']) test(`required route ${r}`,()=>assert.ok(route.includes(`'${r}'`),r));
-for(const t of ['profiles','roles','categories','products','product_variants','product_contents','carts','cart_items','orders','order_items','payments','payment_events','deposits','wallets','wallet_transactions','entitlements','download_logs','services','service_orders','tickets','ticket_messages','messages','notifications','notification_preferences','login_history','activity_logs','announcements','faqs','maintenance_settings','site_settings','refunds']) test(`schema includes ${t}`,()=>assert.match(migrations,new RegExp(`create table if not exists ${t}\\b`,'i')));
+for(const t of ['profiles','roles','categories','products','product_variants','product_contents','carts','cart_items','orders','order_items','payments','payment_events','deposits','wallets','wallet_transactions','idempotency_keys','entitlements','download_logs','services','service_orders','tickets','ticket_messages','messages','notifications','notification_preferences','login_history','activity_logs','announcements','faqs','maintenance_settings','site_settings','refunds']) test(`schema includes ${t}`,()=>assert.match(migrations,new RegExp(`create table if not exists ${t}\\b`,'i')));
+test('database verifier includes critical payment and idempotency tables',()=>{
+  const verifier=fs.readFileSync(
+    path.join(root,'scripts/verify-database.js'),
+    'utf8'
+  );
+
+  for(const table of ['payment_events','wallet_transactions','idempotency_keys']){
+    assert.match(verifier,new RegExp(`'${table}'`),`${table} must be verified`);
+  }
+});
+
 test('duplicate Owner category names return a dedicated toast',()=>{
   const api=fs.readFileSync(path.join(root,'src/controllers/api.controller.js'),'utf8');
   const browser=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
@@ -1495,6 +1506,32 @@ test('owner variant icons remain separate from the product cover',()=>{
   assert.match(browser,/contentType:'VARIANT_ICON'/);
   assert.match(detail,/data-icon="<%= iconUrl %>"/);
   assert.match(cron,/select icon_path[\s\S]*from product_variants/);
+  assert.match(
+    cron,
+    /from product_variants[\s\S]*?is_active=true[\s\S]*?from order_items oi[\s\S]*?oi\.variant_id=product_variants\.id/i
+  );
+  assert.match(
+    controller,
+    /product_variants pv[\s\S]*?pv\.icon_path=\$1[\s\S]*?pv\.is_active=true[\s\S]*?order_items oi[\s\S]*?oi\.variant_id=pv\.id/i
+  );
+});
+
+test('storage owner policies use the canonical text UUID comparison',()=>{
+  const policy=fs.readFileSync(
+    path.join(root,'database/policies/storage.sql'),
+    'utf8'
+  );
+  const migration=fs.readFileSync(
+    path.join(root,'database/migrations/031_policy_reconciliation.sql'),
+    'utf8'
+  );
+
+  assert.equal(
+    (policy.match(/owner_id=\(select auth\.uid\(\)::text\)/g)||[]).length,
+    5
+  );
+  assert.doesNotMatch(policy,/owner_id=\(select auth\.uid\(\)\)/);
+  assert.match(migration,/owner_id=\(select auth\.uid\(\)::text\)/);
 });
 
 test('product detail shows only the main category under the cover',()=>{
@@ -1939,6 +1976,7 @@ test('production generic-json requires API URL, API key, and HTTPS',()=>{
     APP_URL:'https://store.example.test',
     SUPABASE_URL:'https://project.example.test',
     SUPABASE_PUBLISHABLE_KEY:'test-publishable-key',
+    SUPABASE_ANON_KEY:'',
     SUPABASE_SECRET_KEY:'test-server-key',
     DATABASE_URL:'postgres://test:test@127.0.0.1:5432/test',
     SESSION_SECRET:'test-session-secret',
@@ -1989,6 +2027,43 @@ test('production generic-json requires API URL, API key, and HTTPS',()=>{
     PAYMENT_API_KEY:'test-payment-key'
   });
   assert.equal(valid.status,0,`${valid.stdout}\n${valid.stderr}`);
+
+  const missingPublishable=run({
+    PAYMENT_API_BASE_URL:'https://payments.example.test',
+    PAYMENT_API_KEY:'test-payment-key',
+    SUPABASE_PUBLISHABLE_KEY:'',
+    SUPABASE_ANON_KEY:''
+  });
+
+  assert.notEqual(missingPublishable.status,0);
+  assert.match(
+    `${missingPublishable.stdout}\n${missingPublishable.stderr}`,
+    /Missing required production environment variables:[\s\S]*SUPABASE_PUBLISHABLE_KEY/
+  );
+
+  const insecureAppUrl=run({
+    APP_URL:'http://store.example.test',
+    PAYMENT_API_BASE_URL:'https://payments.example.test',
+    PAYMENT_API_KEY:'test-payment-key'
+  });
+
+  assert.notEqual(insecureAppUrl.status,0);
+  assert.match(
+    `${insecureAppUrl.stdout}\n${insecureAppUrl.stderr}`,
+    /APP_URL must be a public HTTPS URL in production/
+  );
+
+  const localhostAppUrl=run({
+    APP_URL:'https://localhost:3000',
+    PAYMENT_API_BASE_URL:'https://payments.example.test',
+    PAYMENT_API_KEY:'test-payment-key'
+  });
+
+  assert.notEqual(localhostAppUrl.status,0);
+  assert.match(
+    `${localhostAppUrl.stdout}\n${localhostAppUrl.stderr}`,
+    /APP_URL must be a public HTTPS URL in production/
+  );
 });
 
 test('BuatQris payment verification has no Xendit token dependency',()=>{

@@ -24,9 +24,20 @@ test('session and CSRF never fall back to hardcoded secrets',()=>{
   assert.match(security,/CSRF_SECRET is required/);
 });
 
-test('webhook event insert is concurrency-safe and occurs once per event',()=>{
+test('webhook event insert is concurrency-safe and provider-scoped',()=>{
   const s=fs.readFileSync(path.join(root,'src/services/payment/payment.service.js'),'utf8');
-  assert.match(s,/on conflict \(provider_event_id\) do nothing returning id/i);
+  const migrations=fs.readdirSync(path.join(root,'database/migrations'))
+    .filter(file=>file.endsWith('.sql'))
+    .map(file=>fs.readFileSync(path.join(root,'database/migrations',file),'utf8'))
+    .join('\n');
+
+  assert.equal(
+    (s.match(/where provider=\$1 and provider_event_id=\$2 for update/gi)||[]).length,
+    2
+  );
+  assert.match(s,/on conflict \(provider,provider_event_id\) do nothing returning id/i);
+  assert.match(migrations,/drop constraint if exists payment_events_provider_event_id_key/i);
+  assert.match(migrations,/unique\s*\(\s*provider\s*,\s*provider_event_id\s*\)/i);
   assert.equal((s.match(/insert into payment_events/g)||[]).length,1);
 });
 

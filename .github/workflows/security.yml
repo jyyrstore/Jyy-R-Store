@@ -18,7 +18,7 @@ jobs:
           cache: npm
       - name: Secret scan
         run: |
-          ! grep -RInE '(SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|PAYMENT_WEBHOOK_SECRET|XENDIT_SECRET_KEY|XENDIT_WEBHOOK_TOKEN|SMTP_PASSWORD|SESSION_SECRET|CSRF_SECRET|ENCRYPTION_KEY)=([^[:space:]]+)' . --exclude-dir=.git --exclude-dir=node_modules --exclude='.env.example' --exclude='package-lock.json'
+          ! grep -RInE '(SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|DATABASE_URL|PAYMENT_API_KEY|PAYMENT_SECRET_KEY|PAYMENT_WEBHOOK_SECRET|XENDIT_SECRET_KEY|XENDIT_WEBHOOK_TOKEN|BUATQRIS_SECRET_TOKEN|BUATQRIS_SIGNING_SECRET|SMTP_PASSWORD|SESSION_SECRET|COOKIE_SECRET|CSRF_SECRET|ENCRYPTION_KEY|UPSTASH_REDIS_REST_TOKEN|CRON_SECRET)=([^[:space:]]+)' . --exclude-dir=.git --exclude-dir=node_modules --exclude='.env.example' --exclude='package-lock.json'
       - run: npm ci --ignore-scripts
       - name: Dependency vulnerability scan
         run: npm audit --audit-level=high

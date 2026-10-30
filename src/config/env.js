@@ -111,6 +111,7 @@ function loadEnv() {
   if (nodeEnv === 'production') {
     required.push(
       'SUPABASE_URL',
+      'SUPABASE_PUBLISHABLE_KEY',
       'SUPABASE_SECRET_KEY',
       'DATABASE_URL',
       'CRON_SECRET',
@@ -142,6 +143,22 @@ function loadEnv() {
     if (missing.length) {
       throw new Error(
         `Missing required production environment variables: ${missing.join(', ')}`
+      );
+    }
+
+    let appUrl;
+    try {
+      appUrl = new URL(env.APP_URL);
+    } catch {
+      throw new Error('APP_URL must be a valid absolute URL.');
+    }
+
+    if (
+      appUrl.protocol !== 'https:' ||
+      ['localhost', '127.0.0.1', '[::1]'].includes(appUrl.hostname)
+    ) {
+      throw new Error(
+        'APP_URL must be a public HTTPS URL in production'
       );
     }
 

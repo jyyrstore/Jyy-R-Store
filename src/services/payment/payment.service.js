@@ -1153,8 +1153,8 @@ async function recordWebhookEvent(client,{
   paymentId,providerName,eventId,payload,pending=false
 }){
   const existing=(await client.query(
-    'select id,processed_at from payment_events where provider_event_id=$1 for update',
-    [eventId]
+    'select id,processed_at from payment_events where provider=$1 and provider_event_id=$2 for update',
+    [providerName,eventId]
   )).rows[0];
 
   if(existing){
@@ -1171,7 +1171,7 @@ async function recordWebhookEvent(client,{
   }
 
   const inserted=(await client.query(
-    'insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,case when $5::boolean then null else now() end) on conflict (provider_event_id) do nothing returning id',
+    'insert into payment_events(payment_id,provider,provider_event_id,payload,processed_at) values($1,$2,$3,$4,case when $5::boolean then null else now() end) on conflict (provider,provider_event_id) do nothing returning id',
     [paymentId||null,providerName,eventId,payload,Boolean(pending)]
   )).rows[0];
 
@@ -1179,8 +1179,8 @@ async function recordWebhookEvent(client,{
 
   // A concurrent delivery may have inserted the event after our first SELECT.
   const raced=(await client.query(
-    'select id,processed_at from payment_events where provider_event_id=$1 for update',
-    [eventId]
+    'select id,processed_at from payment_events where provider=$1 and provider_event_id=$2 for update',
+    [providerName,eventId]
   )).rows[0];
 
   if(!raced || raced.processed_at) return false;

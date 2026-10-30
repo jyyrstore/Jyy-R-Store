@@ -67,7 +67,15 @@ async function cleanupProductUploadOrphans(){
     query(
       `select icon_path
        from product_variants
-       where is_active=true and icon_path is not null`
+       where icon_path is not null
+         and (
+           is_active=true
+           or exists (
+             select 1
+             from order_items oi
+             where oi.variant_id=product_variants.id
+           )
+         )`
     )
   ]);
 
