@@ -1162,3 +1162,36 @@ test('owner mode replaces the main sidebar content instead of nesting a second s
     false
   );
 });
+
+test('order detail checks entitlement for the exact order',()=>{
+  const access=read('src/services/delivery/access-control.service.js');
+  const delivery=read('src/repositories/delivery.repository.js');
+  const controller=read('src/controllers/page.controller.js');
+
+  assert.match(access,/async function canAccess\(userId,productId,orderId\)/);
+  assert.match(access,/repo\.entitlement\(\s*userId,\s*productId,\s*orderId\s*\)/);
+  assert.match(delivery,/async function entitlement\(userId,productId,orderId=null\)/);
+  assert.match(delivery,/and \(\$3::uuid is null or order_id=\$3\)/);
+  assert.match(
+    controller,
+    /accessControl\.canAccess\(\s*req\.user\.id,\s*item\.product_id,\s*order\.id\s*\)/
+  );
+});
+
+test('production requires distributed rate limiting over HTTPS',()=>{
+  const environment=read('src/config/env.js');
+  const verifier=read('scripts/verify-env.js');
+
+  assert.match(
+    environment,
+    /'CRON_SECRET',\s*'UPSTASH_REDIS_REST_URL',\s*'UPSTASH_REDIS_REST_TOKEN'/
+  );
+  assert.match(
+    environment,
+    /UPSTASH_REDIS_REST_URL must use HTTPS in production/
+  );
+  assert.match(
+    verifier,
+    /required\.push\(\s*'CRON_SECRET',\s*'UPSTASH_REDIS_REST_URL',\s*'UPSTASH_REDIS_REST_TOKEN'\s*\)/
+  );
+});

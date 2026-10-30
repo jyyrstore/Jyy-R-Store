@@ -33,7 +33,7 @@
           <span class="home-subcategory-count" aria-label="<%= group.total %> item produk"><%= group.total %></span>
         </div>
         <span class="home-subcategory-rule" aria-hidden="true"></span>
-        <a href="/store?category=<%= group.category.slug %>" class="text-link">Lihat semua</a>
+        <a href="<%= group.category.slug ? '/store?category='+encodeURIComponent(group.category.slug) : '/store' %>" class="text-link">Lihat semua</a>
       </div>
       <div class="product-grid"><% group.products.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>
     </section>

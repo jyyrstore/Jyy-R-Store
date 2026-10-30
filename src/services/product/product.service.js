@@ -62,32 +62,45 @@ async function catalog(q={}){
   };
 }
 
-async function subcategoryHighlights(limitPerCategory=6){
+async function homepageHighlights(limitPerCategory=6){
   const [categoryList,items]=await Promise.all([
     categories.list(true),
-    products.listSubcategoryHighlights(limitPerCategory)
+    products.listHomepageHighlights(limitPerCategory)
   ]);
 
   const byCategory=new Map();
   const categoryTotals=new Map();
 
   for(const item of items){
-    const categorySlug=String(item.category_slug||'');
-    if(!categorySlug)continue;
+    const categoryKey=item.homepage_category_id
+      ? String(item.homepage_category_id)
+      : 'uncategorized';
 
-    categoryTotals.set(categorySlug,Number(item.category_product_count||0));
-    if(!byCategory.has(categorySlug))byCategory.set(categorySlug,[]);
-    byCategory.get(categorySlug).push(item);
+    categoryTotals.set(
+      categoryKey,
+      Number(item.category_product_count||0)
+    );
+
+    if(!byCategory.has(categoryKey))byCategory.set(categoryKey,[]);
+    byCategory.get(categoryKey).push(item);
   }
 
   const groups=categoryList
-    .filter(category=>Boolean(category.parent_id))
+    .filter(category=>byCategory.has(String(category.id)))
     .map(category=>({
       category,
-      total:categoryTotals.get(String(category.slug))||0,
-      products:byCategory.get(String(category.slug))||[]
-    }))
-    .filter(group=>group.products.length>0);
+      total:categoryTotals.get(String(category.id))||0,
+      products:byCategory.get(String(category.id))||[]
+    }));
+
+  const unclassified=byCategory.get('uncategorized')||[];
+  if(unclassified.length){
+    groups.push({
+      category:{id:null,name:'Produk lainnya',slug:null,parent_id:null},
+      total:categoryTotals.get('uncategorized')||0,
+      products:unclassified
+    });
+  }
 
   return {categories:categoryList,groups};
 }
@@ -192,4 +205,4 @@ async function saveVariants(id,variants){
   return products.saveVariants(id,variants||[]);
 }
 
-module.exports={catalog,subcategoryHighlights,detailBySlug,create,update,saveVariants,categories};
+module.exports={catalog,homepageHighlights,detailBySlug,create,update,saveVariants,categories};

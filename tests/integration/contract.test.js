@@ -620,7 +620,7 @@ test('category hierarchy supports one-level subcategories',()=>{
 });
 
 
-test('homepage displays latest products under their subcategory names',()=>{
+test('homepage displays products across active category groups and uncategorized products',()=>{
   const repository=fs.readFileSync(
     path.join(root,'src/repositories/products.repository.js'),
     'utf8'
@@ -642,14 +642,16 @@ test('homepage displays latest products under their subcategory names',()=>{
     'utf8'
   );
 
-  assert.match(repository,/async function listSubcategoryHighlights\(limitPerCategory=6\)/);
-  assert.match(repository,/cross join lateral/);
-  assert.match(repository,/source_product\.status='PUBLISHED'/);
-  assert.match(repository,/\(count\(\*\) over\(\)\)::int as category_product_count/);
-  assert.match(service,/async function subcategoryHighlights\(limitPerCategory=6\)/);
-  assert.match(service,/products\.listSubcategoryHighlights\(limitPerCategory\)/);
-  assert.match(service,/total:categoryTotals\.get\(String\(category\.slug\)\)\|\|0/);
-  assert.match(controller,/products\.subcategoryHighlights\(6\)/);
+  assert.match(repository,/async function listHomepageHighlights\(limitPerCategory=6\)/);
+  assert.match(repository,/p\.status='PUBLISHED'/);
+  assert.match(repository,/homepage_category_id/);
+  assert.match(repository,/count\(\*\) over\s*\(\s*partition by homepage_category_id\s*\)::int as category_product_count/);
+  assert.match(repository,/row_number\(\) over\s*\(\s*partition by homepage_category_id\s*order by created_at desc,id desc\s*\) as category_product_rank/);
+  assert.match(service,/async function homepageHighlights\(limitPerCategory=6\)/);
+  assert.match(service,/products\.listHomepageHighlights\(limitPerCategory\)/);
+  assert.match(service,/categoryTotals\.get\(String\(category\.id\)\)\|\|0/);
+  assert.match(service,/category:\{id:null,name:'Produk lainnya',slug:null,parent_id:null\}/);
+  assert.match(controller,/products\.homepageHighlights\(6\)/);
   assert.match(controller,/total:group\.total/);
   assert.match(homeView,/subcategoryGroups\.forEach\(group=>/);
   assert.match(homeView,/<h2><%= group\.category\.name %><\/h2>[\s\S]*?home-subcategory-count/);
@@ -1943,6 +1945,8 @@ test('production generic-json requires API URL, API key, and HTTPS',()=>{
     COOKIE_SECRET:'test-cookie-secret',
     CSRF_SECRET:'test-csrf-secret',
     CRON_SECRET:'test-cron-secret',
+    UPSTASH_REDIS_REST_URL:'https://redis.example.test',
+    UPSTASH_REDIS_REST_TOKEN:'test-upstash-token',
     PAYMENT_PROVIDER:'generic-json',
     PAYMENT_API_BASE_URL:'',
     PAYMENT_API_KEY:'',

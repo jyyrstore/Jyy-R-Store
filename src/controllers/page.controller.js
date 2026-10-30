@@ -50,7 +50,7 @@ async function home(req,res,next){
   if(!isConfigured()) return configurationPage(req,res);
   try {
     const [homeData,service,ann] = await Promise.all([
-      products.subcategoryHighlights(6), services.list(true), infoRepo.listPublic()
+      products.homepageHighlights(6), services.list(true), infoRepo.listPublic()
     ]);
     const cat=homeData.categories;
     const publicAssetBucket=loadEnv().PUBLIC_ASSET_BUCKET;
@@ -359,7 +359,8 @@ async function orderDetail(req,res,next){
           }),
           accessControl.canAccess(
             req.user.id,
-            item.product_id
+            item.product_id,
+            order.id
           ),
           productRepo.findById(item.product_id)
         ]);

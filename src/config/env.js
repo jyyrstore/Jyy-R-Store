@@ -113,7 +113,9 @@ function loadEnv() {
       'SUPABASE_URL',
       'SUPABASE_SECRET_KEY',
       'DATABASE_URL',
-      'CRON_SECRET'
+      'CRON_SECRET',
+      'UPSTASH_REDIS_REST_URL',
+      'UPSTASH_REDIS_REST_TOKEN'
     );
     const paymentProvider = String(env.PAYMENT_PROVIDER || '').toLowerCase();
 
@@ -140,6 +142,20 @@ function loadEnv() {
     if (missing.length) {
       throw new Error(
         `Missing required production environment variables: ${missing.join(', ')}`
+      );
+    }
+
+    let redisUrl;
+    try {
+      redisUrl = new URL(env.UPSTASH_REDIS_REST_URL);
+    } catch {
+      throw new Error(
+        'UPSTASH_REDIS_REST_URL must be a valid HTTPS URL in production.'
+      );
+    }
+    if (redisUrl.protocol !== 'https:') {
+      throw new Error(
+        'UPSTASH_REDIS_REST_URL must use HTTPS in production.'
       );
     }
 

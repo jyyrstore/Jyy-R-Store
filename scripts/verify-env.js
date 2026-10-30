@@ -57,7 +57,11 @@ function verify(){
   const required=[...CORE_REQUIRED,...paymentFields];
 
   if(env.NODE_ENV==='production'){
-    required.push('CRON_SECRET');
+    required.push(
+      'CRON_SECRET',
+      'UPSTASH_REDIS_REST_URL',
+      'UPSTASH_REDIS_REST_TOKEN'
+    );
   }
 
   const smtpFields=[
