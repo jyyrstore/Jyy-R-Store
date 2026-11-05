@@ -782,6 +782,10 @@ body.no-scroll{
   gap:18px;
 }
 
+.product-form-modal .field[hidden]{
+  display:none;
+}
+
 .product-modal-head{
   padding-right:52px;
 }

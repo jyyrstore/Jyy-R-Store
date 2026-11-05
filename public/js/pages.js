@@ -1407,12 +1407,24 @@
     const pricingModeInput=e.target.closest('input[name="pricing_mode"]');
     if(pricingModeInput){
       const form=pricingModeInput.closest('form');
+      const selectedPricingMode=String(
+        form?.querySelector('input[name="pricing_mode"]:checked')?.value||'FIXED'
+      ).toUpperCase();
+
+      form?.querySelectorAll('[data-product-fixed-pricing-field]').forEach(field=>{
+        field.hidden=selectedPricingMode!=='FIXED';
+
+        const input=field.querySelector('input');
+        if(input){
+          input.disabled=selectedPricingMode!=='FIXED';
+        }
+      });
+
       const add=form?.querySelector('[data-product-variant-add]');
       if(add){
-        add.hidden=String(
-          form.querySelector('input[name="pricing_mode"]:checked')?.value||'FIXED'
-        ).toUpperCase()!=='VARIANT';
+        add.hidden=selectedPricingMode!=='VARIANT';
       }
+
       return;
     }
 
@@ -2634,12 +2646,12 @@ ${productPricingModesMarkup('FIXED')}
     })}
       </label>
 
-      <label class="field">
+      <label class="field" data-product-fixed-pricing-field>
         <span>Harga</span>
         <input name="price" type="number" min="0" required placeholder="10000">
       </label>
 
-      <label class="field">
+      <label class="field" data-product-fixed-pricing-field>
         <span>Stock</span>
         <input name="stock" type="number" min="0" required placeholder="10">
       </label>
