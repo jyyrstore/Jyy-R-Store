@@ -310,7 +310,7 @@ async function register({email,password,username}){
  };
 }
 
-async function verifyEmailOtp(email,code){
+async function verifyEmailOtp(email,code,{ip,userAgent}={}){
  const normalizedEmail=String(email||'').trim().toLowerCase();
  const profile=await profiles.findByEmail(normalizedEmail);
 
@@ -338,13 +338,6 @@ async function verifyEmailOtp(email,code){
   );
  }
 
- if(authUser.email_confirmed_at){
-  await query(
-   'delete from email_verification_otps where user_id=$1',
-   [profile.id]
-  ).catch(()=>{});
-  return {verified:true};
- }
 
  const result=await withTransaction(async client=>{
   await client.query(
@@ -491,53 +484,124 @@ async function verifyEmailOtp(email,code){
   );
  }
 
- try{
-  const {data,error}=await admin.auth.admin.updateUserById(
-   profile.id,
-   {email_confirm:true}
-  );
+  if(!authUser.email_confirmed_at){
+   try{
+    const {data,error}=await admin.auth.admin.updateUserById(
+     profile.id,
+     {email_confirm:true}
+    );
 
-  if(error||!data?.user?.email_confirmed_at){
-   throw authFailure(
-    'Email belum dapat dikonfirmasi. Silakan coba lagi.',
-    503,
-    'EMAIL_CONFIRMATION_FAILED'
-   );
+    if(
+     error||
+     String(data?.user?.id||'')!==String(profile.id)||
+     String(data?.user?.email||'').trim().toLowerCase()!==normalizedEmail||
+     !data?.user?.email_confirmed_at
+    ){
+     throw authFailure(
+      'Email belum dapat dikonfirmasi. Silakan coba lagi.',
+      503,
+      'EMAIL_CONFIRMATION_FAILED'
+     );
+    }
+   }catch(error){
+    await query(
+     `update email_verification_otps
+      set code_hash=$2,
+          updated_at=now()
+      where user_id=$1
+        and code_hash=$3
+        and expires_at>now()`,
+     [profile.id,result.storedCodeHash,result.reservationToken]
+    ).catch(()=>{});
+
+    if(error?.code==='EMAIL_CONFIRMATION_FAILED'){
+     throw error;
+    }
+
+    throw authFailure(
+     'Email belum dapat dikonfirmasi. Silakan coba lagi.',
+     503,
+     'EMAIL_CONFIRMATION_FAILED'
+    );
+   }
   }
- }catch(error){
-  // Restore only while this request still owns the reservation.
-  // A newer OTP issued by resend must never be overwritten.
+
+  // Consume only the reservation owned by this request.
   await query(
-   `update email_verification_otps
-    set code_hash=$2,
-        updated_at=now()
+   `delete from email_verification_otps
     where user_id=$1
-      and code_hash=$3
-      and expires_at>now()`,
-   [profile.id,result.storedCodeHash,result.reservationToken]
+      and code_hash=$2`,
+   [profile.id,result.reservationToken]
   ).catch(()=>{});
 
-  if(error?.code==='EMAIL_CONFIRMATION_FAILED'){
-   throw error;
+  // Generate internal one-time magic link.
+  let generated;
+
+  try{
+   generated=await admin.auth.admin.generateLink({
+    type:'magiclink',
+    email:normalizedEmail
+   });
+  }catch{
+   throw authFailure(
+    'Sesi login belum dapat dibuat. Silakan masuk menggunakan password.',
+    503,
+    'EMAIL_OTP_SESSION_FAILED'
+   );
   }
 
-  throw authFailure(
-   'Email belum dapat dikonfirmasi. Silakan coba lagi.',
-   503,
-   'EMAIL_CONFIRMATION_FAILED'
-  );
- }
+  const generatedUser=generated?.data?.user;
+  const properties=generated?.data?.properties;
 
- // The confirmed Auth user is authoritative even if cleanup fails.
- // Delete only the reservation owned by this verification request.
- await query(
-  `delete from email_verification_otps
-   where user_id=$1
-     and code_hash=$2`,
-  [profile.id,result.reservationToken]
- ).catch(()=>{});
+  if(
+   generated?.error||
+   String(generatedUser?.id||'')!==String(profile.id)||
+   String(generatedUser?.email||'').trim().toLowerCase()!==normalizedEmail||
+   typeof properties?.hashed_token!=='string'||
+   !properties.hashed_token||
+   properties.verification_type!=='magiclink'
+  ){
+   throw authFailure(
+    'Sesi login belum dapat dibuat. Silakan masuk menggunakan password.',
+    503,
+    'EMAIL_OTP_SESSION_FAILED'
+   );
+  }
 
- return {verified:true};
+  let exchanged;
+
+  try{
+   exchanged=await supabasePublic().auth.verifyOtp({
+    token_hash:properties.hashed_token,
+    type:properties.verification_type
+   });
+  }catch{
+   throw authFailure(
+    'Sesi login belum dapat dibuat. Silakan masuk menggunakan password.',
+    503,
+    'EMAIL_OTP_SESSION_FAILED'
+   );
+  }
+
+  const data=exchanged?.data;
+  const session=data?.session;
+
+  if(
+   exchanged?.error||
+   String(data?.user?.id||'')!==String(profile.id)||
+   String(session?.user?.id||'')!==String(profile.id)||
+   !session?.access_token||
+   !session?.refresh_token
+  ){
+   throw authFailure(
+    'Sesi login belum dapat dibuat. Silakan masuk menggunakan password.',
+    503,
+    'EMAIL_OTP_SESSION_FAILED'
+   );
+  }
+
+  return completeLogin(data,{ip,userAgent});
+
 }
 async function resendEmailOtp(email){
  const normalizedEmail=String(email||'').trim().toLowerCase();
@@ -580,95 +644,124 @@ async function resendEmailOtp(email){
  return {accepted:true,message:genericMessage};
 }
 
-async function login({email,password},{ip,userAgent}={}){
-
- const client=supabasePublic();
- const {data,error}=await client.auth.signInWithPassword({email,password});
-
- if(error){
- const loginMeta=parseUserAgent(userAgent);
-
- await query(
- "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values(null,$1,$2,$3,'FAILED',now())",
- [loginMeta.device,loginMeta.browser,maskIp(ip)]
- ).catch(()=>{});
+async function completeLogin(data,{ip,userAgent}={}) {
+ const userId=data?.user?.id;
 
  if(
-  error?.code==='email_not_confirmed'||
-  /email not confirmed/i.test(String(error?.message||''))
+  !userId||
+  !data?.session?.access_token||
+  !data?.session?.refresh_token
  ){
   throw authFailure(
-   'Email belum diverifikasi. Masukkan OTP 4 digit untuk melanjutkan.',
-   403,
-   'EMAIL_NOT_VERIFIED'
+   'Sesi autentikasi tidak valid.',
+   503,
+   'AUTH_SESSION_INVALID'
   );
  }
 
- throw Object.assign(new Error('Email atau password tidak valid.'),{
- status:401,
- code:'INVALID_CREDENTIALS',
- expose:true
- });
- }
-
-  if(!data.user.email_confirmed_at){
-  throw authFailure(
-   'Email belum diverifikasi. Masukkan OTP 4 digit untuk melanjutkan.',
-   403,
-   'EMAIL_NOT_VERIFIED'
-  );
- }
-
- const profile=await profiles.findById(data.user.id);
+ const profile=await profiles.findById(userId);
 
  if(profile?.status==='BANNED'){
- const loginMeta=parseUserAgent(userAgent);
+  const loginMeta=parseUserAgent(userAgent);
 
- await query(
- "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
- [data.user.id,loginMeta.device,loginMeta.browser,maskIp(ip)]
- ).catch(()=>{});
+  await query(
+   "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
+   [userId,loginMeta.device,loginMeta.browser,maskIp(ip)]
+  ).catch(()=>{});
 
- throw Object.assign(new Error('Akun dinonaktifkan.'),{
- status:403,
- code:'ACCOUNT_BANNED',
- expose:true
- });
+  throw authFailure(
+   'Akun dinonaktifkan.',
+   403,
+   'ACCOUNT_BANNED'
+  );
  }
 
  if(profile?.status==='SUSPENDED'){
- const loginMeta=parseUserAgent(userAgent);
+  const loginMeta=parseUserAgent(userAgent);
 
- await query(
- "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
- [data.user.id,loginMeta.device,loginMeta.browser,maskIp(ip)]
- ).catch(()=>{});
+  await query(
+   "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'FAILED',now())",
+   [userId,loginMeta.device,loginMeta.browser,maskIp(ip)]
+  ).catch(()=>{});
 
- throw Object.assign(new Error('Akun sedang ditangguhkan.'),{
- status:403,
- code:'ACCOUNT_SUSPENDED',
- expose:true
- });
+  throw authFailure(
+   'Akun sedang ditangguhkan.',
+   403,
+   'ACCOUNT_SUSPENDED'
+  );
  }
 
  if(!profile){
- await profiles.create({
- id:data.user.id,
- username:data.user.email.split('@')[0].slice(0,32),
- email:data.user.email
- });
+  await profiles.create({
+   id:userId,
+   username:data.user.email.split('@')[0].slice(0,32),
+   email:data.user.email
+  });
  }
 
- await query('update profiles set last_login_at=now() where id=$1',[data.user.id]);
- await query('insert into wallets(user_id) values($1) on conflict do nothing',[data.user.id]);
+ await query(
+  'update profiles set last_login_at=now() where id=$1',
+  [userId]
+ );
+
+ await query(
+  'insert into wallets(user_id) values($1) on conflict do nothing',
+  [userId]
+ );
+
  const loginMeta=parseUserAgent(userAgent);
 
  await query(
- "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'SUCCESS',now())",
- [data.user.id,loginMeta.device,loginMeta.browser,maskIp(ip)]
+  "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values($1,$2,$3,$4,'SUCCESS',now())",
+  [userId,loginMeta.device,loginMeta.browser,maskIp(ip)]
  );
 
  return data;
+}
+
+async function login({email,password},{ip,userAgent}={}) {
+ const client=supabasePublic();
+
+ const {data,error}=await client.auth.signInWithPassword({
+  email,
+  password
+ });
+
+ if(error){
+  const loginMeta=parseUserAgent(userAgent);
+
+  await query(
+   "insert into login_history(user_id,device,browser,masked_ip,status,created_at) values(null,$1,$2,$3,'FAILED',now())",
+   [loginMeta.device,loginMeta.browser,maskIp(ip)]
+  ).catch(()=>{});
+
+  if(
+   error?.code==='email_not_confirmed'||
+   /email not confirmed/i.test(String(error?.message||''))
+  ){
+   throw authFailure(
+    'Email belum diverifikasi. Masukkan OTP 4 digit untuk melanjutkan.',
+    403,
+    'EMAIL_NOT_VERIFIED'
+   );
+  }
+
+  throw Object.assign(new Error('Email atau password tidak valid.'),{
+   status:401,
+   code:'INVALID_CREDENTIALS',
+   expose:true
+  });
+ }
+
+ if(!data.user.email_confirmed_at){
+  throw authFailure(
+   'Email belum diverifikasi. Masukkan OTP 4 digit untuk melanjutkan.',
+   403,
+   'EMAIL_NOT_VERIFIED'
+  );
+ }
+
+ return completeLogin(data,{ip,userAgent});
 }
 
 async function logout(){

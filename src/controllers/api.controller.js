@@ -35,7 +35,20 @@ const {setAuthSession}=require('../utils/auth-session');
 
 const authController={
  register:async(req,res)=>ok(res,await auth.register(req.body),201),
- verifyEmail:async(req,res)=>ok(res,await auth.verifyEmailOtp(req.body.email,req.body.code)),
+ verifyEmail:async(req,res)=>{
+  const data=await auth.verifyEmailOtp(
+   req.body.email,
+   req.body.code,
+   {
+    ip:req.ip,
+    userAgent:req.get('user-agent')
+   }
+  );
+
+  await setAuthSession(req,data);
+
+  return ok(res,{verified:true});
+ },
  resendEmailOtp:async(req,res)=>ok(res,await auth.resendEmailOtp(req.body.email)),
  login:async(req,res)=>{const d=await auth.login(req.body,{ip:req.ip,userAgent:req.get('user-agent')});await setAuthSession(req,d);return ok(res,{user:d.user},200)},
  logout:async(req,res)=>{await require('../services/audit.service').record(req,{action:'LOGOUT',entityType:'session'}).catch(()=>{});await auth.logout();req.session.destroy(()=>{});return ok(res,{})},

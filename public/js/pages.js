@@ -2694,6 +2694,7 @@ ${productPricingModesMarkup('FIXED')}
     if(ep){
       let d;
       try{d=JSON.parse(ep.dataset.ownerEditProduct)}catch{return}
+      const isVariantPricing=String(d.pricing_mode||'FIXED').toUpperCase()==='VARIANT';
 
       if(location.pathname==='/owner/products'&&!ep.hasAttribute('data-owner-product-editor-launch')){
         location.href='/owner/products/edit_produk?id='+encodeURIComponent(d.id);
@@ -2798,14 +2799,14 @@ ${productPricingModesMarkup('FIXED')}
     })}
               </label>
 
-              <label class="field">
+              <label class="field" data-product-fixed-pricing-field ${isVariantPricing?'hidden':''}>
                 <span>Harga</span>
-                <input name="price" type="number" min="0" value="${Number(d.price)||0}">
+                <input name="price" type="number" min="0" value="${Number(d.price)||0}" ${isVariantPricing?'disabled':''}>
               </label>
 
-              <label class="field">
+              <label class="field" data-product-fixed-pricing-field ${isVariantPricing?'hidden':''}>
                 <span>Stok / Kuota</span>
-                <input name="stock" type="number" min="0" value="${Number(d.stock)||0}">
+                <input name="stock" type="number" min="0" value="${Number(d.stock)||0}" ${isVariantPricing?'disabled':''}>
               </label>
 
 
@@ -2924,7 +2925,69 @@ ${productPricingModesMarkup('FIXED')}
   }
 
   document.addEventListener('submit',async e=>{
-    const auth=e.target.closest('[data-auth-form]'); if(auth){e.preventDefault();const type=auth.dataset.authForm;const body=Object.fromEntries(new FormData(auth));const path=type==='login'?'/api/auth/login':type==='register'?'/api/auth/register':type==='forgot'?'/api/auth/forgot-password':'/api/auth/reset-password';const btn=auth.querySelector('button[type="submit"],input[type="submit"]')||auth.querySelector('button');if(btn)btn.disabled=true;try{const r=await api.request(path,{method:'POST',body});if(type==='login')location.href=auth.dataset.next||'/dashboard';else if(type==='register')location.href='/auth/login?success='+encodeURIComponent('Registrasi berhasil. Periksa email jika verifikasi diperlukan.');else if(type==='reset')location.href='/auth/login?success='+encodeURIComponent('Password berhasil diperbarui. Silakan masuk kembali.');else toast.success(type==='forgot'?'Jika email terdaftar, instruksi reset password akan dikirim.':(r.message||'Request diterima.'))}catch(err){toast.error(err.message)}finally{if(btn)btn.disabled=false}}
+    const auth=e.target.closest('[data-auth-form]');
+    if(auth){
+      e.preventDefault();
+
+      const type=auth.dataset.authForm;
+      const body=Object.fromEntries(new FormData(auth));
+      const paths={
+        login:'/api/auth/login',
+        register:'/api/auth/register',
+        forgot:'/api/auth/forgot-password',
+        reset:'/api/auth/reset-password',
+        verify:'/api/auth/verify-email',
+        resend:'/api/auth/resend-email-otp'
+      };
+      const path=paths[type]||'/api/auth/reset-password';
+      const btn=auth.querySelector('button[type="submit"],input[type="submit"]')||
+        auth.querySelector('button');
+
+      if(btn)btn.disabled=true;
+
+      try{
+        const result=await api.request(path,{method:'POST',body});
+
+        if(type==='login'){
+          location.href=auth.dataset.next||'/dashboard';
+        }else if(type==='register'){
+          const target='/auth/verify-email?email='+
+            encodeURIComponent(body.email||'');
+
+          location.href=result?.emailSent===false
+            ? target+'&error='+encodeURIComponent(
+                'Akun dibuat, tetapi email OTP belum terkirim. Silakan coba kirim ulang.'
+              )
+            : target;
+        }else if(type==='verify'){
+          location.href='/dashboard';
+        }else if(type==='resend'){
+          toast.success(
+            result?.message||
+            'Jika email terdaftar dan belum diverifikasi, OTP akan dikirim.'
+          );
+        }else if(type==='reset'){
+          location.href='/auth/login?success='+
+            encodeURIComponent('Password berhasil diperbarui. Silakan masuk kembali.');
+        }else{
+          toast.success(
+            type==='forgot'
+              ? 'Jika email terdaftar, instruksi reset password akan dikirim.'
+              : (result.message||'Request diterima.')
+          );
+        }
+      }catch(err){
+        if(type==='login'&&err.code==='EMAIL_NOT_VERIFIED'){
+          location.href='/auth/verify-email?email='+
+            encodeURIComponent(body.email||'')+
+            '&error='+encodeURIComponent(err.message);
+        }else{
+          toast.error(err.message);
+        }
+      }finally{
+        if(btn)btn.disabled=false;
+      }
+    }
     const pf=e.target.closest('#profile-form');
     if(pf){
       e.preventDefault();

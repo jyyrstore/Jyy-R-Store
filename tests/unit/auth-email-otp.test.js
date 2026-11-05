@@ -28,6 +28,8 @@ function resetState(){
   transactionActive:false,
   adminUpdateDuringTransaction:null,
   beforeAdminUpdate:null,
+  generateLinkParams:null,
+  verifyOtpParams:null,
   profile:{id:USER_ID,email:EMAIL},
   loginProfile:{id:USER_ID,status:'ACTIVE'},
   otp:{
@@ -49,6 +51,31 @@ function resetState(){
      id:USER_ID,
      email:EMAIL,
      email_confirmed_at:new Date().toISOString()
+    }
+   },
+   error:null
+  },
+  generateLinkResult:{
+   data:{
+    user:{id:USER_ID,email:EMAIL},
+    properties:{
+     hashed_token:'test-magiclink-token-hash',
+     verification_type:'magiclink'
+    }
+   },
+   error:null
+  },
+  verifyOtpResult:{
+   data:{
+    user:{
+     id:USER_ID,
+     email:EMAIL,
+     email_confirmed_at:new Date().toISOString()
+    },
+    session:{
+     access_token:'test-access-token',
+     refresh_token:'test-refresh-token',
+     user:{id:USER_ID,email:EMAIL}
     }
    },
    error:null
@@ -200,6 +227,12 @@ const adminClient={
     }
 
     return result;
+   },
+
+   async generateLink(params){
+    state.trace.push('admin-generate-link');
+    state.generateLinkParams=params;
+    return state.generateLinkResult;
    }
   }
  }
@@ -209,6 +242,11 @@ const publicClient={
  auth:{
   async signInWithPassword(){
    return state.signInResult;
+  },
+  async verifyOtp(params){
+   state.trace.push('public-verify-otp');
+   state.verifyOtpParams=params;
+   return state.verifyOtpResult;
   },
   async signOut(){
    return {error:null};
@@ -277,21 +315,113 @@ try{
 
 resetState();
 
-test('OTP valid: transaksi commit sebelum Supabase Admin confirm',async()=>{
+test('OTP valid menghasilkan sesi Supabase melalui magic link satu kali',async()=>{
  resetState();
 
- const result=await auth.verifyEmailOtp(EMAIL,VALID_CODE);
+ const result=await auth.verifyEmailOtp(EMAIL,VALID_CODE,{
+  ip:'127.0.0.1',
+  userAgent:'unit-test'
+ });
 
- assert.deepEqual(result,{verified:true});
+ assert.equal(result.user.id,USER_ID);
+ assert.equal(result.session.access_token,'test-access-token');
  assert.equal(state.adminUpdateDuringTransaction,false);
 
  const commitIndex=state.trace.indexOf('transaction-commit');
  const adminIndex=state.trace.indexOf('admin-confirm');
+ const generateIndex=state.trace.indexOf('admin-generate-link');
+ const verifyIndex=state.trace.indexOf('public-verify-otp');
 
- assert.ok(commitIndex>=0,'transaksi harus commit');
- assert.ok(adminIndex>commitIndex,'Admin API harus dipanggil setelah commit');
- assert.equal(state.otp,null,'reservasi OTP harus dihapus setelah konfirmasi');
+ assert.ok(commitIndex>=0);
+ assert.ok(adminIndex>commitIndex);
+ assert.ok(generateIndex>adminIndex);
+ assert.ok(verifyIndex>generateIndex);
+
+ assert.deepEqual(
+  state.generateLinkParams,
+  {type:'magiclink',email:EMAIL}
+ );
+
+ assert.deepEqual(
+  state.verifyOtpParams,
+  {
+   token_hash:'test-magiclink-token-hash',
+   type:'magiclink'
+  }
+ );
+
+ assert.equal(state.otp,null);
+
+ assert.ok(state.queryLog.some(sql=>
+  sql.startsWith('update profiles set last_login_at=')
+ ));
+
+ assert.ok(state.queryLog.some(sql=>
+  sql.startsWith('insert into wallets')
+ ));
+
+ assert.ok(state.queryLog.some(sql=>
+  sql.includes("'success'")
+ ));
 });
+
+test('OTP tetap wajib meski email sudah confirmed',async()=>{
+ resetState();
+
+ state.authUser.email_confirmed_at=new Date().toISOString();
+
+ await assert.rejects(
+  auth.verifyEmailOtp(EMAIL,'9999'),
+  error=>error.code==='EMAIL_OTP_INVALID'
+ );
+
+ assert.equal(state.otp.attempt_count,1);
+ assert.equal(state.trace.includes('admin-confirm'),false);
+ assert.equal(state.trace.includes('admin-generate-link'),false);
+});
+
+test('magic link ditolak jika user ID tidak sesuai',async()=>{
+ resetState();
+
+ state.generateLinkResult.data.user.id='different-user';
+
+ await assert.rejects(
+  auth.verifyEmailOtp(EMAIL,VALID_CODE),
+  error=>error.code==='EMAIL_OTP_SESSION_FAILED'
+ );
+
+ assert.equal(state.trace.includes('public-verify-otp'),false);
+});
+
+for(const status of ['BANNED','SUSPENDED']){
+ test(`OTP menolak akun ${status}`,async()=>{
+  resetState();
+  state.loginProfile.status=status;
+
+  await assert.rejects(
+   auth.verifyEmailOtp(EMAIL,VALID_CODE,{
+    ip:'127.0.0.1',
+    userAgent:'unit-test'
+   }),
+   error=>error.code===(
+    status==='BANNED'
+     ?'ACCOUNT_BANNED'
+     :'ACCOUNT_SUSPENDED'
+   )
+  );
+
+  assert.ok(state.queryLog.some(sql=>
+   sql.includes("'failed'")
+  ));
+
+  assert.equal(
+   state.queryLog.some(sql=>
+    sql.startsWith('update profiles set last_login_at=')
+   ),
+   false
+  );
+ });
+}
 
 test('OTP salah: attempt count bertambah dan Admin API tidak dipanggil',async()=>{
  resetState();

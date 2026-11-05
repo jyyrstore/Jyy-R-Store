@@ -197,13 +197,20 @@ pageRouter.post(
   })),
   asyncHandler(async(req,res,next)=>{
     try{
-      await require('../services/auth/auth.service')
-        .verifyEmailOtp(req.body.email,req.body.code);
+      const authService=require('../services/auth/auth.service');
+      const {setAuthSession}=require('../utils/auth-session');
 
-      return res.redirect(
-        '/auth/login?success='+
-        encodeURIComponent('Email berhasil diverifikasi. Silakan masuk.')
+      const data=await authService.verifyEmailOtp(
+        req.body.email,
+        req.body.code,
+        {
+          ip:req.ip,
+          userAgent:req.get('user-agent')
+        }
       );
+
+      await setAuthSession(req,data);
+      return res.redirect('/dashboard');
     }catch(error){
       if(error?.expose){
         return res.redirect(
