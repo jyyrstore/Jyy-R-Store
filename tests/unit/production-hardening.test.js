@@ -260,10 +260,6 @@ test('auth callback URLs stay environment-driven',()=>{
   const controller=read('src/controllers/api.controller.js');
   const env=read('src/config/env.js');
 
-  assert.match(
-    auth,
-    /emailRedirectTo:\s*`\$\{loadEnv\(\)\.APP_URL\}\/auth\/callback`/
-  );
 
   assert.match(
     auth,

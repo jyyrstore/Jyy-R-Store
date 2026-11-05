@@ -73,8 +73,9 @@ function verify(){
   ];
 
   const smtpConfigured=smtpFields.some(key=>isSet(env,key));
+  const smtpRequired=env.NODE_ENV==='production'||smtpConfigured;
 
-  if(smtpConfigured){
+  if(smtpRequired){
     required.push('SMTP_HOST','SMTP_USER','SMTP_PASSWORD');
   }
 
@@ -83,7 +84,7 @@ function verify(){
   ];
 
   if(
-    smtpConfigured&&
+    smtpRequired&&
     !isSet(env,'SMTP_FROM')&&
     !isSet(env,'EMAIL_FROM')
   ){
@@ -134,7 +135,7 @@ function verify(){
   const displayKeys=[
     ...new Set([
       ...required,
-      ...(smtpConfigured?smtpFields:[])
+      ...(smtpRequired?smtpFields:[])
     ])
   ];
 

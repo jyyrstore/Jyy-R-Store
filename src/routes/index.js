@@ -120,6 +120,7 @@ pageRouter.get('/faq',asyncHandler(page.faq));
 pageRouter.get('/security',asyncHandler(page.security)); pageRouter.get('/privacy',asyncHandler(page.legal)); pageRouter.get('/terms',asyncHandler(page.legal)); pageRouter.get('/refund',asyncHandler(page.legal)); pageRouter.get('/dmca',asyncHandler(page.legal));
 pageRouter.get('/auth/login',asyncHandler(page.login));
 pageRouter.get('/auth/register',asyncHandler(page.register));
+pageRouter.get('/auth/verify-email',asyncHandler(page.verifyEmail));
 
 pageRouter.post(
   '/auth/login',
@@ -141,6 +142,14 @@ pageRouter.post(
         safeNextPath(req.query.next,'/dashboard')
       );
     }catch(error){
+      if(error?.code==='EMAIL_NOT_VERIFIED'){
+        return res.redirect(
+          '/auth/verify-email?email='+
+          encodeURIComponent(req.body.email||'')+
+          '&error='+encodeURIComponent(error.message)
+        );
+      }
+
       if(error?.expose && Number(error.status)<500){
         const nextPath=safeNextPath(
           req.query.next,
@@ -166,11 +175,74 @@ pageRouter.post('/auth/register',
     username:z.string().min(3).max(32).regex(/^[a-zA-Z0-9._-]+$/)
   })),
   asyncHandler(async(req,res)=>{
-    await require('../services/auth/auth.service').register(req.body);
+    const result=await require('../services/auth/auth.service').register(req.body);
+    const target='/auth/verify-email?email='+encodeURIComponent(result.email);
+
     return res.redirect(
-      '/auth/login?success=' +
-      encodeURIComponent('Registrasi berhasil. Periksa email jika verifikasi diperlukan.')
+      result.emailSent
+        ? target
+        : target+'&error='+encodeURIComponent(
+            'Akun dibuat, tetapi email OTP belum terkirim. Silakan coba kirim ulang.'
+          )
     );
+  })
+);
+
+pageRouter.post(
+  '/auth/verify-email',
+  sensitiveRateLimit(),
+  validate(z.object({
+    email:z.string().email(),
+    code:z.string().regex(/^[0-9]{4}$/)
+  })),
+  asyncHandler(async(req,res,next)=>{
+    try{
+      await require('../services/auth/auth.service')
+        .verifyEmailOtp(req.body.email,req.body.code);
+
+      return res.redirect(
+        '/auth/login?success='+
+        encodeURIComponent('Email berhasil diverifikasi. Silakan masuk.')
+      );
+    }catch(error){
+      if(error?.expose){
+        return res.redirect(
+          '/auth/verify-email?email='+
+          encodeURIComponent(req.body.email||'')+
+          '&error='+encodeURIComponent(error.message)
+        );
+      }
+      return next(error);
+    }
+  })
+);
+
+pageRouter.post(
+  '/auth/resend-email-otp',
+  sensitiveRateLimit(),
+  validate(z.object({email:z.string().email()})),
+  asyncHandler(async(req,res,next)=>{
+    try{
+      await require('../services/auth/auth.service')
+        .resendEmailOtp(req.body.email);
+
+      return res.redirect(
+        '/auth/verify-email?email='+
+        encodeURIComponent(req.body.email)+
+        '&success='+encodeURIComponent(
+          'Jika email terdaftar dan belum diverifikasi, OTP akan dikirim.'
+        )
+      );
+    }catch(error){
+      if(error?.expose){
+        return res.redirect(
+          '/auth/verify-email?email='+
+          encodeURIComponent(req.body.email||'')+
+          '&error='+encodeURIComponent(error.message)
+        );
+      }
+      return next(error);
+    }
   })
 );
 
@@ -280,6 +352,8 @@ pageRouter.use('/owner',owner);
 const apiRouter=express.Router();
 apiRouter.get('/me',requireAuth,asyncHandler(api.authController.me));
 apiRouter.post('/auth/register',validate(z.object({email:z.string().email(),password:z.string().min(8),username:z.string().min(3).max(32).regex(/^[a-zA-Z0-9._-]+$/)})),asyncHandler(api.authController.register));
+apiRouter.post('/auth/verify-email',validate(z.object({email:z.string().email(),code:z.string().regex(/^[0-9]{4}$/)})),asyncHandler(api.authController.verifyEmail));
+apiRouter.post('/auth/resend-email-otp',validate(z.object({email:z.string().email()})),asyncHandler(api.authController.resendEmailOtp));
 apiRouter.post('/auth/login',validate(z.object({email:z.string().email(),password:z.string().min(8)})),asyncHandler(api.authController.login));
 apiRouter.post('/auth/logout',requireAuth,asyncHandler(api.authController.logout));
 apiRouter.post('/auth/forgot-password',validate(z.object({email:z.string().email()})),asyncHandler(api.authController.resetRequest));

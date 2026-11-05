@@ -7,6 +7,7 @@ const {
 
 const REQUIRED_TABLES=[
   'profiles',
+  'email_verification_otps',
   'products',
   'product_variants',
   'product_contents',

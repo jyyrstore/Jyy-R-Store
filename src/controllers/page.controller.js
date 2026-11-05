@@ -743,6 +743,16 @@ async function legal(req,res){const key=requestPath(req).slice(1);const titles={
 async function search(req,res,next){try{res.render('app',base(req,{view:'pages/search',q:req.query.q||'',results:null}));}catch(e){next(e)}}
 async function login(req,res){res.render('app',base(req,{view:'pages/auth',mode:'login',error:req.query.error||'',success:req.query.success||'',nextPath:safeNextPath(req.query.next,'/dashboard')}))}
 async function register(req,res){res.render('app',base(req,{view:'pages/auth',mode:'register',error:req.query.error||'',success:req.query.success||''}))}
+async function verifyEmail(req,res){
+ const email=typeof req.query.email==='string'?req.query.email.trim().slice(0,254):'';
+ return res.render('app',base(req,{
+  view:'pages/auth',
+  mode:'verify',
+  email,
+  error:req.query.error||'',
+  success:req.query.success||''
+ }));
+}
 async function forgotPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'forgot',error:req.query.error||'',success:req.query.success||''}))}
 async function resetPassword(req,res){res.render('app',base(req,{view:'pages/auth',mode:'reset',error:req.query.error||'',success:req.query.success||''}))}
 async function authCallback(req,res,next){
@@ -1168,4 +1178,4 @@ function ownerPage(section){
     }catch(e){next(e)}
   }
 }
-module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ownerMessageDetail,ownerTicketDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,register,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};
+module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ownerMessageDetail,ownerTicketDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,register,verifyEmail,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};

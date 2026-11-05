@@ -2129,6 +2129,35 @@ test('Supabase Auth is isolated from admin Storage client',()=>{
     /supabase\(\)\.auth\./
   );
 
+  assert.match(auth,/auth\.admin\.createUser/);
+  assert.match(auth,/auth\.admin\.updateUserById/);
+  assert.match(auth,/crypto\.randomInt\(0,10000\)/);
+  assert.match(auth,/crypto\.timingSafeEqual/);
+  assert.match(auth,/attempt_count/);
+  assert.match(auth,/email_confirmed_at/);
+
+  const otpMigration=fs.readFileSync(
+    path.join(root,'database/migrations/039_email_verification_otps.sql'),
+    'utf8'
+  );
+
+  const routes=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+
+  const authView=fs.readFileSync(
+    path.join(root,'views/pages/auth.ejs'),
+    'utf8'
+  );
+
+  assert.match(otpMigration,/enable row level security/i);
+  assert.match(otpMigration,/revoke all/i);
+  assert.ok(routes.includes("apiRouter.post('/auth/verify-email'"));
+  assert.ok(routes.includes("apiRouter.post('/auth/resend-email-otp'"));
+  assert.ok(authView.includes('data-auth-form="verify"'));
+  assert.ok(authView.includes('data-auth-form="resend"'));
+
   assert.match(
     storage,
     /supabaseAdmin\(\)/
