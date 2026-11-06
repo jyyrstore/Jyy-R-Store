@@ -91,6 +91,13 @@
       </button>
     </form>
 
+    <a
+      class="button button-secondary button-block"
+      href="/auth/google?next=<%= encodeURIComponent(nextPath || '/dashboard') %>"
+    >
+      Lanjutkan dengan Google
+    </a>
+
     <div class="auth-login-register">
       Belum punya akun?
       <a href="/auth/register">Buat akun baru</a>
@@ -173,6 +180,13 @@
         Daftar
       </button>
     </form>
+
+    <a
+      class="button button-secondary button-block"
+      href="/auth/google?next=/dashboard"
+    >
+      Daftar dengan Google
+    </a>
 
     <div class="auth-links">
       <a href="/auth/login">Sudah punya akun?</a>

@@ -30,6 +30,30 @@ function resetState(){
   beforeAdminUpdate:null,
   generateLinkParams:null,
   verifyOtpParams:null,
+  googleOAuthParams:null,
+  googleExchangeCode:null,
+  googleVerifier:null,
+  publicAuthOptions:null,
+  createdProfiles:[],
+  googleExchangeResult:{
+   data:{
+    user:{
+     id:USER_ID,
+     email:EMAIL,
+     email_confirmed_at:new Date().toISOString(),
+     app_metadata:{
+      provider:'google',
+      providers:['google']
+     },
+     identities:[{provider:'google'}]
+    },
+    session:{
+     access_token:'google-access-token',
+     refresh_token:'google-refresh-token'
+    }
+   },
+   error:null
+  },
   profile:{id:USER_ID,email:EMAIL},
   loginProfile:{id:USER_ID,status:'ACTIVE'},
   otp:{
@@ -248,6 +272,31 @@ const publicClient={
    state.verifyOtpParams=params;
    return state.verifyOtpResult;
   },
+  async signInWithOAuth(params){
+   state.trace.push('google-oauth-start');
+   state.googleOAuthParams=params;
+
+   await state.publicAuthOptions.storage.setItem(
+    'google-pkce-verifier',
+    'test-pkce-verifier'
+   );
+
+   return {
+    data:{url:'https://auth.example.test/authorize'},
+    error:null
+   };
+  },
+  async exchangeCodeForSession(code){
+   state.trace.push('google-oauth-exchange');
+   state.googleExchangeCode=code;
+
+   state.googleVerifier=await
+    state.publicAuthOptions.storage.getItem(
+     'google-pkce-verifier'
+    );
+
+   return state.googleExchangeResult;
+  },
   async signOut(){
    return {error:null};
   }
@@ -265,7 +314,10 @@ const mocks=new Map([
  [
   '../../config/supabase',
   {
-   supabasePublic:()=>publicClient,
+   supabasePublic:options=>{
+    state.publicAuthOptions=options||null;
+    return publicClient;
+   },
    supabaseAdmin:()=>adminClient
   }
  ],
@@ -275,7 +327,10 @@ const mocks=new Map([
    findByEmail:async()=>state.profile,
    findById:async()=>state.loginProfile,
    findByUsername:async()=>null,
-   create:async()=>state.profile
+   create:async profile=>{
+    state.createdProfiles.push(profile);
+    return profile;
+   }
   }
  ],
  [
@@ -526,5 +581,120 @@ test('login menerima email confirmed meski row OTP stale masih ada',async()=>{
   state.queryLog.some(sql=>sql.includes('from email_verification_otps')),
   false,
   'login tidak boleh menolak user confirmed berdasarkan row OTP stale'
+ );
+});
+
+test('Google OAuth menggunakan PKCE dan menyimpan verifier pada session',async()=>{
+ resetState();
+
+ const session={};
+ const redirectTo=
+  'https://jyyr.example/auth/callback?provider=google&next=%2Fdashboard';
+
+ const url=await auth.startGoogleOAuth(session,redirectTo);
+
+ assert.equal(url,'https://auth.example.test/authorize');
+ assert.deepEqual(state.googleOAuthParams,{
+  provider:'google',
+  options:{redirectTo}
+ });
+
+ assert.equal(state.publicAuthOptions.persistSession,true);
+ assert.equal(state.publicAuthOptions.flowType,'pkce');
+
+ assert.equal(
+  await state.publicAuthOptions.storage.getItem(
+   'google-pkce-verifier'
+  ),
+  'test-pkce-verifier'
+ );
+
+ assert.equal(
+  session.supabaseOAuth['google-pkce-verifier'],
+  'test-pkce-verifier'
+ );
+});
+
+test('Google OAuth callback memakai completeLogin untuk akun baru',async()=>{
+ resetState();
+
+ state.loginProfile=null;
+
+ const session={
+  supabaseOAuth:{
+   'google-pkce-verifier':'test-pkce-verifier'
+  }
+ };
+
+ const result=await auth.exchangeGoogleOAuthCode(
+  'test-google-code',
+  session,
+  {
+   ip:'127.0.0.1',
+   userAgent:'unit-test'
+  }
+ );
+
+ assert.equal(result.user.id,USER_ID);
+ assert.equal(result.session.access_token,'google-access-token');
+ assert.equal(state.googleExchangeCode,'test-google-code');
+ assert.equal(state.googleVerifier,'test-pkce-verifier');
+ assert.equal(session.supabaseOAuth,undefined);
+
+ assert.equal(state.createdProfiles.length,1);
+ assert.equal(state.createdProfiles[0].id,USER_ID);
+ assert.equal(state.createdProfiles[0].email,EMAIL);
+
+ assert.match(
+  state.createdProfiles[0].username,
+  /^[a-z0-9._-]{3,32}$/
+ );
+
+ assert.ok(state.queryLog.some(sql=>
+  sql.startsWith('update profiles set last_login_at=')
+ ));
+
+ assert.ok(state.queryLog.some(sql=>
+  sql.startsWith('insert into wallets')
+ ));
+
+ assert.ok(state.queryLog.some(sql=>
+  sql.includes("'success'")
+ ));
+});
+
+test('Google OAuth menolak identitas dari provider lain',async()=>{
+ resetState();
+
+ state.googleExchangeResult.data.user.app_metadata={
+  provider:'email',
+  providers:['email']
+ };
+
+ state.googleExchangeResult.data.user.identities=[
+  {provider:'email'}
+ ];
+
+ const session={
+  supabaseOAuth:{
+   'google-pkce-verifier':'test-pkce-verifier'
+  }
+ };
+
+ await assert.rejects(
+  auth.exchangeGoogleOAuthCode(
+   'test-google-code',
+   session
+  ),
+  error=>error.code==='GOOGLE_OAUTH_PROVIDER_INVALID'
+ );
+
+ assert.equal(session.supabaseOAuth,undefined);
+
+ assert.equal(
+  state.queryLog.some(sql=>
+   sql.startsWith('update profiles set last_login_at=')
+  ),
+  false
  );
 });

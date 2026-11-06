@@ -742,6 +742,47 @@ async function security(req,res){res.render('app',base(req,{view:'pages/security
 async function legal(req,res){const key=requestPath(req).slice(1);const titles={privacy:'Privacy Policy',terms:'Terms of Service',refund:'Refund Policy',dmca:'DMCA / Hak Cipta'}; res.render('app',base(req,{view:'pages/legal',legalKey:key,legalTitle:titles[key]||'Policy'}))}
 async function search(req,res,next){try{res.render('app',base(req,{view:'pages/search',q:req.query.q||'',results:null}));}catch(e){next(e)}}
 async function login(req,res){if(req.user)return res.redirect('/dashboard');res.render('app',base(req,{view:'pages/auth',mode:'login',error:req.query.error||'',success:req.query.success||'',nextPath:safeNextPath(req.query.next,'/dashboard')}))}
+async function googleLogin(req,res,next){
+ if(req.user)return res.redirect('/dashboard');
+
+ try{
+  const nextPath=safeNextPath(
+   req.query.next,
+   '/dashboard'
+  );
+
+  const callbackUrl=new URL(
+   '/auth/callback',
+   loadEnv().APP_URL
+  );
+
+  callbackUrl.searchParams.set('provider','google');
+  callbackUrl.searchParams.set('next',nextPath);
+
+  const destination=await auth.startGoogleOAuth(
+   req.session,
+   callbackUrl.toString()
+  );
+
+  await new Promise((resolve,reject)=>{
+   req.session.save(error=>
+    error?reject(error):resolve()
+   );
+  });
+
+  return res.redirect(303,destination);
+ }catch(error){
+  if(error?.expose){
+   return res.redirect(
+    '/auth/login?error='+
+    encodeURIComponent(error.message)
+   );
+  }
+
+  return next(error);
+ }
+}
+
 async function register(req,res){res.render('app',base(req,{view:'pages/auth',mode:'register',error:req.query.error||'',success:req.query.success||''}))}
 async function verifyEmail(req,res){
  const email=typeof req.query.email==='string'?req.query.email.trim().slice(0,254):'';
@@ -776,7 +817,20 @@ async function authCallback(req,res,next){
    );
   }
 
-  const d=await auth.exchangeCode(req.query.code);
+  const isGoogleOAuth=
+   String(req.query.provider||'').toLowerCase()==='google';
+
+  const d=isGoogleOAuth
+   ?await auth.exchangeGoogleOAuthCode(
+      req.query.code,
+      req.session,
+      {
+       ip:req.ip,
+       userAgent:req.get('user-agent')
+      }
+     )
+   :await auth.exchangeCode(req.query.code);
+
   await setAuthSession(req,d);
   return res.redirect(safeNextPath(req.query.next));
  }catch(e){
@@ -1178,4 +1232,4 @@ function ownerPage(section){
     }catch(e){next(e)}
   }
 }
-module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ownerMessageDetail,ownerTicketDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,register,verifyEmail,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};
+module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ownerMessageDetail,ownerTicketDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,googleLogin,register,verifyEmail,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};

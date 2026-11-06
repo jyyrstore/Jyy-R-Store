@@ -52,7 +52,7 @@ function supabaseAdmin() {
   });
 }
 
-function supabasePublic() {
+function supabasePublic(authOptions = {}) {
   if (!publicConfig?.url || !publicConfig?.key) {
     throw new Error('Supabase public client is not configured.');
   }
@@ -61,7 +61,8 @@ function supabasePublic() {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
-      detectSessionInUrl: false
+      detectSessionInUrl: false,
+      ...authOptions
     }
   });
 }

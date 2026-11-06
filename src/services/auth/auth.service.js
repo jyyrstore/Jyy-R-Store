@@ -20,6 +20,83 @@ function authFailure(message,status,code){
  });
 }
 
+function createOAuthSessionStorage(session){
+ if(
+  !session||
+  typeof session!=='object'||
+  Array.isArray(session)
+ ){
+  throw authFailure(
+   'Sesi OAuth tidak valid.',
+   400,
+   'GOOGLE_OAUTH_SESSION_INVALID'
+  );
+ }
+
+ if(
+  !session.supabaseOAuth||
+  typeof session.supabaseOAuth!=='object'||
+  Array.isArray(session.supabaseOAuth)
+ ){
+  session.supabaseOAuth={};
+ }
+
+ const storage=session.supabaseOAuth;
+
+ return {
+  getItem:async key=>
+   Object.prototype.hasOwnProperty.call(storage,key)
+    ?storage[key]
+    :null,
+
+  setItem:async(key,value)=>{
+   storage[key]=value;
+  },
+
+  removeItem:async key=>{
+   delete storage[key];
+  }
+ };
+}
+
+function hasGoogleIdentity(user){
+ const metadata=user?.app_metadata||{};
+
+ if(String(metadata.provider||'').toLowerCase()==='google'){
+  return true;
+ }
+
+ const providers=Array.isArray(metadata.providers)
+  ?metadata.providers
+  :[];
+
+ if(providers.some(provider=>
+  String(provider).toLowerCase()==='google'
+  )){
+  return true;
+ }
+
+ return Array.isArray(user?.identities)&&
+  user.identities.some(identity=>
+   String(identity?.provider||'').toLowerCase()==='google'
+  );
+}
+
+function googleUsername(user){
+ const localPart=String(user?.email||'')
+  .split('@')[0]
+  .toLowerCase()
+  .replace(/[^a-z0-9._-]/g,'')
+  .slice(0,19);
+
+ const suffix=String(user?.id||'')
+  .replace(/[^a-f0-9]/gi,'')
+  .slice(-12)
+  .toLowerCase()||'account';
+
+ return `${localPart||'google'}_${suffix}`.slice(0,32);
+}
+
 function emailOtpSecret(){
  const secret=String(loadEnv().CSRF_SECRET||'');
  if(Buffer.byteLength(secret)<32){
@@ -644,7 +721,10 @@ async function resendEmailOtp(email){
  return {accepted:true,message:genericMessage};
 }
 
-async function completeLogin(data,{ip,userAgent}={}) {
+async function completeLogin(
+ data,
+ {ip,userAgent,username:defaultUsername}={}
+) {
  const userId=data?.user?.id;
 
  if(
@@ -694,7 +774,8 @@ async function completeLogin(data,{ip,userAgent}={}) {
  if(!profile){
   await profiles.create({
    id:userId,
-   username:data.user.email.split('@')[0].slice(0,32),
+   username:defaultUsername||
+    data.user.email.split('@')[0].slice(0,32),
    email:data.user.email
   });
  }
@@ -762,6 +843,138 @@ async function login({email,password},{ip,userAgent}={}) {
  }
 
  return completeLogin(data,{ip,userAgent});
+}
+
+async function startGoogleOAuth(session,redirectTo){
+ let result;
+
+ try{
+  const client=supabasePublic({
+   persistSession:true,
+   flowType:'pkce',
+   storage:createOAuthSessionStorage(session)
+  });
+
+  result=await client.auth.signInWithOAuth({
+   provider:'google',
+   options:{redirectTo}
+  });
+ }catch(error){
+  if(session&&typeof session==='object'){
+   delete session.supabaseOAuth;
+  }
+
+  if(error?.expose)throw error;
+
+  throw authFailure(
+   'Login dengan Google belum dapat dimulai.',
+   503,
+   'GOOGLE_OAUTH_START_FAILED'
+  );
+ }
+
+ if(
+  result?.error||
+  typeof result?.data?.url!=='string'||
+  !result.data.url
+ ){
+  delete session.supabaseOAuth;
+
+  throw authFailure(
+   'Login dengan Google belum dapat dimulai.',
+   503,
+   'GOOGLE_OAUTH_START_FAILED'
+  );
+ }
+
+ return result.data.url;
+}
+
+async function exchangeGoogleOAuthCode(
+ code,
+ session,
+ {ip,userAgent}={}
+){
+ const normalizedCode=String(code||'').trim();
+
+ if(!normalizedCode){
+  throw authFailure(
+   'Kode autentikasi Google tidak tersedia.',
+   400,
+   'GOOGLE_OAUTH_CODE_INVALID'
+  );
+ }
+
+ let exchanged;
+
+ try{
+  const client=supabasePublic({
+   persistSession:true,
+   flowType:'pkce',
+   storage:createOAuthSessionStorage(session)
+  });
+
+  exchanged=await client.auth.exchangeCodeForSession(
+   normalizedCode
+  );
+ }catch(error){
+  if(session&&typeof session==='object'){
+   delete session.supabaseOAuth;
+  }
+
+  if(error?.expose)throw error;
+
+  throw authFailure(
+   'Login Google gagal diproses. Silakan coba lagi.',
+   400,
+   'GOOGLE_OAUTH_CODE_INVALID'
+  );
+ }
+
+ if(session&&typeof session==='object'){
+  delete session.supabaseOAuth;
+ }
+
+ const data=exchanged?.data;
+ const user=data?.user;
+
+ if(
+  exchanged?.error||
+  !user?.id||
+  !data?.session?.access_token||
+  !data?.session?.refresh_token
+ ){
+  throw authFailure(
+   'Kode autentikasi Google tidak valid atau kedaluwarsa.',
+   400,
+   'GOOGLE_OAUTH_CODE_INVALID'
+  );
+ }
+
+ if(!hasGoogleIdentity(user)){
+  throw authFailure(
+   'Identitas Google tidak valid.',
+   401,
+   'GOOGLE_OAUTH_PROVIDER_INVALID'
+  );
+ }
+
+ if(
+  !String(user.email||'').trim()||
+  !user.email_confirmed_at
+ ){
+  throw authFailure(
+   'Email Google belum terverifikasi.',
+   403,
+   'GOOGLE_EMAIL_NOT_VERIFIED'
+  );
+ }
+
+ return completeLogin(data,{
+  ip,
+  userAgent,
+  username:googleUsername(user)
+ });
 }
 
 async function logout(){
@@ -864,4 +1077,16 @@ async function updatePassword({accessToken,refreshToken},password){
  }
 }
 
-module.exports={register,login,verifyEmailOtp,resendEmailOtp,logout,exchangeCode,verifyRecoveryToken,sendPasswordReset,updatePassword};
+module.exports={
+ register,
+ login,
+ verifyEmailOtp,
+ resendEmailOtp,
+ startGoogleOAuth,
+ exchangeGoogleOAuthCode,
+ logout,
+ exchangeCode,
+ verifyRecoveryToken,
+ sendPasswordReset,
+ updatePassword
+};
