@@ -783,13 +783,20 @@ async function googleLogin(req,res,next){
  }
 }
 
-async function register(req,res){res.render('app',base(req,{view:'pages/auth',mode:'register',error:req.query.error||'',success:req.query.success||''}))}
-async function verifyEmail(req,res){
- const email=typeof req.query.email==='string'?req.query.email.trim().slice(0,254):'';
+async function register(req,res){
+ const verificationEmail=
+  typeof req.query.email==='string'
+   ?req.query.email.trim().slice(0,254)
+   :'';
+
+ const verificationStep=
+  req.query.step==='verify'&&Boolean(verificationEmail);
+
  return res.render('app',base(req,{
   view:'pages/auth',
-  mode:'verify',
-  email,
+  mode:'register',
+  verificationEmail,
+  verificationStep,
   error:req.query.error||'',
   success:req.query.success||''
  }));
@@ -1232,4 +1239,4 @@ function ownerPage(section){
     }catch(e){next(e)}
   }
 }
-module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ownerMessageDetail,ownerTicketDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,googleLogin,register,verifyEmail,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};
+module.exports={home,store,productDetail,dashboard,cartPage,checkout,orders,orderDetail,history,deposit,profilePage,messagesPage,messageDetail,ownerMessageDetail,ownerTicketDetail,ticketsPage,ticketDetail,notificationsPage,servicesPage,topOrder,faq,security,legal,search,login,googleLogin,register,forgotPassword,resetPassword,authCallback,paymentStatus,delivery,ownerPage,configurationPage};

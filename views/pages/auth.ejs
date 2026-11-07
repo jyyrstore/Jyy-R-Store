@@ -1,4 +1,4 @@
-<% if(mode==='login'){ %>
+<% if(mode==='login' || mode==='register'){ %>
 <div class="auth-card auth-card-login">
   <section class="auth-login-aside">
     <a class="brand auth-login-brand" href="/">
@@ -7,11 +7,8 @@
     </a>
 
     <div class="auth-login-aside-copy">
-      <h1>Selamat datang kembali.</h1>
-      <p>
-        Masuk untuk melanjutkan belanja, mengelola wallet,
-        dan mengakses pesanan Anda.
-      </p>
+      <h1><%= mode==='register' ? 'Mulai perjalanan Anda.' : 'Selamat datang kembali.' %></h1>
+      <p><%= mode==='register' ? 'Buat akun untuk menjelajahi produk, mengelola wallet, dan mengikuti pesanan Anda.' : 'Masuk untuk melanjutkan belanja, mengelola wallet, dan mengakses pesanan Anda.' %></p>
     </div>
 
     <div class="auth-login-benefits">
@@ -40,8 +37,8 @@
   <section class="auth-login-main">
     <div class="auth-login-heading">
 
-      <h2>Masuk ke akun Anda</h2>
-      <p>Gunakan email dan password yang terdaftar.</p>
+      <h2><%= mode==='register' && verificationStep ? 'Verifikasi email' : mode==='register' ? 'Buat akun Anda' : 'Masuk ke akun Anda' %></h2>
+      <p><%= mode==='register' && verificationStep ? 'Masukkan kode OTP 4 digit yang dikirim ke email Anda.' : mode==='register' ? 'Lengkapi data akun agar bisa mulai berbelanja.' : 'Gunakan email dan password yang terdaftar.' %></p>
     </div>
 
     <% if(error){ %>
@@ -57,8 +54,29 @@
       </div>
     <% } %>
 
-    <form class="stack-form auth-login-form" data-auth-form="login" method="POST" action="/auth/login?next=<%= encodeURIComponent(nextPath || '/dashboard') %>" data-next="<%= nextPath || '/dashboard' %>">
+    <form
+      class="stack-form auth-login-form"
+      data-auth-form="<%= mode %>"
+      method="POST"
+      action="<%= mode==='register' ? '/auth/register' : '/auth/login?next='+encodeURIComponent(nextPath || '/dashboard') %>"
+      <% if(mode==='login'){ %>data-next="<%= nextPath || '/dashboard' %>"<% } %>
+      <% if(mode==='register' && verificationStep){ %>hidden<% } %>
+    >
       <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
+      <% if(mode==='register'){ %>
+      <label class="field">
+        <span>Username</span>
+        <input
+          name="username"
+          autocomplete="username"
+          placeholder="Pilih username"
+          minlength="3"
+          maxlength="32"
+          required
+        >
+      </label>
+      <% } %>
+
       <label class="field">
         <span>Email</span>
         <input
@@ -75,12 +93,14 @@
         <input
           type="password"
           name="password"
-          autocomplete="current-password"
+          autocomplete="<%= mode==='register' ? 'new-password' : 'current-password' %>"
           placeholder="Masukkan password"
+          <% if(mode==='register'){ %>minlength="8"<% } %>
           required
         >
       </label>
 
+      <% if(mode==='login'){ %>
       <div class="auth-login-meta">
         <label class="auth-login-remember">
           <input type="checkbox" name="rememberMe" value="true">
@@ -88,15 +108,133 @@
         </label>
         <a href="/auth/forgot-password">Lupa Password?</a>
       </div>
+      <% } %>
 
       <button type="submit" class="button button-primary button-block auth-login-submit">
-        Masuk
+        <%= mode==='register' ? 'Daftar' : 'Masuk' %>
       </button>
     </form>
 
+    <% if(mode==='register'){ %>
+    <section
+      class="auth-register-verification"
+      data-register-verification
+      <%= verificationStep ? '' : 'hidden' %>
+    >
+      <p class="auth-register-verification-copy">
+        Kode OTP 4 digit dikirim ke
+        <strong data-register-verification-email><%= verificationEmail || 'email Anda' %></strong>.
+        Kode berlaku selama 10 menit.
+      </p>
+
+      <div
+        class="alert alert-error"
+        data-register-feedback
+        role="alert"
+        hidden
+      ></div>
+
+      <form
+        class="stack-form auth-login-form"
+        data-auth-form="verify"
+        method="POST"
+        action="/auth/verify-email"
+      >
+        <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
+        <input
+          type="hidden"
+          name="email"
+          value="<%= verificationEmail || '' %>"
+          data-register-email
+        >
+        <input type="hidden" name="code" value="" data-otp-code>
+
+        <label class="field">
+          <span>OTP 4 digit</span>
+
+          <div
+            class="auth-otp-fields"
+            data-otp-fields
+            role="group"
+            aria-label="Masukkan empat digit kode OTP"
+          >
+            <input
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              pattern="[0-9]{1,4}"
+              maxlength="4"
+              data-otp-digit
+              aria-label="Digit OTP 1"
+              required
+            >
+            <input
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              pattern="[0-9]"
+              maxlength="1"
+              data-otp-digit
+              aria-label="Digit OTP 2"
+              required
+            >
+            <input
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              pattern="[0-9]"
+              maxlength="1"
+              data-otp-digit
+              aria-label="Digit OTP 3"
+              required
+            >
+            <input
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              pattern="[0-9]"
+              maxlength="1"
+              data-otp-digit
+              aria-label="Digit OTP 4"
+              required
+            >
+          </div>
+        </label>
+
+        <button
+          type="submit"
+          class="button button-primary button-block auth-login-submit"
+        >
+          Verifikasi dan masuk
+        </button>
+      </form>
+
+      <form
+        class="stack-form auth-login-form auth-register-resend"
+        data-auth-form="resend"
+        method="POST"
+        action="/auth/resend-email-otp"
+      >
+        <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
+        <input
+          type="hidden"
+          name="email"
+          value="<%= verificationEmail || '' %>"
+          data-register-email
+        >
+
+        <button type="submit" class="button button-secondary button-block">
+          Kirim ulang OTP
+        </button>
+      </form>
+    </section>
+    <% } %>
+
     <a
       class="button button-block auth-google-button"
-      href="/auth/google?next=<%= encodeURIComponent(nextPath || '/dashboard') %>"
+      data-register-google
+      <% if(mode==='register' && verificationStep){ %>hidden<% } %>
+      href="<%= mode==='register' ? '/auth/google?next=/dashboard' : '/auth/google?next='+encodeURIComponent(nextPath || '/dashboard') %>"
     >
       <img
         class="auth-google-logo"
@@ -104,15 +242,28 @@
         alt=""
         aria-hidden="true"
       >
-      <span>Lanjutkan dengan Google</span>
+      <span><%= mode==='register' ? 'Daftar dengan Google' : 'Lanjutkan dengan Google' %></span>
     </a>
 
-    <div class="auth-login-register">
-      Belum punya akun?
-      <a href="/auth/register">Buat akun baru</a>
+    <div
+      class="auth-login-register"
+      data-register-links
+      <% if(mode==='register' && verificationStep){ %>hidden<% } %>
+    >
+      <% if(mode==='register'){ %>
+        Sudah punya akun?
+        <a href="/auth/login">Masuk</a>
+      <% } else { %>
+        Belum punya akun?
+        <a href="/auth/register">Buat akun baru</a>
+      <% } %>
     </div>
 
-    <p class="auth-login-note">
+    <p
+      class="auth-login-note"
+      data-register-note
+      <% if(mode==='register' && verificationStep){ %>hidden<% } %>
+    >
       <%- icon('shield-key-outline') %>
       <span>Jangan bagikan password akun Anda kepada orang lain.</span>
     </p>
@@ -140,110 +291,7 @@
     </div>
   <% } %>
 
-  <% if(mode==='register'){ %>
-    <h1>Buat akun</h1>
-    <p>Daftar untuk membeli produk<br>dan menggunakan wallet.</p>
-
-    <form
-      class="stack-form"
-      data-auth-form="register"
-      action="/auth/register"
-      method="POST"
-    >
-      <input
-        type="hidden"
-        name="_csrf"
-        value="<%= csrfToken || '' %>"
-      >
-
-      <label class="field">
-        <span>Username</span>
-        <input
-          name="username"
-          required
-          minlength="3"
-          maxlength="32"
-        >
-      </label>
-
-      <label class="field">
-        <span>Email</span>
-        <input
-          type="email"
-          name="email"
-          required
-        >
-      </label>
-
-      <label class="field">
-        <span>Password</span>
-        <input
-          type="password"
-          name="password"
-          minlength="8"
-          required
-        >
-      </label>
-
-      <button type="submit" class="button button-primary button-block">
-        Daftar
-      </button>
-    </form>
-
-    <a
-      class="button button-secondary button-block"
-      href="/auth/google?next=/dashboard"
-    >
-      Daftar dengan Google
-    </a>
-
-    <div class="auth-links">
-      <a href="/auth/login">Sudah punya akun?</a>
-    </div>
-
-  <% } else if(mode==='verify'){ %>
-
-    <h1>Verifikasi email</h1>
-    <p>Masukkan OTP 4 digit yang dikirim ke email Anda. Kode berlaku selama 10 menit.</p>
-
-    <form class="stack-form" data-auth-form="verify" method="POST" action="/auth/verify-email">
-      <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
-      <input type="hidden" name="email" value="<%= email || '' %>">
-
-      <label class="field">
-        <span>OTP 4 digit</span>
-        <input
-          type="text"
-          name="code"
-          inputmode="numeric"
-          autocomplete="one-time-code"
-          pattern="[0-9]{4}"
-          minlength="4"
-          maxlength="4"
-          placeholder="0000"
-          required
-        >
-      </label>
-
-      <button type="submit" class="button button-primary button-block">
-        Verifikasi email
-      </button>
-    </form>
-
-    <form class="stack-form" data-auth-form="resend" method="POST" action="/auth/resend-email-otp">
-      <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
-      <input type="hidden" name="email" value="<%= email || '' %>">
-
-      <button type="submit" class="button button-secondary button-block">
-        Kirim ulang OTP
-      </button>
-    </form>
-
-    <div class="auth-links">
-      <a href="/auth/login">Kembali ke login</a>
-    </div>
-
-  <% } else if(mode==='forgot'){ %>
+  <% if(mode==='forgot'){ %>
 
     <h1>Reset password</h1>
     <p>Kami akan mengirim instruksi ke email akun.</p>

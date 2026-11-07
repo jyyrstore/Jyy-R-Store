@@ -2157,6 +2157,12 @@ test('Supabase Auth is isolated from admin Storage client',()=>{
   assert.ok(routes.includes("apiRouter.post('/auth/resend-email-otp'"));
   assert.ok(authView.includes('data-auth-form="verify"'));
   assert.ok(authView.includes('data-auth-form="resend"'));
+  assert.ok(authView.includes('data-register-verification'));
+  assert.equal(
+    (authView.match(/data-otp-digit/g)||[]).length,
+    4
+  );
+  assert.ok(!routes.includes("pageRouter.get('/auth/verify-email'"));
 
   assert.match(
     storage,

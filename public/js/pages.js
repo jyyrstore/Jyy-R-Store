@@ -2926,12 +2926,135 @@ ${productPricingModesMarkup('FIXED')}
     );
   }
 
+  function syncRegisterOtp(group){
+    const digits=Array.from(
+      group.querySelectorAll('[data-otp-digit]')
+    );
+
+    const code=group
+      .closest('form')
+      ?.querySelector('[data-otp-code]');
+
+    if(code){
+      code.value=digits.map(input=>input.value).join('');
+    }
+  }
+
+  document.addEventListener('input',e=>{
+    const input=e.target.closest('[data-otp-digit]');
+    if(!input)return;
+
+    const group=input.closest('[data-otp-fields]');
+    if(!group)return;
+
+    const digits=Array.from(
+      group.querySelectorAll('[data-otp-digit]')
+    );
+
+    const index=digits.indexOf(input);
+    const value=input.value.replace(/\D/g,'');
+
+    if(value.length>1){
+      const start=value.length>=4?0:index;
+      const values=value.slice(0,4-start);
+
+      values.split('').forEach((digit,offset)=>{
+        if(digits[start+offset]){
+          digits[start+offset].value=digit;
+        }
+      });
+
+      digits[Math.min(start+values.length,3)]?.focus();
+    }else{
+      input.value=value.slice(-1);
+
+      if(input.value){
+        digits[index+1]?.focus();
+      }
+    }
+
+    syncRegisterOtp(group);
+  });
+
+  document.addEventListener('paste',e=>{
+    const input=e.target.closest('[data-otp-digit]');
+    if(!input)return;
+
+    const group=input.closest('[data-otp-fields]');
+    if(!group)return;
+
+    const value=(e.clipboardData?.getData('text')||'')
+      .replace(/\D/g,'')
+      .slice(0,4);
+
+    if(!value)return;
+
+    e.preventDefault();
+
+    const digits=Array.from(
+      group.querySelectorAll('[data-otp-digit]')
+    );
+
+    value.split('').forEach((digit,index)=>{
+      if(digits[index]){
+        digits[index].value=digit;
+      }
+    });
+
+    syncRegisterOtp(group);
+    digits[Math.min(value.length,3)]?.focus();
+  });
+
+  document.addEventListener('keydown',e=>{
+    const input=e.target.closest('[data-otp-digit]');
+    if(!input)return;
+
+    const group=input.closest('[data-otp-fields]');
+    if(!group)return;
+
+    const digits=Array.from(
+      group.querySelectorAll('[data-otp-digit]')
+    );
+
+    const index=digits.indexOf(input);
+
+    if(e.key==='Backspace'&&!input.value){
+      e.preventDefault();
+      digits[index-1]?.focus();
+    }else if(e.key==='ArrowLeft'){
+      e.preventDefault();
+      digits[index-1]?.focus();
+    }else if(e.key==='ArrowRight'){
+      e.preventDefault();
+      digits[index+1]?.focus();
+    }
+  });
+
   document.addEventListener('submit',async e=>{
     const auth=e.target.closest('[data-auth-form]');
     if(auth){
       e.preventDefault();
 
+      if(auth.dataset.submitting==='1'){
+        return;
+      }
+
       const type=auth.dataset.authForm;
+
+      if(type==='verify'){
+        const code=Array.from(
+          auth.querySelectorAll('[data-otp-digit]')
+        ).map(input=>input.value).join('');
+
+        const codeField=auth.querySelector('[data-otp-code]');
+        if(codeField)codeField.value=code;
+
+        if(!/^[0-9]{4}$/.test(code)){
+          toast.error('Masukkan empat digit kode OTP.');
+          return;
+        }
+      }
+
       const body=Object.fromEntries(new FormData(auth));
       const paths={
         login:'/api/auth/login',
@@ -2944,8 +3067,21 @@ ${productPricingModesMarkup('FIXED')}
       const path=paths[type]||'/api/auth/reset-password';
       const btn=auth.querySelector('button[type="submit"],input[type="submit"]')||
         auth.querySelector('button');
+      const originalButtonLabel=btn
+        ?(btn.tagName==='INPUT'?btn.value:btn.textContent.trim())
+        :'';
 
-      if(btn)btn.disabled=true;
+      auth.dataset.submitting='1';
+
+      if(btn){
+        btn.setAttribute('aria-busy','true');
+
+        if(btn.tagName==='INPUT'){
+          btn.value='Memproses…';
+        }else{
+          btn.textContent='Memproses…';
+        }
+      }
 
       try{
         const result=await api.request(path,{method:'POST',body});
@@ -2953,14 +3089,79 @@ ${productPricingModesMarkup('FIXED')}
         if(type==='login'){
           location.href=auth.dataset.next||'/dashboard';
         }else if(type==='register'){
-          const target='/auth/verify-email?email='+
-            encodeURIComponent(body.email||'');
+          const panel=auth.closest('.auth-login-main');
+          const verification=panel?.querySelector(
+            '[data-register-verification]'
+          );
 
-          location.href=result?.emailSent===false
-            ? target+'&error='+encodeURIComponent(
-                'Akun dibuat, tetapi email OTP belum terkirim. Silakan coba kirim ulang.'
-              )
-            : target;
+          if(!panel||!verification){
+            toast.error('Form verifikasi tidak tersedia. Muat ulang halaman.');
+            return;
+          }
+
+          const email=String(body.email||'').trim();
+
+          verification
+            .querySelectorAll('[data-register-email]')
+            .forEach(field=>{
+              field.value=email;
+            });
+
+          const emailLabel=verification.querySelector(
+            '[data-register-verification-email]'
+          );
+
+          if(emailLabel){
+            emailLabel.textContent=email;
+          }
+
+          verification
+            .querySelectorAll('[data-otp-digit]')
+            .forEach(field=>{
+              field.value='';
+            });
+
+          const codeField=verification.querySelector('[data-otp-code]');
+          if(codeField)codeField.value='';
+
+          auth.hidden=true;
+
+          const google=panel.querySelector('[data-register-google]');
+          const links=panel.querySelector('[data-register-links]');
+          const note=panel.querySelector('[data-register-note]');
+
+          if(google)google.hidden=true;
+          if(links)links.hidden=true;
+          if(note)note.hidden=true;
+
+          verification.hidden=false;
+
+          const heading=panel.querySelector('.auth-login-heading h2');
+          const description=panel.querySelector('.auth-login-heading p');
+
+          if(heading)heading.textContent='Verifikasi email';
+
+          if(description){
+            description.textContent=
+              'Masukkan kode OTP 4 digit yang dikirim ke email Anda.';
+          }
+
+          const feedback=verification.querySelector(
+            '[data-register-feedback]'
+          );
+
+          if(result?.emailSent===false){
+            if(feedback){
+              feedback.textContent=
+                'Akun berhasil dibuat, tetapi OTP belum terkirim. Gunakan tombol Kirim ulang OTP.';
+              feedback.hidden=false;
+            }
+          }else{
+            if(feedback)feedback.hidden=true;
+            toast.success('Kode OTP verifikasi telah dikirim ke email Anda.');
+          }
+
+          verification.querySelector('[data-otp-digit]')?.focus();
         }else if(type==='verify'){
           location.href='/dashboard';
         }else if(type==='resend'){
@@ -2980,14 +3181,24 @@ ${productPricingModesMarkup('FIXED')}
         }
       }catch(err){
         if(type==='login'&&err.code==='EMAIL_NOT_VERIFIED'){
-          location.href='/auth/verify-email?email='+
+          location.href='/auth/register?step=verify&email='+
             encodeURIComponent(body.email||'')+
             '&error='+encodeURIComponent(err.message);
         }else{
           toast.error(err.message);
         }
       }finally{
-        if(btn)btn.disabled=false;
+        auth.removeAttribute('data-submitting');
+
+        if(btn){
+          btn.removeAttribute('aria-busy');
+
+          if(btn.tagName==='INPUT'){
+            btn.value=originalButtonLabel;
+          }else{
+            btn.textContent=originalButtonLabel;
+          }
+        }
       }
     }
     const pf=e.target.closest('#profile-form');

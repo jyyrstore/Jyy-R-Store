@@ -382,7 +382,7 @@
 
 /* Register and account security note */
 
-.stack-form[data-auth-form="register"] + a.button-block{
+.stack-form[data-auth-form="register"] ~ a.button-block{
   margin-top:18px;
 }
 
@@ -394,6 +394,82 @@
   line-height:1.5;
 }
 
+.auth-register-verification{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  width:100%;
+}
+
+.auth-login-main [hidden]{
+  display:none;
+}
+
+.auth-register-verification-copy{
+  margin:0;
+  color:var(--muted);
+  font-size:14px;
+  line-height:1.6;
+  text-align:center;
+  overflow-wrap:anywhere;
+}
+
+.auth-register-verification-copy strong{
+  color:var(--text);
+  font-weight:750;
+}
+
+.auth-otp-fields{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  width:100%;
+}
+
+.auth-login-form .auth-otp-fields input{
+  box-sizing:border-box;
+  display:block;
+  width:100%;
+  min-width:0;
+  height:62px;
+  min-height:56px;
+  margin:0;
+  padding:8px 4px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:rgba(255,255,255,.035);
+  color:var(--text);
+  font:inherit;
+  font-size:27px;
+  font-weight:800;
+  line-height:1;
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+  transition:border-color .16s ease,box-shadow .16s ease;
+}
+
+.auth-login-form .auth-otp-fields input:focus{
+  border-color:var(--primary-2);
+  outline:0;
+  box-shadow:0 0 0 3px rgba(147,197,253,.10);
+}
+
+.auth-register-resend{
+  margin-top:0;
+}
+
+@media(max-width:480px){
+  .auth-otp-fields{
+    gap:8px;
+  }
+
+  .auth-login-form .auth-otp-fields input{
+    height:56px;
+    border-radius:12px;
+    font-size:24px;
+  }
+}
+
 .auth-login-note{
   display:flex;
   align-items:center;
@@ -403,7 +479,7 @@
   color:var(--muted);
   font-size:15px;
   line-height:1.5;
-  text-align:left;
+  text-align:center;
 }
 
 .auth-login-note .icon{
@@ -598,6 +674,10 @@
 
 .auth-shell-login .auth-login-form > .field:nth-of-type(2){
   animation-delay:.63s;
+}
+
+.auth-shell-login .auth-login-form > .field:nth-of-type(3){
+  animation-delay:.71s;
 }
 
 .auth-shell-login .auth-login-meta{

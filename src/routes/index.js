@@ -125,7 +125,6 @@ pageRouter.get(
   asyncHandler(page.googleLogin)
 );
 pageRouter.get('/auth/register',asyncHandler(page.register));
-pageRouter.get('/auth/verify-email',asyncHandler(page.verifyEmail));
 
 pageRouter.post(
   '/auth/login',
@@ -153,7 +152,7 @@ pageRouter.post(
     }catch(error){
       if(error?.code==='EMAIL_NOT_VERIFIED'){
         return res.redirect(
-          '/auth/verify-email?email='+
+          '/auth/register?step=verify&email='+
           encodeURIComponent(req.body.email||'')+
           '&error='+encodeURIComponent(error.message)
         );
@@ -185,7 +184,7 @@ pageRouter.post('/auth/register',
   })),
   asyncHandler(async(req,res)=>{
     const result=await require('../services/auth/auth.service').register(req.body);
-    const target='/auth/verify-email?email='+encodeURIComponent(result.email);
+    const target='/auth/register?step=verify&email='+encodeURIComponent(result.email);
 
     return res.redirect(
       result.emailSent
@@ -223,7 +222,7 @@ pageRouter.post(
     }catch(error){
       if(error?.expose){
         return res.redirect(
-          '/auth/verify-email?email='+
+          '/auth/register?step=verify&email='+
           encodeURIComponent(req.body.email||'')+
           '&error='+encodeURIComponent(error.message)
         );
@@ -243,7 +242,7 @@ pageRouter.post(
         .resendEmailOtp(req.body.email);
 
       return res.redirect(
-        '/auth/verify-email?email='+
+        '/auth/register?step=verify&email='+
         encodeURIComponent(req.body.email)+
         '&success='+encodeURIComponent(
           'Jika email terdaftar dan belum diverifikasi, OTP akan dikirim.'
@@ -252,7 +251,7 @@ pageRouter.post(
     }catch(error){
       if(error?.expose){
         return res.redirect(
-          '/auth/verify-email?email='+
+          '/auth/register?step=verify&email='+
           encodeURIComponent(req.body.email||'')+
           '&error='+encodeURIComponent(error.message)
         );
