@@ -132,17 +132,21 @@ pageRouter.post(
   sensitiveRateLimit(),
   validate(z.object({
     email:z.string().email(),
-    password:z.string().min(8)
+    password:z.string().min(8),
+    rememberMe:zBool.optional()
   })),
   asyncHandler(async(req,res,next)=>{
     try{
       const authService=require('../services/auth/auth.service');
       const {setAuthSession}=require('../utils/auth-session');
-      const data=await authService.login(req.body,{
+      const {rememberMe,...credentials}=req.body;
+      const data=await authService.login(credentials,{
         ip:req.ip,
         userAgent:req.get('user-agent')
       });
-      await setAuthSession(req,data);
+      await setAuthSession(req,data,{
+        rememberMe:rememberMe===true
+      });
       return res.redirect(
         safeNextPath(req.query.next,'/dashboard')
       );
@@ -366,7 +370,7 @@ apiRouter.get('/me',requireAuth,asyncHandler(api.authController.me));
 apiRouter.post('/auth/register',validate(z.object({email:z.string().email(),password:z.string().min(8),username:z.string().min(3).max(32).regex(/^[a-zA-Z0-9._-]+$/)})),asyncHandler(api.authController.register));
 apiRouter.post('/auth/verify-email',validate(z.object({email:z.string().email(),code:z.string().regex(/^[0-9]{4}$/)})),asyncHandler(api.authController.verifyEmail));
 apiRouter.post('/auth/resend-email-otp',validate(z.object({email:z.string().email()})),asyncHandler(api.authController.resendEmailOtp));
-apiRouter.post('/auth/login',validate(z.object({email:z.string().email(),password:z.string().min(8)})),asyncHandler(api.authController.login));
+apiRouter.post('/auth/login',validate(z.object({email:z.string().email(),password:z.string().min(8),rememberMe:zBool.optional()})),asyncHandler(api.authController.login));
 apiRouter.post('/auth/logout',requireAuth,asyncHandler(api.authController.logout));
 apiRouter.post('/auth/forgot-password',validate(z.object({email:z.string().email()})),asyncHandler(api.authController.resetRequest));
 apiRouter.post('/auth/reset-password',requireAuth,validate(z.object({password:z.string().min(8)})),asyncHandler(api.authController.resetPassword));

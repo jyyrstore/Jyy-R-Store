@@ -45,7 +45,7 @@
     </div>
 
     <% if(error){ %>
-      <div class="alert alert-error">
+      <div class="alert alert-error" role="alert">
         <%- icon('circle-alert') %>
         <span><%= error %></span>
       </div>
@@ -82,6 +82,10 @@
       </label>
 
       <div class="auth-login-meta">
+        <label class="auth-login-remember">
+          <input type="checkbox" name="rememberMe" value="true">
+          <span>Ingat saya</span>
+        </label>
         <a href="/auth/forgot-password">Lupa Password?</a>
       </div>
 

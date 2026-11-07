@@ -1865,8 +1865,32 @@ button[hidden]{
   background:transparent;
 }
 .password-visibility-toggle .icon{
+  grid-area:1 / 1;
   width:20px;
   height:20px;
+  pointer-events:none;
+  transition:opacity .16s ease,transform .16s ease;
+}
+.password-visibility-toggle .icon:first-child{
+  opacity:1;
+  transform:scale(1);
+}
+.password-visibility-toggle .icon:last-child{
+  opacity:0;
+  transform:scale(.82);
+}
+.password-visibility-toggle.is-visible .icon:first-child{
+  opacity:0;
+  transform:scale(.82);
+}
+.password-visibility-toggle.is-visible .icon:last-child{
+  opacity:1;
+  transform:scale(1);
+}
+@media(prefers-reduced-motion:reduce){
+  .password-visibility-toggle .icon{
+    transition:none;
+  }
 }
 .icon-circle-x{
   width:1.2em;
@@ -1901,7 +1925,7 @@ button[hidden]{
   input[type="button"],
   input[type="submit"],
   input[type="reset"]
-):active{
+):not(.password-visibility-toggle):active{
   animation:jyyr-button-press .12s ease-out;
 }
 
@@ -1913,7 +1937,7 @@ button[hidden]{
     input[type="button"],
     input[type="submit"],
     input[type="reset"]
-  ):active{
+  ):not(.password-visibility-toggle):active{
     animation:none;
   }
 }

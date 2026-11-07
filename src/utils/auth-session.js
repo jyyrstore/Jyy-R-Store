@@ -1,4 +1,4 @@
-function setAuthSession(req,data){
+function setAuthSession(req,data,{rememberMe}={}){
   const session=data?.session;
   const user=data?.user;
   if(!req?.session?.regenerate) throw new Error('Session regeneration is unavailable.');
@@ -13,6 +13,13 @@ function setAuthSession(req,data){
         refreshToken:session.refresh_token,
         userId:user.id
       };
+
+      if(typeof rememberMe==='boolean'){
+        req.session.cookie.maxAge=rememberMe
+          ?30*24*60*60*1000
+          :null;
+      }
+
       resolve();
     });
   });

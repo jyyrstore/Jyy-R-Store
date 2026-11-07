@@ -49,17 +49,19 @@
         button.className='icon-button password-visibility-toggle';
         button.setAttribute('aria-label','Lihat sandi');
         button.title='Lihat sandi';
-        button.innerHTML=window.JYYRIcon?.('eye')||'';
+        button.innerHTML=[
+          window.JYYRIcon?.('eye')||'',
+          window.JYYRIcon?.('eye-closed')||''
+        ].join('');
 
         button.addEventListener('click',()=>{
-          const showing=input.type==='text';
+          const visible=input.type==='password';
 
-          input.type=showing?'password':'text';
+          input.type=visible?'text':'password';
 
-          const iconName=showing?'eye':'eye-closed';
-          const label=showing?'Lihat sandi':'Sembunyikan sandi';
+          const label=visible?'Sembunyikan sandi':'Lihat sandi';
 
-          button.innerHTML=window.JYYRIcon?.(iconName)||'';
+          button.classList.toggle('is-visible',visible);
           button.setAttribute('aria-label',label);
           button.title=label;
         });
