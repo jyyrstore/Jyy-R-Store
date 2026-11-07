@@ -81,6 +81,7 @@
   grid-column:3;
   grid-row:2;
   font-size:15px;
+  color:var(--info);
   flex:0 0 auto;
   white-space:nowrap;
 }

@@ -16,7 +16,9 @@
   <link rel="stylesheet" href="<%= staticAsset('/css/components.css') %>">
   <link rel="stylesheet" href="<%= staticAsset('/css/navigation.css') %>">
   <link rel="stylesheet" href="<%= staticAsset('/css/store.css') %>">
+  <% if (view !== 'pages/home') { %>
   <link rel="stylesheet" href="<%= staticAsset('/css/pages.css') %>">
+  <% } %>
   <link rel="stylesheet" href="<%= staticAsset('/css/animations.css') %>">
   <link rel="stylesheet" href="<%= staticAsset('/css/responsive.css') %>">
   <script defer src="<%= staticAsset('/js/app.js') %>"></script>

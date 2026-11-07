@@ -673,6 +673,38 @@ test('homepage displays products across active category groups and uncategorized
   assert.match(homeView,/group\.products\.forEach\(product=>/);
   assert.match(homeView,/productCardImageLoading:homepageProductIndex===1\?'eager':'lazy'/);
   assert.match(homeView,/productCardImageFetchPriority:homepageProductIndex===1\?'high':null/);
+  assert.ok(homeView.includes('src="/images/banners/brand-banner.jpg"'));
+  assert.match(homeView,/width="1600"\s+height="900"/);
+  assert.doesNotMatch(homeView,/brand-banner\.webp/);
+
+  assert.ok(homeView.includes(
+    'aria-label="Lihat semua produk kategori <%= group.category.name %>"'
+  ));
+
+  assert.ok(homeStyles.includes(
+    '.home-page .home-subcategory-header .text-link{\n  grid-column:3;\n  grid-row:2;\n  font-size:15px;\n  color:var(--info);'
+  ));
+
+  const appView=fs.readFileSync(
+    path.join(root,'views/app.ejs'),
+    'utf8'
+  );
+
+  const pagesStyles=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const animationsStyles=fs.readFileSync(
+    path.join(root,'public/css/animations.css'),
+    'utf8'
+  );
+
+  assert.ok(appView.includes("<% if (view !== 'pages/home') { %>"));
+  assert.ok(animationsStyles.includes('@keyframes page-reveal'));
+  assert.ok(animationsStyles.includes('/* GLOBAL PAGE ENTRANCE SEQUENCE */'));
+  assert.ok(!pagesStyles.includes('@keyframes page-reveal'));
+  assert.ok(!pagesStyles.includes('/* GLOBAL PAGE ENTRANCE SEQUENCE */'));
 
   const productCard=fs.readFileSync(
     path.join(root,'views/partials/product-card.ejs'),
