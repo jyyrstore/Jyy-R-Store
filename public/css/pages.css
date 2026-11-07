@@ -422,6 +422,256 @@
   color:var(--primary-2);
 }
 
+
+
+/* DESKTOP LOGIN LAYOUT */
+
+@media(min-width:861px){
+
+  .auth-shell.auth-shell-login{
+    position:relative;
+    display:grid;
+    place-items:center;
+    min-height:100vh;
+    padding:clamp(24px,4vh,40px) 24px;
+    background:
+      radial-gradient(circle at 16% 18%,rgba(59,130,246,.14),transparent 34%),
+      radial-gradient(circle at 88% 82%,rgba(113,167,242,.08),transparent 28%),
+      var(--bg);
+  }
+
+  .auth-card-login{
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);
+    align-items:stretch;
+    width:min(1120px,100%);
+    min-height:680px;
+    margin:0;
+    padding:0;
+    overflow:hidden;
+    background:var(--surface);
+    border:1px solid rgba(147,197,253,.20);
+    border-radius:28px;
+    box-shadow:0 28px 80px rgba(0,0,0,.32);
+  }
+
+  .auth-login-aside{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    gap:clamp(64px,9vh,110px);
+    min-width:0;
+    min-height:100%;
+    padding:clamp(36px,5vw,64px);
+    background:
+      linear-gradient(145deg,rgba(59,130,246,.11),transparent 58%),
+      var(--surface);
+    border:0;
+    border-right:1px solid var(--border);
+  }
+
+  .auth-login-brand{
+    align-self:flex-start;
+  }
+
+  .auth-login-aside-copy{
+    max-width:36rem;
+    padding:0;
+  }
+
+  .auth-login-aside-copy h1{
+    margin:0 0 12px;
+    max-width:13ch;
+    font-size:clamp(30px,3.2vw,42px);
+    line-height:1.08;
+    overflow-wrap:anywhere;
+  }
+
+  .auth-login-aside-copy p{
+    max-width:36ch;
+    font-size:clamp(16px,1.4vw,18px);
+    line-height:1.6;
+  }
+
+  .auth-login-main{
+    width:100%;
+    min-width:0;
+    min-height:100%;
+    padding:clamp(36px,4.5vw,56px) clamp(28px,4vw,52px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:var(--surface);
+    border:0;
+    border-radius:0;
+    box-shadow:none;
+  }
+
+  .auth-login-main > *{
+    width:100%;
+    max-width:440px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
+
+
+/* LOGIN ENTRANCE SEQUENCE */
+
+@keyframes auth-login-reveal{
+  from{
+    opacity:0;
+    transform:translate3d(0,14px,0) scale(.985);
+  }
+  to{
+    opacity:1;
+    transform:translate3d(0,0,0) scale(1);
+  }
+}
+
+@keyframes auth-login-icon-pop{
+  0%{
+    opacity:0;
+    transform:scale(.72);
+  }
+  72%{
+    opacity:1;
+    transform:scale(1.06);
+  }
+  100%{
+    opacity:1;
+    transform:scale(1);
+  }
+}
+
+.auth-shell-login .auth-login-brand,
+.auth-shell-login .auth-login-aside-copy h1,
+.auth-shell-login .auth-login-aside-copy p,
+.auth-shell-login .auth-login-main,
+.auth-shell-login .auth-login-heading h2,
+.auth-shell-login .auth-login-heading p,
+.auth-shell-login .auth-login-main > .alert,
+.auth-shell-login .auth-login-form > .field,
+.auth-shell-login .auth-login-meta,
+.auth-shell-login .auth-login-form > .auth-login-submit,
+.auth-shell-login .auth-google-button,
+.auth-shell-login .auth-login-register,
+.auth-shell-login .auth-login-note{
+  animation:auth-login-reveal .48s cubic-bezier(.22,1,.36,1) both;
+}
+
+.auth-shell-login .auth-login-brand{
+  animation-delay:0s;
+}
+
+.auth-shell-login .auth-login-aside-copy h1{
+  animation-delay:.08s;
+}
+
+.auth-shell-login .auth-login-aside-copy p{
+  animation-delay:.16s;
+}
+
+.auth-shell-login .auth-login-main{
+  animation-delay:.24s;
+}
+
+.auth-shell-login .auth-login-heading h2{
+  animation-delay:.36s;
+}
+
+.auth-shell-login .auth-login-heading p{
+  animation-delay:.43s;
+}
+
+.auth-shell-login .auth-login-main > .alert{
+  animation-delay:.49s;
+}
+
+.auth-shell-login .auth-login-form > .field:nth-of-type(1){
+  animation-delay:.55s;
+}
+
+.auth-shell-login .auth-login-form > .field:nth-of-type(2){
+  animation-delay:.63s;
+}
+
+.auth-shell-login .auth-login-meta{
+  animation-delay:.71s;
+}
+
+.auth-shell-login .auth-login-form > .auth-login-submit{
+  animation-delay:.79s;
+}
+
+.auth-shell-login .auth-google-button{
+  animation-delay:.87s;
+}
+
+.auth-shell-login .auth-login-register{
+  animation-delay:.95s;
+}
+
+.auth-shell-login .auth-login-note{
+  animation-delay:1.03s;
+}
+
+/* Individual icon entrance */
+
+.auth-shell-login .auth-login-brand .brand-mark .icon,
+.auth-shell-login .auth-login-main > .alert > .icon,
+.auth-shell-login .auth-google-logo,
+.auth-shell-login .auth-login-note > .icon{
+  animation:auth-login-icon-pop .5s cubic-bezier(.22,1,.36,1) both;
+}
+
+.auth-shell-login .auth-login-brand .brand-mark .icon{
+  animation-delay:.08s;
+}
+
+.auth-shell-login .auth-login-main > .alert > .icon{
+  animation-delay:.53s;
+}
+
+.auth-shell-login .auth-google-logo{
+  animation-delay:.91s;
+}
+
+.auth-shell-login .auth-login-note > .icon{
+  animation-delay:1.08s;
+}
+
+/* Respect reduced-motion preference */
+
+@media(prefers-reduced-motion:reduce){
+  .auth-shell-login .auth-login-brand,
+  .auth-shell-login .auth-login-aside-copy h1,
+  .auth-shell-login .auth-login-aside-copy p,
+  .auth-shell-login .auth-login-main,
+  .auth-shell-login .auth-login-heading h2,
+  .auth-shell-login .auth-login-heading p,
+  .auth-shell-login .auth-login-main > .alert,
+  .auth-shell-login .auth-login-form > .field,
+  .auth-shell-login .auth-login-meta,
+  .auth-shell-login .auth-login-form > .auth-login-submit,
+  .auth-shell-login .auth-google-button,
+  .auth-shell-login .auth-login-register,
+  .auth-shell-login .auth-login-note,
+  .auth-shell-login .auth-login-brand .brand-mark .icon,
+  .auth-shell-login .auth-login-main > .alert > .icon,
+  .auth-shell-login .auth-google-logo,
+  .auth-shell-login .auth-login-note > .icon{
+    animation:none!important;
+    opacity:1!important;
+    transform:none!important;
+  }
+}
+
+
 /* Small mobile screens */
 
 @media(max-width:480px){
