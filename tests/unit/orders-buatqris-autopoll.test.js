@@ -37,14 +37,22 @@ test('orders page polls pending BuatQris status through the server API', () => {
   assert.match(view, /window\.location\.reload\(\)/);
 });
 
-test('history order tab uses the same customer order card structure as orders', () => {
+test('customer order lists share the same order card structure', () => {
   const history = fs.readFileSync(
     path.join(root, 'views/pages/history.ejs'),
+    'utf8'
+  );
+  const dashboard = fs.readFileSync(
+    path.join(root, 'views/pages/dashboard.ejs'),
     'utf8'
   );
   const orders = view;
   const styles = fs.readFileSync(
     path.join(root, 'public/css/pages.css'),
+    'utf8'
+  );
+  const responsive = fs.readFileSync(
+    path.join(root, 'public/css/responsive.css'),
     'utf8'
   );
 
@@ -58,6 +66,7 @@ test('history order tab uses the same customer order card structure as orders', 
   ]) {
     assert.ok(history.includes(marker), `History harus memiliki ${marker}`);
     assert.ok(orders.includes(marker), `Orders harus memiliki ${marker}`);
+    assert.ok(dashboard.includes(marker), `Dashboard harus memiliki ${marker}`);
   }
 
   assert.match(
@@ -73,6 +82,16 @@ test('history order tab uses the same customer order card structure as orders', 
   assert.match(
     styles,
     /body\[data-view="pages\/orders"\] \.order-list-main/
+  );
+
+  assert.match(
+    styles,
+    /body\[data-view="pages\/dashboard"\] \.dashboard-order-list \.order-list-main/
+  );
+
+  assert.match(
+    responsive,
+    /body\[data-view="pages\/dashboard"\] \.two-column\.section \.dashboard-balance-list/
   );
 });
 
