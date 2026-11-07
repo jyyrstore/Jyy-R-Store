@@ -1822,16 +1822,21 @@
           : '';
         selectedVariantNode.hidden=!(selected&&selectedLabel);
       }
-      const selectedIcon=picker?.querySelector('[data-product-variant-selected-icon]');
+      const selectedIcon=document.querySelector('[data-product-variant-selected-icon]');
       const iconUrl=String(option?.dataset.icon||'');
 
       if(selectedIcon){
-        if(selected&&iconUrl){
-          selectedIcon.src=iconUrl;
+        const defaultIconUrl=String(selectedIcon.dataset.productVariantDefaultSrc||'');
+        const nextIconUrl=selected&&iconUrl?iconUrl:defaultIconUrl;
+
+        if(nextIconUrl){
+          selectedIcon.src=nextIconUrl;
           selectedIcon.hidden=false;
+          selectedIcon.nextElementSibling?.setAttribute('hidden','');
         }else{
           selectedIcon.removeAttribute('src');
           selectedIcon.hidden=true;
+          selectedIcon.nextElementSibling?.removeAttribute('hidden');
         }
       }
 

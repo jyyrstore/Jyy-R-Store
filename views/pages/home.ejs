@@ -23,6 +23,7 @@
     </div>
   </section>
 
+  <% let homepageProductIndex=0; %>
   <% subcategoryGroups.forEach(group=>{ %>
     <section class="section">
       <% const parentCategory=categories.find(category=>String(category.id)===String(group.category.parent_id)); %>
@@ -35,7 +36,7 @@
         <span class="home-subcategory-rule" aria-hidden="true"></span>
         <a href="<%= group.category.slug ? '/store?category='+encodeURIComponent(group.category.slug) : '/store' %>" class="text-link">Lihat semua</a>
       </div>
-      <div class="product-grid"><% group.products.forEach(product=>{ %><%- include('../partials/product-card',{product}) %><% }) %></div>
+      <div class="product-grid"><% group.products.forEach(product=>{ %><%- include('../partials/product-card',{product,productCardImageLoading:homepageProductIndex===1?'eager':'lazy',productCardImageFetchPriority:homepageProductIndex===1?'high':null}) %><% homepageProductIndex++; %><% }) %></div>
     </section>
   <% }) %>
 

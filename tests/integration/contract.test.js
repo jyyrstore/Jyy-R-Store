@@ -671,6 +671,16 @@ test('homepage displays products across active category groups and uncategorized
   assert.match(homeStyles,/\.home-page \.home-subcategory-count\{[\s\S]*?\bborder:1px solid var\(--border\);[\s\S]*?\}/);
   assert.match(homeStyles,/\.home-page \.home-subcategory-count\{(?=[^{}]*border-radius:999px;)(?=[^{}]*padding:2px 7px;)[^{}]*\}/);
   assert.match(homeView,/group\.products\.forEach\(product=>/);
+  assert.match(homeView,/productCardImageLoading:homepageProductIndex===1\?'eager':'lazy'/);
+  assert.match(homeView,/productCardImageFetchPriority:homepageProductIndex===1\?'high':null/);
+
+  const productCard=fs.readFileSync(
+    path.join(root,'views/partials/product-card.ejs'),
+    'utf8'
+  );
+  assert.match(productCard,/width="600"[\s\S]*?height="600"[\s\S]*?loading="<%= imageLoading %>"/);
+  assert.match(productCard,/fetchpriority="<%= imageFetchPriority %>"/);
+  assert.match(productCard,/typeof productCardImageLoading !== 'undefined' \? productCardImageLoading : 'lazy'/);
   assert.doesNotMatch(homeView,/<h2>New Product<\/h2>/);
 });
 
@@ -1589,6 +1599,35 @@ test('product detail variant choices render in a standalone card after statistic
   assert.match(markup,/product-variant-card-price/);
   assert.match(markup,/product-variant-card-stock/);
   assert.doesNotMatch(markup,/jyyr-select-trigger|jyyr-select-menu/);
+
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+
+  assert.ok(
+    detail.indexOf('data-product-variant-selected-icon')>=0 &&
+    detail.indexOf('data-product-variant-selected-icon')<
+      detail.indexOf('data-product-variant-picker'),
+    'Target gambar utama harus berada sebelum card pilihan varian.'
+  );
+  assert.match(detail,/data-product-variant-default-src=/);
+  assert.match(
+    browser,
+    /const selectedIcon=document\.querySelector\('\[data-product-variant-selected-icon\]'\);/
+  );
+  assert.match(
+    browser,
+    /const nextIconUrl=selected&&iconUrl\?iconUrl:defaultIconUrl;/
+  );
+  assert.match(
+    browser,
+    /selectedIcon\.nextElementSibling\?\.setAttribute\('hidden',''\)/
+  );
+  assert.match(
+    browser,
+    /selectedIcon\.nextElementSibling\?\.removeAttribute\('hidden'\)/
+  );
 
   const detailTitle=detail.indexOf(
     '<div class="detail-title-row">',
