@@ -70,14 +70,313 @@
       });
   }
 
+  function appendProductDescriptionInline(parent,value){
+    const source=String(value??'');
+    const markers=[
+      {token:'```',tag:'code',plain:true},
+      {token:'**',tag:'strong'},
+      {token:'__',tag:'strong'},
+      {token:'~~',tag:'del'},
+      {token:'*',tag:'strong'},
+      {token:'_',tag:'em'},
+      {token:'~',tag:'del'},
+      {token:'`',tag:'code',plain:true}
+    ];
+
+    let cursor=0;
+
+    while(cursor<source.length){
+      const linkMatch=source.slice(cursor).match(
+        /^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/i
+      );
+
+      if(linkMatch){
+        try{
+          const url=new URL(linkMatch[2],window.location.origin);
+
+          if(url.protocol==='http:'||url.protocol==='https:'){
+            const anchor=document.createElement('a');
+
+            anchor.href=url.href;
+            anchor.target='_blank';
+            anchor.rel='noopener noreferrer';
+
+            appendProductDescriptionInline(anchor,linkMatch[1]);
+            parent.appendChild(anchor);
+
+            cursor+=linkMatch[0].length;
+            continue;
+          }
+        }catch{
+          // URL tidak valid akan diperlakukan sebagai teks biasa.
+        }
+      }
+
+      let matched=null;
+
+      for(const marker of markers){
+        if(!source.startsWith(marker.token,cursor))continue;
+
+        const end=source.indexOf(
+          marker.token,
+          cursor+marker.token.length
+        );
+
+        if(end<=cursor+marker.token.length)continue;
+
+        matched={
+          ...marker,
+          end,
+          content:source.slice(
+            cursor+marker.token.length,
+            end
+          )
+        };
+
+        break;
+      }
+
+      if(matched){
+        const element=document.createElement(matched.tag);
+
+        if(matched.plain){
+          element.textContent=matched.content;
+        }else{
+          appendProductDescriptionInline(element,matched.content);
+        }
+
+        parent.appendChild(element);
+        cursor=matched.end+matched.token.length;
+        continue;
+      }
+
+      let next=cursor+1;
+
+      while(
+        next<source.length &&
+        !markers.some(marker=>source.startsWith(marker.token,next)) &&
+        !source.startsWith('[',next)
+      ){
+        next++;
+      }
+
+      parent.appendChild(
+        document.createTextNode(source.slice(cursor,next))
+      );
+
+      cursor=next;
+    }
+  }
+
+  function enhanceProductDescriptions(){
+    document.querySelectorAll(
+      '[data-product-description]:not([data-product-description-ready])'
+    ).forEach(block=>{
+      const lines=String(block.textContent||'')
+        .replace(/\r\n?/g,'\n')
+        .split('\n');
+
+      const fragment=document.createDocumentFragment();
+
+      const isBlockStart=line=>{
+        const trimmed=line.trim();
+
+        return (
+          /^```([a-z0-9_-]*)$/i.test(trimmed) ||
+          /^#{1,3}\s+/.test(line) ||
+          /^(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed) ||
+          /^\s*>/.test(line) ||
+          /^\s*[-+*]\s+/.test(line) ||
+          /^\s*\d+[.)]\s+/.test(line)
+        );
+      };
+
+      const appendLines=(parent,items)=>{
+        items.forEach((line,index)=>{
+          appendProductDescriptionInline(parent,line);
+
+          if(index<items.length-1){
+            parent.appendChild(
+              document.createElement('br')
+            );
+          }
+        });
+      };
+
+      let index=0;
+
+      while(index<lines.length){
+        if(!lines[index].trim()){
+          index++;
+          continue;
+        }
+
+        const fence=lines[index].trim().match(
+          /^```([a-z0-9_-]*)$/i
+        );
+
+        if(fence){
+          index++;
+
+          const codeLines=[];
+
+          while(
+            index<lines.length &&
+            lines[index].trim()!=='```'
+          ){
+            codeLines.push(lines[index]);
+            index++;
+          }
+
+          if(index<lines.length)index++;
+
+          const pre=document.createElement('pre');
+          const code=document.createElement('code');
+
+          code.textContent=codeLines.join('\n');
+          pre.appendChild(code);
+          fragment.appendChild(pre);
+
+          continue;
+        }
+
+        const heading=lines[index].match(
+          /^(#{1,3})\s+(.+)$/
+        );
+
+        if(heading){
+          const element=document.createElement(
+            'h'+(heading[1].length+2)
+          );
+
+          appendProductDescriptionInline(
+            element,
+            heading[2]
+          );
+
+          fragment.appendChild(element);
+          index++;
+          continue;
+        }
+
+        if(
+          /^(?:-{3,}|\*{3,}|_{3,})$/.test(
+            lines[index].trim()
+          )
+        ){
+          fragment.appendChild(
+            document.createElement('hr')
+          );
+
+          index++;
+          continue;
+        }
+
+        const unordered=lines[index].match(
+          /^\s*[-+*]\s+(.*)$/
+        );
+
+        if(unordered){
+          const list=document.createElement('ul');
+
+          while(index<lines.length){
+            const item=lines[index].match(
+              /^\s*[-+*]\s+(.*)$/
+            );
+
+            if(!item)break;
+
+            const li=document.createElement('li');
+            appendProductDescriptionInline(li,item[1]);
+            list.appendChild(li);
+            index++;
+          }
+
+          fragment.appendChild(list);
+          continue;
+        }
+
+        const ordered=lines[index].match(
+          /^\s*\d+[.)]\s+(.*)$/
+        );
+
+        if(ordered){
+          const list=document.createElement('ol');
+
+          while(index<lines.length){
+            const item=lines[index].match(
+              /^\s*\d+[.)]\s+(.*)$/
+            );
+
+            if(!item)break;
+
+            const li=document.createElement('li');
+            appendProductDescriptionInline(li,item[1]);
+            list.appendChild(li);
+            index++;
+          }
+
+          fragment.appendChild(list);
+          continue;
+        }
+
+        if(/^\s*>/.test(lines[index])){
+          const quote=document.createElement('blockquote');
+          const paragraph=document.createElement('p');
+          const quoteLines=[];
+
+          while(
+            index<lines.length &&
+            /^\s*>/.test(lines[index])
+          ){
+            quoteLines.push(
+              lines[index].replace(/^\s*>\s?/,'')
+            );
+            index++;
+          }
+
+          appendLines(paragraph,quoteLines);
+          quote.appendChild(paragraph);
+          fragment.appendChild(quote);
+
+          continue;
+        }
+
+        const paragraphLines=[lines[index]];
+        index++;
+
+        while(
+          index<lines.length &&
+          lines[index].trim() &&
+          !isBlockStart(lines[index])
+        ){
+          paragraphLines.push(lines[index]);
+          index++;
+        }
+
+        const paragraph=document.createElement('p');
+        appendLines(paragraph,paragraphLines);
+        fragment.appendChild(paragraph);
+      }
+
+      block.textContent='';
+      block.appendChild(fragment);
+      block.dataset.productDescriptionReady='1';
+    });
+  }
+
   if(document.readyState==='loading'){
     document.addEventListener(
       'DOMContentLoaded',
-      enhancePasswordFields,
+      ()=>{
+        enhancePasswordFields();
+        enhanceProductDescriptions();
+      },
       {once:true}
     );
   }else{
     enhancePasswordFields();
+    enhanceProductDescriptions();
   }
 
 
@@ -2663,6 +2962,10 @@ ${productPricingModesMarkup('FIXED')}
       <label class="field full">
         <span>Description</span>
         <textarea name="description" rows="4" placeholder="Deskripsi singkat produk..."></textarea>
+        <small class="field-help">
+          Format: *tebal*, **tebal**, _miring_, _*tebal miring*_, ~coret~, &#96;kode&#96;, dan &#96;&#96;&#96;blok kode&#96;&#96;&#96;.
+          Format tambahan: # Judul, ## Subjudul, - daftar, 1. daftar, &gt; kutipan, ---, dan [teks](https://contoh.com).
+        </small>
       </label>
     </div>
   </section>
@@ -2816,6 +3119,10 @@ ${productPricingModesMarkup('FIXED')}
               <label class="field full">
                 <span>Deskripsi</span>
                 <textarea name="description" rows="5" maxlength="5000">${esc(d.description||'')}</textarea>
+                <small class="field-help">
+                  Format: *tebal*, **tebal**, _miring_, _*tebal miring*_, ~coret~, &#96;kode&#96;, dan &#96;&#96;&#96;blok kode&#96;&#96;&#96;.
+                  Format tambahan: # Judul, ## Subjudul, - daftar, 1. daftar, &gt; kutipan, ---, dan [teks](https://contoh.com).
+                </small>
               </label>
             </div>
           </section>

@@ -13,6 +13,7 @@
 
 <% if(p && p.totalPages>1){ %>
   <nav class="pagination" aria-label="<%= paginationLabel %>">
+    <div class="pagination-controls">
 
     <% if(p.showPrevious){ %>
       <a
@@ -54,6 +55,7 @@
         aria-label="Halaman terakhir"
       >&gt;&gt;</a>
     <% } %>
-
+    </div>
+    <span class="pagination-total">Total: <%= p.total %></span>
   </nav>
 <% } %>
