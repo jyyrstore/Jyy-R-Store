@@ -35,7 +35,7 @@
     <%- include('partials/bottom-nav') %>
     </div>
   <% } else { %>
-    <main class="auth-shell"><%- include(view) %></main>
+    <main class="auth-shell<%= view === 'pages/auth' && mode === 'login' ? ' auth-shell-login' : '' %>"><%- include(view) %></main>
   <% } %>
   <div id="toast-root" class="toast-root" aria-live="polite" aria-atomic="true"></div>
   <div id="modal-root"></div>

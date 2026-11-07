@@ -7,7 +7,6 @@
     </a>
 
     <div class="auth-login-aside-copy">
-      <span class="eyebrow accent">Akun Jyyr Store</span>
       <h1>Selamat datang kembali.</h1>
       <p>
         Masuk untuk melanjutkan belanja, mengelola wallet,
@@ -83,7 +82,7 @@
       </label>
 
       <div class="auth-login-meta">
-        <a href="/auth/forgot-password">Lupa password?</a>
+        <a href="/auth/forgot-password">Lupa Password?</a>
       </div>
 
       <button type="submit" class="button button-primary button-block auth-login-submit">
@@ -92,10 +91,16 @@
     </form>
 
     <a
-      class="button button-secondary button-block"
+      class="button button-block auth-google-button"
       href="/auth/google?next=<%= encodeURIComponent(nextPath || '/dashboard') %>"
     >
-      Lanjutkan dengan Google
+      <img
+        class="auth-google-logo"
+        src="<%= staticAsset('/images/branding/google-g-logo.svg') %>"
+        alt=""
+        aria-hidden="true"
+      >
+      <span>Lanjutkan dengan Google</span>
     </a>
 
     <div class="auth-login-register">
