@@ -2926,6 +2926,27 @@ ${productPricingModesMarkup('FIXED')}
     );
   }
 
+  function initializeRegisterOtp(){
+    document.querySelectorAll('[data-otp-fields]').forEach(group=>{
+      const form=group.closest('form');
+      const code=form?.querySelector('[data-otp-code]');
+      const fallback=form?.querySelector('[data-otp-fallback]');
+
+      if(!form||!code||!fallback)return;
+
+      code.name='code';
+      fallback.disabled=true;
+      fallback.hidden=true;
+      group.hidden=false;
+
+      group.querySelectorAll('[data-otp-digit]').forEach(input=>{
+        input.required=true;
+      });
+    });
+  }
+
+  initializeRegisterOtp();
+
   function syncRegisterOtp(group){
     const digits=Array.from(
       group.querySelectorAll('[data-otp-digit]')

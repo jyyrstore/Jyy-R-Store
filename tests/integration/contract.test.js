@@ -2170,6 +2170,63 @@ test('Supabase Auth is isolated from admin Storage client',()=>{
   );
 });
 
+test('email OTP verification supports browsers without JavaScript',()=>{
+  const authView=fs.readFileSync(
+    path.join(root,'views/pages/auth.ejs'),
+    'utf8'
+  );
+  const pageScript=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const routes=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+
+  const fallbackIndex=authView.indexOf('data-otp-fallback');
+  assert.ok(fallbackIndex>=0,'OTP fallback input must exist');
+
+  const fallbackStart=authView.lastIndexOf('<input',fallbackIndex);
+  const fallbackEnd=authView.indexOf('>',fallbackIndex);
+  assert.ok(fallbackStart>=0 && fallbackEnd>fallbackIndex);
+
+  const fallbackField=authView.slice(fallbackStart,fallbackEnd+1);
+  assert.ok(fallbackField.includes('name="code"'));
+  assert.ok(fallbackField.includes('pattern="[0-9]{4}"'));
+  assert.ok(fallbackField.includes('minlength="4"'));
+  assert.ok(fallbackField.includes('maxlength="4"'));
+  assert.ok(fallbackField.includes('required'));
+  assert.ok(!fallbackField.includes('hidden'));
+
+  assert.ok(
+    authView.includes('data-otp-fields\n            hidden\n'),
+    'Four-digit UI must start hidden until JavaScript initializes it'
+  );
+  assert.ok(
+    authView.includes('<input type="hidden" value="" data-otp-code>')
+  );
+
+  for(const fragment of [
+    'function initializeRegisterOtp(){',
+    "code.name='code';",
+    'fallback.disabled=true;',
+    'fallback.hidden=true;',
+    'group.hidden=false;',
+    'input.required=true;',
+    '  initializeRegisterOtp();'
+  ]){
+    assert.ok(pageScript.includes(fragment),fragment);
+  }
+
+  assert.ok(
+    routes.includes("pageRouter.post(\n  '/auth/verify-email',")
+  );
+  assert.ok(
+    routes.includes("code:z.string().regex(/^[0-9]{4}$/)")
+  );
+});
+
 test('general limiter skips routes already protected by sensitive limiter',()=>{
   const security=fs.readFileSync(
     path.join(

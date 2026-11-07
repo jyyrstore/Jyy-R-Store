@@ -147,14 +147,27 @@
           value="<%= verificationEmail || '' %>"
           data-register-email
         >
-        <input type="hidden" name="code" value="" data-otp-code>
+        <input type="hidden" value="" data-otp-code>
 
         <label class="field">
           <span>OTP 4 digit</span>
+          <input
+            type="text"
+            name="code"
+            data-otp-fallback
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            pattern="[0-9]{4}"
+            minlength="4"
+            maxlength="4"
+            placeholder="Masukkan kode OTP"
+            required
+          >
 
           <div
             class="auth-otp-fields"
             data-otp-fields
+            hidden
             role="group"
             aria-label="Masukkan empat digit kode OTP"
           >
@@ -166,7 +179,6 @@
               maxlength="4"
               data-otp-digit
               aria-label="Digit OTP 1"
-              required
             >
             <input
               type="text"
@@ -176,7 +188,6 @@
               maxlength="1"
               data-otp-digit
               aria-label="Digit OTP 2"
-              required
             >
             <input
               type="text"
@@ -186,7 +197,6 @@
               maxlength="1"
               data-otp-digit
               aria-label="Digit OTP 3"
-              required
             >
             <input
               type="text"
@@ -196,7 +206,6 @@
               maxlength="1"
               data-otp-digit
               aria-label="Digit OTP 4"
-              required
             >
           </div>
         </label>
