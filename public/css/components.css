@@ -1938,16 +1938,15 @@ button[hidden]{
    GLOBAL BUTTON PRESS ANIMATION
    ========================================================= */
 
-@keyframes jyyr-button-press{
-  0%{
-    transform:scale(1);
-  }
-  45%{
-    transform:translateY(1px) scale(.97);
-  }
-  100%{
-    transform:scale(1);
-  }
+:is(
+  button,
+  a.button,
+  [role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+):not(.password-visibility-toggle):not(.auth-login-submit){
+  transition:transform .12s ease-out;
 }
 
 :is(
@@ -1958,7 +1957,7 @@ button[hidden]{
   input[type="submit"],
   input[type="reset"]
 ):not(.password-visibility-toggle):not(.auth-login-submit):active{
-  animation:jyyr-button-press .12s ease-out;
+  transform:translateY(1px) scale(.97);
 }
 
 @media(prefers-reduced-motion:reduce){
@@ -1970,21 +1969,28 @@ button[hidden]{
     input[type="submit"],
     input[type="reset"]
   ):not(.password-visibility-toggle):not(.auth-login-submit):active{
-    animation:none;
+    transition:none;
+    transform:none;
   }
 }
 
 
 /* Navigation pressed state */
+.nav-link,
+.bottom-item{
+  transition:transform .12s ease-out;
+}
+
 .nav-link:active,
 .bottom-item:active{
-  animation:jyyr-button-press .12s ease-out;
+  transform:translateY(1px) scale(.97);
 }
 
 @media(prefers-reduced-motion:reduce){
   .nav-link:active,
   .bottom-item:active{
-    animation:none;
+    transition:none;
+    transform:none;
   }
 }
 

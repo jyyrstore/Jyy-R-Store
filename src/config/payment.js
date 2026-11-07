@@ -724,7 +724,11 @@ function qrisMethodConflictsWithTestMode(qrisMethod, storedIsTest) {
     storedIsTest === false;
 }
 
-function resolvedPaymentUrl(payment, externalUrl) {
+function resolvedPaymentUrl(payment, externalUrl, options = {}) {
+  if (options.internal === true && payment?.id) {
+    return `/payment/${encodeURIComponent(payment.public_id || payment.id)}`;
+  }
+
   const direct = externalUrl ||
     payment?.raw_reference?.paymentUrl ||
     payment?.raw_reference?.payment_url;

@@ -17,7 +17,7 @@
   data-label-cancelled="<%= labelStatus('CANCELLED') %>"
 ><%= paymentDisplayLabel %></span></div>
 <% const buatqrisImage = payment.raw_reference?.qr_url || payment.raw_reference?.qris_image || null; %>
-<% const buatqrisPayLink = payment.raw_reference?.paymentUrl || payment.raw_reference?.payment_url || null; %>
+<% const providerPaymentUrl = payment.raw_reference?.paymentUrl || payment.raw_reference?.payment_url || null; %>
 <% if (String(payment.provider || '').toLowerCase() === 'buatqris') { %>
 <% const qrisExpiresAt = payment.expires_at && Number.isFinite(Date.parse(String(payment.expires_at))) ? new Date(payment.expires_at) : null; %>
 <% if (qrisExpiresAt) { %>
@@ -73,7 +73,7 @@
       </button>
     </div>
   <% } %>
-  <% if (!buatqrisImage && !buatqrisPayLink) { %>
+  <% if (!buatqrisImage && !providerPaymentUrl) { %>
     <p class="muted">Tautan dan gambar QRIS belum tersedia. Muat ulang halaman untuk memeriksa kembali.</p>
   <% } %>
 

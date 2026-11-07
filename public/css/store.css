@@ -2228,13 +2228,13 @@
 .amount-last-deposit-button{
   display:flex;
   align-items:center;
-  justify-content:flex-start;
+  justify-content:center;
   width:100%;
   min-width:0;
   height:46px;
   padding:0 12px;
   box-sizing:border-box;
-  text-align:left;
+  text-align:center;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;

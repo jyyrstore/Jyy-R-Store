@@ -202,7 +202,7 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
         ? await payments.findById(prepared.deposit.payment_id)
         : null);
 
-    const paymentUrl=existingPayment
+    const providerPaymentUrl=existingPayment
       ? resolvedPaymentUrl(existingPayment,null)
       : null;
 
@@ -216,7 +216,7 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
       existingPayment &&
       existingPayment.status==='PENDING' &&
       !existingPayment.reference &&
-      !paymentUrl
+      !providerPaymentUrl
     ){
       throw Object.assign(
         new Error(
@@ -234,7 +234,9 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
     return {
       deposit:prepared.deposit,
       payment:existingPayment,
-      paymentUrl,
+      paymentUrl:existingPayment
+        ? resolvedPaymentUrl(existingPayment,null,{internal:true})
+        : null,
       duplicate:true
     };
   }
@@ -348,7 +350,11 @@ async function createAndPay(userId,{amount,idempotencyKey,returnUrl}){
       expires_at:payment.expires_at
     },
     payment,
-    paymentUrl:resolvedPaymentUrl(payment,providerPayment.paymentUrl)
+    paymentUrl:resolvedPaymentUrl(
+      payment,
+      providerPayment.paymentUrl,
+      {internal:true}
+    )
   };
 }
 

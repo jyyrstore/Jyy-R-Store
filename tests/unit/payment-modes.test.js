@@ -11,6 +11,39 @@ test('checkout API accepts explicit payment modes',()=>{
   assert.match(routes,/z\.enum\(\['BALANCE','GATEWAY','SANDBOX','LIVE'\]\)/);
 });
 
+test('deposit uses internal payment page and preserves provider URL',()=>{
+  const {resolvedPaymentUrl}=require('../../src/config/payment');
+  const externalUrl='https://pay.example.test/transaction/123';
+
+  const payment={
+    id:'payment-test-id',
+    public_id:'JYYR-PAYY-ABCD-EFGH',
+    provider:'generic-json',
+    raw_reference:{paymentUrl:externalUrl}
+  };
+
+  assert.equal(
+    resolvedPaymentUrl(payment,null),
+    externalUrl
+  );
+
+  assert.equal(
+    resolvedPaymentUrl(payment,null,{internal:true}),
+    '/payment/JYYR-PAYY-ABCD-EFGH'
+  );
+
+  const service=read('src/services/deposit/deposit.service.js');
+  const page=read('views/pages/payment.ejs');
+
+  assert.match(service,/providerPaymentUrl=existingPayment/);
+  assert.match(service,/resolvedPaymentUrl\(existingPayment,null,\{internal:true\}\)/);
+  assert.match(service,/providerPayment\.paymentUrl,[\s\S]*?\{internal:true\}/);
+
+  assert.doesNotMatch(page,/href="<%= providerPaymentUrl %>"/);
+  assert.doesNotMatch(page,/>Buka Pembayaran<\/a>/);
+});
+
+
 test('Sandbox is owner-only and Live explicitly disables test mode',()=>{
   const api=read('src/controllers/api.controller.js');
   const service=read('src/services/payment/payment.service.js');
