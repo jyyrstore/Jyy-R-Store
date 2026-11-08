@@ -1466,16 +1466,20 @@
   height:1.2em;
 }
 
-.home-page > .section{
+.home-page > .section:not(.home-category-section){
   margin-top:0;
 }
 
-.home-page > .section + .section .section-header{
+.home-page > .section.home-category-section{
+  margin-top:28px;
+}
+
+.home-page > .section + .section:not(.home-category-section) .section-header{
   transform:translateY(8px);
 }
 
 
-.home-page > .section:nth-of-type(2) + .section{
+.home-page > .section:nth-of-type(2) + .section:not(.home-category-section){
   margin-top:14px;
 }
 

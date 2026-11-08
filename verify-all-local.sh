@@ -526,8 +526,8 @@ for (const name of ['app','api','navigation','modal','toast','pages']) {
   }
 }
 
-if (!app.includes("staticAsset('/favicon/favicon.svg')")) {
-  console.error('❌ Favicon tidak memakai staticAsset.');
+if (!app.includes("staticAsset('/favicon/icon-app.webp')")) {
+  console.error('❌ Favicon WebP tidak memakai staticAsset.');
   process.exit(1);
 }
 

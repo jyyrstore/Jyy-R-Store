@@ -27,16 +27,43 @@
 
   <div class="profile-card-head">
 
-    <div class="profile-section-heading">
+    <div class="profile-section-heading profile-page-title">
       <h1 id="profile-page-title">
         Profil
       </h1>
     </div>
 
-    <div class="profile-avatar" aria-hidden="true">
-      <span data-profile-avatar>
-        <%= profileInitial %>
-      </span>
+    <div class="profile-identity-main">
+      <div class="profile-avatar" aria-hidden="true">
+        <span data-profile-avatar>
+          <%= profileInitial %>
+        </span>
+      </div>
+
+      <div class="profile-identity-copy">
+        <h2
+          id="profile-identity-title"
+          data-profile-display
+        >
+          <%= profileName %>
+        </h2>
+
+        <p
+          class="profile-identity-username"
+          data-profile-username
+          data-profile-detail="username"
+        >
+          @<%= profileUsername %>
+        </p>
+
+        <p
+          class="profile-identity-email"
+          data-profile-email
+          data-profile-detail="email"
+        >
+          <%= profile.email || 'Tidak tersedia' %>
+        </p>
+      </div>
     </div>
 
     <button
@@ -53,41 +80,12 @@
 
   <div class="profile-identity">
 
-        <div class="profile-identity-copy">
-
-      <h2
-          id="profile-identity-title"
-          data-profile-display
-        >
-          <%= profileName %>
-        </h2>
-
-      <p
-          class="profile-identity-username"
-          data-profile-username
-          data-profile-detail="username"
-        >
-          @<%= profileUsername %>
-        </p>
-
-      <p
-        class="profile-identity-email"
-        data-profile-email
-        data-profile-detail="email"
-      >
-        <%= profile.email || 'Tidak tersedia' %>
-      </p>
 
 
-
-      <p
-          class="profile-identity-bio"
-          data-profile-detail="bio"
-        ><%= profile.bio || 'Belum ada bio.' %></p>
-
-
-
-    </div>
+    <p
+      class="profile-identity-bio"
+      data-profile-detail="bio"
+    ><%= profile.bio || 'Belum ada bio.' %></p>
 
   </div>
 
