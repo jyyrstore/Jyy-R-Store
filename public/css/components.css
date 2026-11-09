@@ -1495,6 +1495,41 @@ body.no-scroll{
   background:var(--surface-raised);
 }
 
+.jyyr-select [data-jyyr-select-label]:not([hidden]),
+.jyyr-select-option-content{
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+}
+
+.jyyr-select [data-jyyr-select-label]{
+  overflow:hidden;
+}
+
+.jyyr-select [data-jyyr-select-label]>span,
+.jyyr-select-option-content>span{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.jyyr-select-option-content{
+  width:100%;
+  text-align:left;
+}
+
+.jyyr-select-icon{
+  display:block;
+  flex:0 0 28px;
+  width:28px;
+  height:28px;
+  border-radius:8px;
+  object-fit:cover;
+  background:rgba(59,130,246,.1);
+}
+
 .jyyr-select-trigger:focus-visible{
   outline:2px solid var(--primary-2);
   outline-offset:-2px;
@@ -1537,7 +1572,8 @@ body.no-scroll{
     visibility 0s linear .20s;
 }
 
-.jyyr-select.open .jyyr-select-menu{
+.jyyr-select.open .jyyr-select-menu,
+.jyyr-select-menu.open{
   opacity:1;
   visibility:visible;
   pointer-events:auto;

@@ -84,7 +84,7 @@ async function list(opts={}){
   const f=filters(opts);
   const limit=safeIntRange(opts.limit,20,1,100);
   const offset=safeIntRange(opts.offset,0,0,1000000);
-  const sql=`select p.*,case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end as price,case when p.pricing_mode='VARIANT' then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else greatest(p.stock-p.reserved_stock,0) end as stock,c.name category_name,c.slug category_slug,parent_c.name category_parent_name,parent_c.slug category_parent_slug from products p left join categories c on c.id=p.category_id left join categories parent_c on parent_c.id=c.parent_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
+  const sql=`select p.*,case when p.pricing_mode='VARIANT' then coalesce((select min(pv.price) from product_variants pv where pv.product_id=p.id and pv.is_active=true),p.price) else p.price end as price,case when p.pricing_mode='VARIANT' then coalesce((select sum(greatest(pv.stock-pv.reserved_stock,0)) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else greatest(p.stock-p.reserved_stock,0) end as stock,case when p.pricing_mode='VARIANT' then coalesce((select sum(pv.stock) from product_variants pv where pv.product_id=p.id and pv.is_active=true),0) else p.stock end as stock_capacity,c.name category_name,c.slug category_slug,parent_c.name category_parent_name,parent_c.slug category_parent_slug from products p left join categories c on c.id=p.category_id left join categories parent_c on parent_c.id=c.parent_id where ${f.where} order by ${f.order} limit ${limit} offset ${offset}`;
   return (await query(sql,f.args)).rows;
 }
 async function listHomepageHighlights(limitPerCategory=6){
@@ -118,6 +118,14 @@ async function listHomepageHighlights(limitPerCategory=6){
             ),0)
             else greatest(p.stock-p.reserved_stock,0)
           end as stock,
+          case when p.pricing_mode='VARIANT'
+            then coalesce((
+              select sum(pv.stock)
+              from product_variants pv
+              where pv.product_id=p.id and pv.is_active=true
+            ),0)
+            else p.stock
+          end as stock_capacity,
           case
             when c.is_active=true
               and (c.parent_id is null or parent_c.is_active=true)
@@ -700,7 +708,36 @@ async function addContent(data){
     ]
   )).rows[0];
 }
-async function updateContent(id,data){ return (await query('update product_contents set title=$2,description=$3,text_content=$4,url=$5,sort_order=$6,is_preview=$7,access_type=$8,updated_at=now() where id=$1 returning *',[id,data.title,data.description||null,data.text_content||null,data.url||null,data.sort_order||0,!!data.is_preview,data.access_type||'PURCHASED'])).rows[0]; }
+async function updateContent(id,data,productId=null){
+  const values=[
+    id,
+    data.title,
+    data.description||null,
+    data.text_content||null,
+    data.url||null,
+    data.sort_order||0,
+    !!data.is_preview,
+    data.access_type||'PURCHASED'
+  ];
+
+  const productScope=productId?' and product_id=$9':'';
+  if(productId)values.push(productId);
+
+  return (await query(
+    `update product_contents
+     set title=$2,
+         description=$3,
+         text_content=$4,
+         url=$5,
+         sort_order=$6,
+         is_preview=$7,
+         access_type=$8,
+         updated_at=now()
+     where id=$1${productScope}
+     returning *`,
+    values
+  )).rows[0];
+}
 async function deleteContent(id,productId=null){
   if(productId){
     const row=(await query(

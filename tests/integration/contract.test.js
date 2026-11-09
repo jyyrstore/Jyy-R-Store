@@ -371,6 +371,264 @@ test('variant-specific content preserves shared legacy access and checks the pur
   assert.match(page,/productRepo\.contents\(item\.product_id,\s*\{\s*variantId:item\.variant_id\|\|null,\s*forOrder:true\s*\}\)/);
   assert.match(orders,/'variant_id',oi\.variant_id/);
 });
+test('Owner content target variant dropdown displays saved variant icons',()=>{
+  const controller=fs.readFileSync(
+    path.join(root,'src/controllers/api.controller.js'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const picker=fs.readFileSync(
+    path.join(root,'public/js/pickers.js'),
+    'utf8'
+  );
+  const components=fs.readFileSync(
+    path.join(root,'public/css/components.css'),
+    'utf8'
+  );
+
+  assert.ok(controller.includes(
+    'icon_url:variant.icon_path?storage.publicUrl(publicAssetBucket,variant.icon_path):null'
+  ));
+
+  const normalizedBrowser=browser.replace(/\s+/g,'');
+  assert.ok(normalizedBrowser.includes(
+    '...variants.map(variant=>[variant.id,variant.label,variant.icon_url'
+  ));
+
+  assert.ok(browser.includes(
+    'data-icon-url="${esc(optionIconUrl||\'\')}"'
+  ));
+
+  assert.ok(picker.includes('selected.dataset.iconUrl'));
+  assert.ok(components.includes('.jyyr-select-icon{'));
+});
+
+test('Product card stock badge uses initial inventory percentage',()=>{
+  const fs=require('node:fs');
+  const path=require('node:path');
+  const root=path.resolve(__dirname,'../..');
+
+  const repository=fs.readFileSync(
+    path.join(root,'src/repositories/products.repository.js'),
+    'utf8'
+  );
+  const card=fs.readFileSync(
+    path.join(root,'views/partials/product-card.ejs'),
+    'utf8'
+  );
+  const styles=fs.readFileSync(
+    path.join(root,'public/css/store.css'),
+    'utf8'
+  );
+
+  assert.match(repository,/select sum\(pv\.stock\) from product_variants pv/);
+  assert.match(repository,/end as stock_capacity,c\.name category_name/);
+  assert.match(repository,/end as stock_capacity,\s*case\s+when c\.is_active=true/);
+
+  assert.match(card,/product\.stock_capacity/);
+  assert.match(card,/product\.purchase_count/);
+  assert.match(card,/stock \* 100 <= initialStock \* 20/);
+  assert.match(card,/stockStatus = stock <= 0 \? 'sold-out' : stock \* 100 <= initialStock \* 20 \? 'orange' : 'green'/);
+  assert.match(card,/stockLabel = stockStatus === 'sold-out' \? 'Habis' : stockStatus === 'orange' \? 'Sedikit' : 'Tersedia'/);
+  assert.match(card,/product-stock--<%= stockStatus %>/);
+  assert.match(card,/<%= stockLabel %>/);
+  assert.doesNotMatch(card,/stock > 0 \? stock : 'Habis'/);
+
+  assert.match(styles,/\.product-stock--green\{color:var\(--success\)\}/);
+  assert.match(styles,/\.product-stock--orange\{color:var\(--warning\)\}/);
+  assert.match(styles,/\.product-stock--sold-out\{color:var\(--error\)\}/);
+});
+
+test('Product detail image preview crops to 4:5 and opens active image',()=>{
+  const detail=fs.readFileSync(
+    path.join(root,'views/pages/product-detail.ejs'),
+    'utf8'
+  );
+  const css=fs.readFileSync(
+    path.join(root,'public/css/store.css'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const modal=fs.readFileSync(
+    path.join(root,'public/js/modal.js'),
+    'utf8'
+  );
+
+  assert.match(detail,/data-product-image-open/);
+  assert.match(detail,/class="detail-image-frame"/);
+
+  assert.match(
+    css,/\.detail-media\s*\{[^}]*max-width:\s*544px/s
+  );
+  assert.match(
+    css,/\.detail-image-frame\s*\{[^}]*aspect-ratio:\s*4\s*\/\s*5/s
+  );
+  assert.match(
+    css,/\.detail-image\s*\{[^}]*object-fit:\s*cover/s
+  );
+  assert.match(
+    css,/\.detail-image-open\s*\{[^}]*cursor:\s*zoom-in/s
+  );
+  assert.match(css,/\.modal\.product-image-modal\s*\{/);
+  assert.match(
+    css,/\.product-image-modal-content img\s*\{[^}]*object-fit:\s*contain/s
+  );
+
+  assert.match(browser,/window\.JYYRModal\?\.open\(/);
+  assert.match(browser,/image\.currentSrc\|\|image\.src/);
+  assert.match(browser,/imageOpenButton\.hidden=!nextIconUrl/);
+  assert.match(browser,/PRODUCT DETAIL IMAGE VARIANT SWIPE/);
+  assert.match(browser,/document\.addEventListener\('pointerdown'/);
+  assert.match(browser,/document\.addEventListener\('pointerup'/);
+  assert.match(browser,/targetOption\.click\(\)/);
+  assert.match(detail,/if\(productImageVariants\.length\)/);
+  assert.match(detail,/data-product-variant-nav aria-label/);
+  assert.match(detail,/data-product-variant-prev/);
+  assert.match(detail,/data-product-variant-next/);
+  assert.match(browser,/function productVariantOptions\(\)/);
+  assert.match(browser,/function syncProductVariantNavigation\(\)/);
+  assert.ok(browser.includes("?`[ ${String(options[currentIndex].dataset.label||'Pilih varian')} ]`"));
+  assert.match(css,/\[data-product-variant-prev\]\s+\.product-image-variant-arrow\s*\{[^}]*border-left:3px solid currentColor/s);
+  assert.match(css,/\[data-product-variant-next\]\s+\.product-image-variant-arrow\s*\{[^}]*border-right:3px solid currentColor/s);
+  assert.match(browser,/function moveProductVariant\(direction\)/);
+  assert.match(browser,/variantNav\.cloneNode\(true\)/);
+  assert.match(detail,/class="product-image-variant-arrow"/);
+  assert.match(css,/\.product-image-variant-nav\s*\{[^}]*background:\s*transparent/s);
+  assert.match(css,/\.product-image-variant-nav\s*\{[^}]*border:\s*0/s);
+  assert.match(css,/\.product-image-variant-nav button\s*\{[^}]*align-items:\s*center/s);
+  assert.match(css,/^\.product-image-variant-arrow\s*\{/m);
+  assert.match(css,/\[data-product-variant-next\]\s+\.product-image-variant-arrow/);
+  assert.match(browser,/syncProductVariantNavigation\(\)/);
+  assert.match(css,/\.product-image-variant-nav\s*\{[^}]*position:\s*absolute/s);
+  assert.match(css,/\.product-image-variant-nav button:disabled/);
+  assert.match(browser,/modalImage\.src=nextIconUrl/);
+  assert.match(css,/\.detail-image-open\s*\{[^}]*touch-action:\s*pan-y/s);
+  assert.match(css,/\.product-image-modal-content\s*\{[^}]*touch-action:\s*pan-y/s);
+  assert.match(browser,/img\.matches\('\.detail-image'\)/);
+  assert.match(browser,/querySelector\('\[data-product-image-open\]'\)/);
+
+  assert.match(modal,/window\.JYYRModal=\{open,close,confirm\}/);
+});
+
+test('Product detail variant cards select through shared picker',()=>{
+  const fs=require('node:fs');
+  const path=require('node:path');
+  const root=path.resolve(__dirname,'../..');
+
+  const template=fs.readFileSync(
+    path.join(root,'views/pages/product-detail.ejs'),
+    'utf8'
+  );
+  const picker=fs.readFileSync(
+    path.join(root,'public/js/pickers.js'),
+    'utf8'
+  );
+
+  assert.match(template,/data-product-variant-picker/);
+  assert.match(template,/data-product-variant-select/);
+  assert.match(template,/data-jyyr-select-option/);
+
+  assert.match(picker,/const option=\s*event\.target\.closest\(\s*'\[data-jyyr-select-option\]'\s*\)/);
+  assert.match(picker,/chooseOption\(option\)/);
+  assert.match(picker,/const inlinePicker=option\.closest\('\[data-product-variant-picker\]'\)/);
+  assert.match(picker,/value\.value=String\(option\.dataset\.value\|\|''\)/);
+  assert.match(picker,/syncSelect\(inlinePicker\)/);
+  assert.match(picker,/new Event\('input',\{bubbles:true\}\)/);
+  assert.match(picker,/new Event\('change',\{bubbles:true\}\)/);
+});
+
+test('Owner content icon follows the selected target',()=>{
+  const fs=require('node:fs');
+  const path=require('node:path');
+  const root=path.resolve(__dirname,'../..');
+
+  const view=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+  const pages=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const styles=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  assert.ok(view.includes(
+    'thumbnailUrl:ownerProduct.thumbnail_path?assetUrl(publicAssetBucket,ownerProduct.thumbnail_path):null'
+  ));
+  const normalizedPages=pages.replace(/\s+/g,'');
+  assert.ok(normalizedPages.includes(
+    'constproductThumbnailUrl=window.__OWNER_PRODUCT_EDITOR?.id===productId'
+  ));
+  assert.ok(pages.includes(
+    'variants.find(variant=>String(variant.id)===String(c.variant_id))'
+  ));
+  assert.ok(pages.includes(
+    'String(targetVariant?.icon_url||productThumbnailUrl)'
+  ));
+  assert.ok(pages.includes(
+    '<div class="owner-content-icon">${iconMarkup}</div>'
+  ));
+  assert.ok(styles.includes('.owner-content-icon img{'));
+});
+
+test('Owner content edit uses scoped metadata updates and preserves stored files',()=>{
+  const route=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+  const api=fs.readFileSync(
+    path.join(root,'src/controllers/api.controller.js'),
+    'utf8'
+  );
+  const repository=fs.readFileSync(
+    path.join(root,'src/repositories/products.repository.js'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const styles=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  assert.ok(route.includes(
+    "ownerApi.put('/products/:id/content/:contentId',validate(ownerProductContentUpdateSchema),asyncHandler(api.ownerController.productContentUpdate));"
+  ));
+  assert.ok(api.includes('productContentUpdate:async(req,res)=>'));
+  const normalizedApi=api.replace(/\s+/g,'');
+  assert.ok(normalizedApi.includes('repo.updateContent(req.params.contentId,'));
+
+  const updateStart=repository.indexOf(
+    'async function updateContent(id,data,productId=null)'
+  );
+  const updateEnd=repository.indexOf(
+    'async function deleteContent',
+    updateStart
+  );
+
+  assert.ok(updateStart>=0&&updateEnd>updateStart);
+
+  const update=repository.slice(updateStart,updateEnd);
+  assert.ok(update.includes('product_id=$9'));
+  assert.doesNotMatch(update,/storage_path\s*=/);
+
+  assert.ok(browser.includes('data-owner-content-edit="${esc(c.id)}"'));
+  assert.ok(browser.includes("window.JYYRIcon?.('edit')"));
+  assert.ok(browser.includes("isEditing?'PUT':'POST'"));
+  assert.ok(styles.includes('.owner-content-row-actions{'));
+});
+
 test('OWNER role cannot be assigned through the normal role API/repository',()=>{
   const repo=fs.readFileSync(path.join(root,'src/repositories/users.repository.js'),'utf8');
   const api=fs.readFileSync(path.join(root,'src/controllers/api.controller.js'),'utf8');
@@ -2745,4 +3003,28 @@ test('failed and expired payment paths create user notifications', () => {
   assert.ok(source.includes("title:'Deposit kedaluwarsa'"));
   assert.ok(source.includes("title:'Pembayaran gagal'"));
   assert.ok(source.includes("title:'Pembayaran kedaluwarsa'"));
+});
+
+
+test('Product detail hides only the duplicate picker label',()=>{
+  const fs=require('node:fs');
+  const path=require('node:path');
+  const root=path.resolve(__dirname,'../..');
+
+  const css=fs.readFileSync(
+    path.join(root,'public/css/components.css'),
+    'utf8'
+  );
+  const view=fs.readFileSync(
+    path.join(root,'views/pages/product-detail.ejs'),
+    'utf8'
+  );
+
+  assert.match(
+    css,
+    /\.jyyr-select \[data-jyyr-select-label\]:not\(\[hidden\]\),/
+  );
+  assert.match(view,/<span data-jyyr-select-label hidden>/);
+  assert.match(view,/<p class="detail-selected-variant" data-product-selected-variant/);
+  assert.match(view,/<strong><%= v\.label %><\/strong>/);
 });

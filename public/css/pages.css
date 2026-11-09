@@ -1996,7 +1996,24 @@
   height:18px;
 }
 
-.owner-product-editor-page[data-owner-product-page="content_produk"] .owner-content-row [data-owner-content-delete]{
+.owner-content-icon img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:inherit;
+}
+
+.owner-content-row-actions{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  flex:0 0 38px;
+  gap:7px;
+}
+
+.owner-product-editor-page[data-owner-product-page="content_produk"] .owner-content-row-actions > [data-owner-content-edit],
+.owner-product-editor-page[data-owner-product-page="content_produk"] .owner-content-row-actions > [data-owner-content-delete]{
   box-sizing:border-box;
   display:inline-flex;
   align-items:center;
@@ -2009,7 +2026,7 @@
   padding:0;
 }
 
-.owner-product-editor-page[data-owner-product-page="content_produk"] .owner-content-row [data-owner-content-delete] svg{
+.owner-product-editor-page[data-owner-product-page="content_produk"] .owner-content-row-actions > button svg{
   display:block;
   width:17px;
   height:17px;

@@ -389,12 +389,13 @@
   }={})=>{
     const current=String(value??'');
 
-    const label=
+    const selectedOption=
       options.find(
         option=>String(option[0])===current
-      )?.[1]||
-      options[0]?.[1]||
-      'Pilih';
+      )||options[0]||null;
+
+    const label=selectedOption?.[1]||'Pilih';
+    const iconUrl=String(selectedOption?.[2]||'');
 
     return `
       <div class="jyyr-select" data-jyyr-select>
@@ -413,7 +414,10 @@
           aria-expanded="false"
           data-jyyr-select-trigger
         >
-          <span data-jyyr-select-label>${esc(label)}</span>
+          <span data-jyyr-select-label>
+            ${iconUrl?`<img class="jyyr-select-icon" src="${esc(iconUrl)}" alt="" aria-hidden="true">`:''}
+            <span>${esc(label)}</span>
+          </span>
           <span class="jyyr-select-chevron" aria-hidden="true"></span>
         </button>
         <div
@@ -421,7 +425,7 @@
           role="listbox"
           data-jyyr-select-menu
         >
-          ${options.map(([v,l])=>`
+          ${options.map(([v,l,optionIconUrl])=>`
             <button
               type="button"
               class="jyyr-select-option"
@@ -429,7 +433,13 @@
               data-jyyr-select-option
               data-value="${esc(v)}"
               data-label="${esc(l)}"
-            >${esc(l)}</button>
+              data-icon-url="${esc(optionIconUrl||'')}"
+            >
+              <span class="jyyr-select-option-content">
+                ${optionIconUrl?`<img class="jyyr-select-icon" src="${esc(optionIconUrl)}" alt="" aria-hidden="true">`:''}
+                <span>${esc(l)}</span>
+              </span>
+            </button>
           `).join('')}
         </div>
       </div>
@@ -1362,12 +1372,33 @@
     productId,
     productName='Produk',
     productStatus='DRAFT',
-    hasThumbnail=null
+    hasThumbnail=null,
+    editingContentId=null
   ){
     try{
       const r=await api.request('/api/owner/products/'+encodeURIComponent(productId)+'/content');
       const items=Array.isArray(r)?r:(r.items||[]);
       const variants=Array.isArray(r?.variants)?r.variants:[];
+
+      const productThumbnailUrl=
+        window.__OWNER_PRODUCT_EDITOR?.id===productId
+          ? String(window.__OWNER_PRODUCT_EDITOR.thumbnailUrl||'')
+          : '';
+
+
+      const editingContent=editingContentId
+        ? items.find(item=>String(item.id)===String(editingContentId))
+        : null;
+
+      if(editingContentId&&!editingContent){
+        throw new Error('Content tidak ditemukan.');
+      }
+
+      const editingType=String(editingContent?.type||'FILE').toUpperCase();
+
+      const editingVariantLabel=editingContent?.variant_id
+        ? `Varian: ${editingContent.variant_label||'khusus'}${editingContent.variant_is_active?'':' (varian lama)'}`
+        : 'Konten bersama — semua varian';
 
       const coverReady=hasThumbnail===null ? null : Boolean(hasThumbnail);
       const validContentCount=items.filter(ownerContentIsValid).length;
@@ -1381,6 +1412,15 @@
             const type=String(c.type||'').toUpperCase();
             const access=String(c.access_type||'PURCHASED').toUpperCase();
             const valid=ownerContentIsValid(c);
+            const targetVariant=c.variant_id
+              ? variants.find(variant=>String(variant.id)===String(c.variant_id))
+              : null;
+            const iconUrl=c.variant_id
+              ? String(targetVariant?.icon_url||productThumbnailUrl)
+              : productThumbnailUrl;
+            const iconMarkup=iconUrl
+              ? `<img src="${esc(iconUrl)}" alt="" loading="lazy">`
+              : (window.JYYRIcon?.(type==='LINK'?'plus':'package')||'');
             const variantScope=c.variant_id
               ? `Varian: ${c.variant_label||'khusus'}${c.variant_is_active?'':' (varian lama)'}`
               : 'Bersama semua varian';
@@ -1394,7 +1434,7 @@
             return `
               <article class="owner-content-row ${valid?'is-valid':'is-invalid'}">
                 <div class="owner-content-row-main">
-                  <div class="owner-content-icon">${window.JYYRIcon?.(type==='LINK'?'plus':'package')||''}</div>
+                  <div class="owner-content-icon">${iconMarkup}</div>
                   <div class="owner-content-row-copy">
                     <strong>${esc(c.title||('Content '+(i+1)))}</strong>
                     <span>${esc(meta)}</span>
@@ -1406,17 +1446,31 @@
                   </div>
                 </div>
 
-                <button
-                  class="button button-danger button-small"
-                  type="button"
-                  data-owner-content-delete="${esc(c.id)}"
-                  data-owner-content-product="${esc(productId)}"
-                  data-owner-content-name="${esc(productName)}"
-                  data-owner-content-status="${esc(productStatus)}"
-                  data-owner-content-has-thumbnail="${coverReady===true?'1':'0'}"
-                  aria-label="Hapus content"
-                  title="Hapus content">${window.JYYRIcon?.('trash-can')||''}
-                </button>
+                <div class="owner-content-row-actions">
+                  <button
+                    class="button button-secondary button-small"
+                    type="button"
+                    data-owner-content-edit="${esc(c.id)}"
+                    data-owner-content-product="${esc(productId)}"
+                    data-owner-content-name="${esc(productName)}"
+                    data-owner-content-status="${esc(productStatus)}"
+                    data-owner-content-has-thumbnail="${coverReady===true?'1':'0'}"
+                    aria-label="Edit content"
+                    title="Edit content">${window.JYYRIcon?.('edit')||''}
+                  </button>
+
+                  <button
+                    class="button button-danger button-small"
+                    type="button"
+                    data-owner-content-delete="${esc(c.id)}"
+                    data-owner-content-product="${esc(productId)}"
+                    data-owner-content-name="${esc(productName)}"
+                    data-owner-content-status="${esc(productStatus)}"
+                    data-owner-content-has-thumbnail="${coverReady===true?'1':'0'}"
+                    aria-label="Hapus content"
+                    title="Hapus content">${window.JYYRIcon?.('trash-can')||''}
+                  </button>
+                </div>
               </article>
             `;
           }).join('')
@@ -1580,31 +1634,37 @@
             data-product-name="${esc(productName)}"
             data-product-status="${esc(productStatus)}"
             data-product-has-thumbnail="${coverReady===true?'1':'0'}"
+            data-owner-content-id="${esc(editingContent?.id||'')}"
             class="owner-content-form">
 
             <div class="owner-section-title">
               <div>
-                <h3>Tambah Content</h3>
-                <p>Pilih jenis content. Form akan menampilkan field yang memang dibutuhkan.</p>
+                <h3>${editingContent?'Edit Content':'Tambah Content'}</h3>
+                <p>${editingContent?'Perbarui informasi content. File, tipe, dan target varian akan dipertahankan.':'Pilih jenis content. Form akan menampilkan field yang memang dibutuhkan.'}</p>
               </div>
             </div>
 
             <div class="owner-content-form-grid">
               <label class="field">
                 <span>Jenis Content</span>
-                ${pickerSelect({
-      name:'type',
-      value:'FILE',
-      attrs:'data-owner-content-type',
-      options:[
-        ['FILE','File / ZIP'],
-        ['IMAGE','Gambar'],
-        ['VIDEO','Video'],
-        ['AUDIO','Audio'],
-        ['TEXT','Teks'],
-        ['LINK','Link']
-      ]
-    })}
+                ${editingContent
+                  ? `
+                    <input type="hidden" name="type" value="${esc(editingType)}" data-owner-content-type>
+                    <input type="text" value="${esc(ownerContentTypeLabel(editingType))}" readonly aria-readonly="true">
+                  `
+                  : pickerSelect({
+                      name:'type',
+                      value:'FILE',
+                      attrs:'data-owner-content-type',
+                      options:[
+                        ['FILE','File / ZIP'],
+                        ['IMAGE','Gambar'],
+                        ['VIDEO','Video'],
+                        ['AUDIO','Audio'],
+                        ['TEXT','Teks'],
+                        ['LINK','Link']
+                      ]
+                    })}
                 <small class="field-help" data-owner-content-type-help>
                   Gunakan File untuk ZIP atau PDF yang memang akan diunduh pembeli.
                 </small>
@@ -1612,30 +1672,35 @@
 
               <label class="field">
                 <span>Judul</span>
-                <input name="title" required maxlength="160" placeholder="Contoh: Preset Loading Screen MLBB">
+                <input name="title" required maxlength="160" value="${esc(editingContent?.title||'')}" placeholder="Contoh: Preset Loading Screen MLBB">
               </label>
 
               <label class="field full">
                 <span>Deskripsi</span>
-                <textarea name="description" maxlength="2000" rows="3" placeholder="Jelaskan singkat isi content ini."></textarea>
+                <textarea name="description" maxlength="2000" rows="3" placeholder="Jelaskan singkat isi content ini.">${esc(editingContent?.description||'')}</textarea>
               </label>
 
               <div class="owner-context-field full" data-owner-content-field="file">
-                <label class="field">
-                  <span>File</span>
-                  ${pickerFile({
-      name:'file',
-      accept:'.zip,.pdf',
-      attrs:'data-owner-content-file'
-    })}
-                  <small class="field-help">File akan diupload langsung ke Storage dan diverifikasi oleh server.</small>
-                </label>
+                ${editingContent
+                  ? `<small class="field-help">File yang sudah tersimpan akan tetap digunakan saat informasi content diperbarui.</small>`
+                  : `
+                    <label class="field">
+                      <span>File</span>
+                      ${pickerFile({
+        name:'file',
+        accept:'.zip,.pdf',
+        attrs:'data-owner-content-file'
+      })}
+                      <small class="field-help">File akan diupload langsung ke Storage dan diverifikasi oleh server.</small>
+                    </label>
+                  `
+                }
               </div>
 
               <div class="owner-context-field full" data-owner-content-field="text" hidden>
                 <label class="field">
                   <span>Isi Teks</span>
-                  <textarea name="text_content" maxlength="50000" rows="8" placeholder="Masukkan isi teks yang akan dibaca pembeli."></textarea>
+                  <textarea name="text_content" maxlength="50000" rows="8" placeholder="Masukkan isi teks yang akan dibaca pembeli.">${esc(editingContent?.text_content||'')}</textarea>
                 </label>
               </div>
 
@@ -1646,6 +1711,7 @@
                     name="url"
                     type="url"
                     maxlength="2000"
+                    value="${esc(editingContent?.url||'')}"
                     placeholder="https://contoh.com/preset">
                   <small class="field-help">Cocok untuk preset Alight Motion atau content lain yang dibagikan melalui link.</small>
                 </label>
@@ -1655,7 +1721,7 @@
                 <span>Akses</span>
                 ${pickerSelect({
       name:'access_type',
-      value:'PURCHASED',
+      value:editingContent?.access_type||'PURCHASED',
       attrs:'data-owner-content-access',
       options:[
         ['PURCHASED','Hanya pembeli'],
@@ -1670,40 +1736,62 @@
 
               <label class="field full">
                 <span>Target Varian</span>
-                ${pickerSelect({
-      name:'variant_id',
-      value:'',
-      attrs:'data-owner-content-variant',
-      options:[
-        ['','Konten bersama — semua varian'],
-        ...variants.map(variant=>[variant.id,variant.label])
-      ]
-    })}
+                ${editingContent
+                  ? `
+                    <input type="hidden" name="variant_id" value="${esc(editingContent.variant_id||'')}">
+                    <input type="text" value="${esc(editingVariantLabel)}" readonly aria-readonly="true">
+                  `
+                  : pickerSelect({
+                      name:'variant_id',
+                      value:'',
+                      attrs:'data-owner-content-variant',
+                      options:[
+                        ['','Konten bersama — semua varian'],
+                        ...variants.map(variant=>[
+                          variant.id,
+                          variant.label,
+                          variant.icon_url
+                        ])
+                      ]
+                    })}
                 <small class="field-help">
-                  Kosongkan untuk konten bersama. Konten khusus varian hanya bisa diakses pembeli varian tersebut dan harus memakai akses Hanya pembeli.
+                  ${editingContent
+                    ? 'Target varian dipertahankan saat mengedit content.'
+                    : 'Kosongkan untuk konten bersama. Konten khusus varian hanya bisa diakses pembeli varian tersebut dan harus memakai akses Hanya pembeli.'}
                 </small>
               </label>
             </div>
 
             <progress data-upload-progress value="0" max="100" hidden></progress>
-            <div class="owner-upload-status" data-upload-status>Belum ada upload berjalan.</div>
+            <div class="owner-upload-status" data-upload-status>${editingContent?'File tersimpan dipertahankan.':'Belum ada upload berjalan.'}</div>
 
             <div class="product-modal-actions">
+              ${editingContent?'<button class="button button-secondary" type="button" data-owner-content-cancel-edit>Batal Edit</button>':''}
               <button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Tutup</button>
-              <button class="button button-primary" type="submit">Simpan Content</button>
+              <button class="button button-primary" type="submit">${editingContent?'Simpan Perubahan':'Simpan Content'}</button>
             </div>
           </form>
 
           ${publishBlock}
         </div>
-      `);
+      `,()=>{
+        const contentForm=document.querySelector('[data-owner-content-form]');
+        syncOwnerContentForm(contentForm);
+
+        if(editingContent){
+          contentForm?.scrollIntoView({
+            behavior:'smooth',
+            block:'start'
+          });
+        }
+      });
     }catch(err){
       toast.error(err.message);
     }
   }
   function formButtons(label='Simpan'){return `<div class="inline-actions"><button class="button button-primary">${esc(label)}</button><button class="button button-secondary" type="button" data-modal-close>${window.JYYRIcon?.('circle-x','icon icon-circle-x')||''}Batal</button></div>`}
 
-  document.addEventListener('error',e=>{const img=e.target;if(img?.matches?.('[data-image-fallback]')){img.hidden=true;img.nextElementSibling?.removeAttribute('hidden')} if(img?.matches?.('[data-image-fallback-hide]'))img.hidden=true;},{capture:true});
+  document.addEventListener('error',e=>{const img=e.target;if(img?.matches?.('[data-image-fallback]')){img.hidden=true;img.nextElementSibling?.removeAttribute('hidden');if(img.matches('.detail-image'))document.querySelector('[data-product-image-open]')?.setAttribute('hidden','')} if(img?.matches?.('[data-image-fallback-hide]'))img.hidden=true;},{capture:true});
   document.addEventListener('change',e=>{
     const pricingModeInput=e.target.closest('input[name="pricing_mode"]');
     if(pricingModeInput){
@@ -1838,7 +1926,18 @@
           selectedIcon.hidden=true;
           selectedIcon.nextElementSibling?.removeAttribute('hidden');
         }
+
+        const imageOpenButton=document.querySelector('[data-product-image-open]');
+        if(imageOpenButton)imageOpenButton.hidden=!nextIconUrl;
+
+        const modalImage=document.querySelector('.product-image-modal-content img');
+        if(modalImage){
+          if(nextIconUrl)modalImage.src=nextIconUrl;
+          else modalImage.removeAttribute('src');
+        }
       }
+
+      syncProductVariantNavigation();
 
       const price=Number(option?.dataset.price||0);
       const stock=Number(option?.dataset.stock||0);
@@ -3157,6 +3256,32 @@ ${productPricingModesMarkup('FIXED')}
       );
     }
 
+    const contentCancelEdit=e.target.closest('[data-owner-content-cancel-edit]');
+    if(contentCancelEdit){
+      const form=contentCancelEdit.closest('[data-owner-content-form]');
+      if(form){
+        await openOwnerContentManager(
+          form.dataset.productId,
+          form.dataset.productName||'Produk',
+          form.dataset.productStatus||'DRAFT',
+          form.dataset.productHasThumbnail==='1'
+        );
+      }
+      return;
+    }
+
+    const contentEdit=e.target.closest('[data-owner-content-edit]');
+    if(contentEdit){
+      await openOwnerContentManager(
+        contentEdit.dataset.ownerContentProduct,
+        contentEdit.dataset.ownerContentName||'Produk',
+        contentEdit.dataset.ownerContentStatus||'DRAFT',
+        contentEdit.dataset.ownerContentHasThumbnail==='1',
+        contentEdit.dataset.ownerContentEdit
+      );
+      return;
+    }
+
     const contentDelete=e.target.closest('[data-owner-content-delete]');if(contentDelete){if(!(await window.JYYRModal.confirm('Hapus content ini?')))return;try{await ownerAction('/api/owner/products/'+encodeURIComponent(contentDelete.dataset.ownerContentProduct)+'/content/'+encodeURIComponent(contentDelete.dataset.ownerContentDelete),{},'DELETE','Content dihapus.');await openOwnerContentManager(contentDelete.dataset.ownerContentProduct,contentDelete.dataset.ownerContentName||'Produk',contentDelete.dataset.ownerContentStatus||'DRAFT',contentDelete.dataset.ownerContentHasThumbnail==='1')}catch(err){toast.error(err.message)}}
     const publish=e.target.closest('[data-owner-publish]');if(publish){if(!(await window.JYYRModal.confirm('Publish produk ini?')))return;try{await ownerAction('/api/owner/products/'+publish.dataset.ownerPublish+'/publish',{},'POST','Produk dipublish.');location.reload()}catch(err){toast.error(err.message)}}
     const unpublish=e.target.closest('[data-owner-unpublish]');if(unpublish){if(!(await window.JYYRModal.confirm('Unpublish produk ini?')))return;try{await ownerAction('/api/owner/products/'+unpublish.dataset.ownerUnpublish+'/unpublish',{},'POST','Produk di-unpublish.');location.reload()}catch(err){toast.error(err.message)}}
@@ -3800,6 +3925,11 @@ ${productPricingModesMarkup('FIXED')}
         fd.get('type')||'FILE'
       ).toUpperCase();
 
+      const editingContentId=String(
+        cfm.dataset.ownerContentId||''
+      ).trim();
+      const isEditing=Boolean(editingContentId);
+
       const id=
         fd.get('product_id') ||
         cfm.dataset.productId;
@@ -3842,6 +3972,7 @@ ${productPricingModesMarkup('FIXED')}
       }
 
       if(
+        !isEditing &&
         ['FILE','IMAGE','VIDEO','AUDIO'].includes(type) &&
         !(file instanceof File && file.size)
       ){
@@ -3899,8 +4030,9 @@ ${productPricingModesMarkup('FIXED')}
           'aria-busy',
           'true'
         );
-        btn.textContent=
-          ['FILE','IMAGE','VIDEO','AUDIO'].includes(type)
+        btn.textContent=isEditing
+          ? 'Menyimpan…'
+          : ['FILE','IMAGE','VIDEO','AUDIO'].includes(type)
             ? 'Mengunggah…'
             : 'Menyimpan…';
       }
@@ -3947,7 +4079,8 @@ ${productPricingModesMarkup('FIXED')}
           await ownerAction(
             '/api/owner/products/' +
             encodeURIComponent(id) +
-            '/content',
+            '/content' +
+            (isEditing?'/'+encodeURIComponent(editingContentId):''),
             {
               product_id:id,
               type,
@@ -3967,8 +4100,8 @@ ${productPricingModesMarkup('FIXED')}
               variant_id:variantId,
               sort_order:0
             },
-            'POST',
-            'Content berhasil ditambahkan.'
+            isEditing?'PUT':'POST',
+            isEditing?'Content berhasil diperbarui.':'Content berhasil ditambahkan.'
           );
         }
 
@@ -5164,6 +5297,184 @@ ${productPricingModesMarkup('FIXED')}
   });
 
 
+function productVariantOptions(){
+  const picker=document.querySelector('[data-product-variant-picker]');
+
+  return [
+    ...(picker?.querySelectorAll('[data-jyyr-select-option]')||[])
+  ].filter(option=>!option.disabled);
+}
+
+function syncProductVariantNavigation(){
+  const options=productVariantOptions();
+  const select=document.querySelector('[data-product-variant-select]');
+
+  const currentIndex=options.findIndex(
+    option=>String(option.dataset.value||'')===String(select?.value||'')
+  );
+
+  document.querySelectorAll('[data-product-variant-nav]').forEach(nav=>{
+    const label=nav.querySelector('[data-product-variant-nav-label]');
+    const previous=nav.querySelector('[data-product-variant-prev]');
+    const next=nav.querySelector('[data-product-variant-next]');
+
+    if(label){
+      label.textContent=currentIndex>=0
+        ?`[ ${String(options[currentIndex].dataset.label||'Pilih varian')} ]`
+        :'Pilih varian';
+    }
+
+    if(previous){
+      previous.disabled=!options.length||
+        (currentIndex>=0&&currentIndex===0);
+    }
+
+    if(next){
+      next.disabled=!options.length||
+        (currentIndex>=0&&currentIndex===options.length-1);
+    }
+  });
+}
+
+function moveProductVariant(direction){
+  const options=productVariantOptions();
+  const select=document.querySelector('[data-product-variant-select]');
+
+  if(!select||!options.length)return false;
+
+  const currentIndex=options.findIndex(
+    option=>String(option.dataset.value||'')===String(select.value||'')
+  );
+
+  const step=direction<0?-1:1;
+
+  const targetIndex=currentIndex<0
+    ?(step>0?0:options.length-1)
+    :Math.max(
+      0,
+      Math.min(options.length-1,currentIndex+step)
+    );
+
+  if(targetIndex===currentIndex)return false;
+
+  const targetOption=options[targetIndex];
+  if(!targetOption)return false;
+
+  targetOption.click();
+  return true;
+}
+
+/* PRODUCT DETAIL IMAGE VARIANT SWIPE */
+let productImageSwipe=null;
+let suppressProductImageSwipeClick=false;
+
+document.addEventListener('pointerdown',event=>{
+  if(!event.isPrimary || event.pointerType==='mouse')return;
+
+  const surface=event.target instanceof Element
+    ? event.target.closest('.detail-image-frame, .product-image-modal-content')
+    : null;
+
+  if(!surface)return;
+
+  suppressProductImageSwipeClick=false;
+
+  const image=surface.querySelector(
+    '.detail-image[data-product-variant-selected-icon], img'
+  );
+
+  if(!image || image.hidden || !image.complete || image.naturalWidth<1)return;
+
+  productImageSwipe={
+    pointerId:event.pointerId,
+    surface,
+    startX:event.clientX,
+    startY:event.clientY
+  };
+});
+
+document.addEventListener('pointerup',event=>{
+  const gesture=productImageSwipe;
+
+  if(!gesture || gesture.pointerId!==event.pointerId)return;
+
+  productImageSwipe=null;
+
+  const deltaX=event.clientX-gesture.startX;
+  const deltaY=event.clientY-gesture.startY;
+
+  if(
+    Math.abs(deltaX)<48 ||
+    Math.abs(deltaX)<Math.abs(deltaY)*1.25
+  )return;
+
+  const direction=deltaX<0?1:-1;
+  const changed=moveProductVariant(direction);
+
+  if(changed){
+    suppressProductImageSwipeClick=true;
+  }
+});
+
+document.addEventListener('pointercancel',event=>{
+  if(productImageSwipe?.pointerId===event.pointerId){
+    productImageSwipe=null;
+  }
+});
+
+/* PRODUCT DETAIL IMAGE VIEWER */
+document.addEventListener('click',event=>{
+  if(suppressProductImageSwipeClick){
+    suppressProductImageSwipeClick=false;
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
+  const variantButton=event.target instanceof Element
+    ? event.target.closest('[data-product-variant-prev], [data-product-variant-next]')
+    : null;
+
+  if(variantButton){
+    event.preventDefault();
+    moveProductVariant(
+      variantButton.matches('[data-product-variant-next]')?1:-1
+    );
+    return;
+  }
+
+  const trigger=event.target instanceof Element
+    ? event.target.closest('[data-product-image-open]')
+    : null;
+
+  if(!trigger || trigger.hidden)return;
+
+  const image=trigger
+    .closest('.detail-image-frame')
+    ?.querySelector('.detail-image[data-product-variant-selected-icon]');
+
+  if(!image || image.hidden || !image.complete || image.naturalWidth<1)return;
+
+  const src=image.currentSrc||image.src;
+  if(!src)return;
+
+  window.JYYRModal?.open(
+    `<div class="product-image-modal-content"><img src="${esc(src)}" alt="${esc(image.alt||'Gambar produk')}"></div>`,
+    'product-image-modal'
+  );
+
+  const modalContent=document.querySelector('.product-image-modal-content');
+  const variantNav=trigger
+    .closest('.detail-image-frame')
+    ?.querySelector('[data-product-variant-nav]');
+
+  if(modalContent&&variantNav){
+    modalContent.appendChild(variantNav.cloneNode(true));
+    syncProductVariantNavigation();
+  }
+});
+
+
 })();
 
 
@@ -5225,6 +5536,8 @@ document.addEventListener('input', event => {
 
   input.setSelectionRange(nextCaret, nextCaret);
 });
+
+
 
 /* PRODUCT DETAIL SHARE */
 document.addEventListener('click', async event => {

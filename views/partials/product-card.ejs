@@ -1,4 +1,8 @@
-<% const stock = Number(product.stock) || 0; %>
+<% const stock = Math.max(0, Number(product.stock) || 0); %>
+<% const stockCapacity = Math.max(stock, Number(product.stock_capacity) || stock); %>
+<% const initialStock = stockCapacity + Math.max(0, Number(product.purchase_count) || 0); %>
+<% const stockStatus = stock <= 0 ? 'sold-out' : stock * 100 <= initialStock * 20 ? 'orange' : 'green'; %>
+<% const stockLabel = stockStatus === 'sold-out' ? 'Habis' : stockStatus === 'orange' ? 'Sedikit' : 'Tersedia'; %>
 <% const imageLoading = typeof productCardImageLoading !== 'undefined' ? productCardImageLoading : 'lazy'; %>
 <% const imageFetchPriority = typeof productCardImageFetchPriority !== 'undefined' ? productCardImageFetchPriority : null; %>
 <article class="product-card" data-product-card data-product-id="<%= product.id %>">
@@ -26,12 +30,12 @@
       <% } %>
 
       <span
-        class="product-stock product-stock--<%= stock >= 500 ? 'green' : stock >= 250 ? 'blue' : stock > 0 ? 'orange' : 'sold-out' %> product-stock--cover"
-        aria-label="<%= stock > 0 ? stock + ' produk tersedia' : 'Produk habis' %>"
-        title="<%= stock > 0 ? stock + ' produk tersedia' : 'Produk habis' %>"
+        class="product-stock product-stock--<%= stockStatus %> product-stock--cover"
+        aria-label="<%= stockLabel %>"
+        title="<%= stockLabel %>"
       >
         <span class="product-stock-dot" aria-hidden="true">•</span>
-        <%= stock > 0 ? stock : 'Habis' %>
+        <%= stockLabel %>
       </span>
     </a>
 

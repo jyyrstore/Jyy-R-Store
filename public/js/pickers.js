@@ -1,6 +1,8 @@
 (() => {
   const state = {
-    activeSelect:null
+    activeSelect:null,
+    activeMenu:null,
+    activeMenuAnchor:null
   };
 
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({
@@ -18,7 +20,9 @@
 
     const current=String(value.value||'');
     const options=[
-      ...root.querySelectorAll('[data-jyyr-select-option]')
+      ...(state.activeSelect===root && state.activeMenu
+        ? state.activeMenu.querySelectorAll('[data-jyyr-select-option]')
+        : root.querySelectorAll('[data-jyyr-select-option]'))
     ];
 
     const selected=
@@ -27,9 +31,25 @@
       )||options[0];
 
     if(selected){
-      label.textContent=
+      label.replaceChildren();
+
+      const iconUrl=String(selected.dataset.iconUrl||'');
+
+      if(iconUrl){
+        const image=document.createElement('img');
+        image.className='jyyr-select-icon';
+        image.src=iconUrl;
+        image.alt='';
+        image.setAttribute('aria-hidden','true');
+        label.appendChild(image);
+      }
+
+      const text=document.createElement('span');
+      text.textContent=
         selected.dataset.label||
         selected.textContent.trim();
+
+      label.appendChild(text);
     }
 
     options.forEach(option=>{
@@ -48,36 +68,79 @@
     const trigger=root?.querySelector(
       '[data-jyyr-select-trigger]'
     );
-    const menu=root?.querySelector(
-      '[data-jyyr-select-menu]'
-    );
+    const menu=state.activeSelect===root && state.activeMenu
+      ?state.activeMenu
+      :root?.querySelector('[data-jyyr-select-menu]');
 
     if(!trigger||!menu)return;
 
     const rect=trigger.getBoundingClientRect();
-    const width=Math.max(160,rect.width);
-    const height=Math.min(
+    const viewport=window.visualViewport;
+    const viewportLeft=viewport?.offsetLeft??0;
+    const viewportTop=viewport?.offsetTop??0;
+    const viewportWidth=viewport?.width||window.innerWidth;
+    const viewportHeight=viewport?.height||window.innerHeight;
+    const viewportRight=viewportLeft+viewportWidth;
+    const viewportBottom=viewportTop+viewportHeight;
+
+    const edge=8;
+    const gap=7;
+
+    const width=Math.min(
+      Math.max(160,rect.width),
+      Math.max(0,viewportWidth-edge*2)
+    );
+
+    const left=Math.max(
+      viewportLeft+edge,
+      Math.min(rect.left,viewportRight-edge-width)
+    );
+
+    const maxHeight=Math.min(
       260,
       Math.max(80,menu.scrollHeight||260)
     );
 
-    let top=rect.bottom+7;
+    const spaceAbove=Math.max(
+      0,
+      rect.top-viewportTop-gap-edge
+    );
 
-    if(
-      window.innerHeight-rect.bottom<height+12 &&
-      rect.top>window.innerHeight-rect.bottom
-    ){
-      top=rect.top-height-7;
-    }
+    const spaceBelow=Math.max(
+      0,
+      viewportBottom-rect.bottom-gap-edge
+    );
 
-    menu.style.left=`${Math.round(rect.left)}px`;
-    menu.style.top=`${Math.round(Math.max(8,top))}px`;
+    const openAbove=
+      spaceBelow<maxHeight &&
+      spaceAbove>spaceBelow;
+
+    const availableHeight=
+      openAbove?spaceAbove:spaceBelow;
+
+    const menuHeight=Math.min(
+      maxHeight,
+      availableHeight
+    );
+
+    const top=openAbove
+      ?Math.max(viewportTop+edge,rect.top-gap-menuHeight)
+      :Math.min(rect.bottom+gap,viewportBottom-edge-menuHeight);
+
+    menu.style.left=`${Math.round(left)}px`;
+    menu.style.top=`${Math.round(top)}px`;
     menu.style.width=`${Math.round(width)}px`;
+    menu.style.maxHeight=`${Math.round(menuHeight)}px`;
   }
 
   function closeSelect(){
     const root=state.activeSelect;
     if(!root)return;
+
+    const menu=state.activeMenu||
+      root.querySelector('[data-jyyr-select-menu]');
+
+    const placeholder=state.activeMenuAnchor;
 
     root.classList.remove('open');
 
@@ -88,17 +151,27 @@
       'false'
     );
 
-    const menu=root.querySelector(
-      '[data-jyyr-select-menu]'
-    );
-
     if(menu){
+      menu.classList.remove('open');
       menu.style.left='';
       menu.style.top='';
       menu.style.width='';
+      menu.style.maxHeight='';
+
+      if(placeholder){
+        if(placeholder.parentNode?.isConnected){
+          placeholder.parentNode.insertBefore(menu,placeholder);
+        }else{
+          menu.remove();
+        }
+
+        placeholder.remove();
+      }
     }
 
     state.activeSelect=null;
+    state.activeMenu=null;
+    state.activeMenuAnchor=null;
   }
 
   function openSelect(root,focusIndex=null){
@@ -115,24 +188,40 @@
       '[data-jyyr-select-trigger]'
     );
 
+    const menu=root.querySelector(
+      '[data-jyyr-select-menu]'
+    );
+
     const options=[
       ...root.querySelectorAll(
         '[data-jyyr-select-option]'
       )
     ];
 
-    if(!trigger||!options.length)return;
+    if(!trigger||!menu||!options.length)return;
 
     syncSelect(root);
 
+    const placeholder=root.closest('.owner-product-editor-page')
+      ?document.createComment('jyyr-select-menu')
+      :null;
+
+    if(placeholder){
+      menu.parentNode.insertBefore(placeholder,menu);
+      document.body.appendChild(menu);
+    }
+
+    state.activeSelect=root;
+    state.activeMenu=menu;
+    state.activeMenuAnchor=placeholder;
+
     root.classList.add('open');
+    menu.classList.add('open');
 
     trigger.setAttribute(
       'aria-expanded',
       'true'
     );
-
-    state.activeSelect=root;
 
     positionSelect(root);
 
@@ -148,8 +237,8 @@
 
     const index=
       focusIndex===null
-        ? Math.max(0,currentIndex)
-        : Math.max(
+        ?Math.max(0,currentIndex)
+        :Math.max(
             0,
             Math.min(
               options.length-1,
@@ -161,11 +250,31 @@
   }
 
   function chooseOption(option){
-    const root=option.closest(
-      '[data-jyyr-select]'
-    );
+    const inlinePicker=option.closest('[data-product-variant-picker]');
+    if(inlinePicker){
+      const value=inlinePicker.querySelector('[data-jyyr-select-value]');
+      if(!value)return;
 
-    if(!root)return;
+      if(state.activeSelect)closeSelect();
+
+      value.value=String(option.dataset.value||'');
+      syncSelect(inlinePicker);
+
+      value.dispatchEvent(
+        new Event('input',{bubbles:true})
+      );
+
+      value.dispatchEvent(
+        new Event('change',{bubbles:true})
+      );
+
+      return;
+    }
+
+    const root=state.activeSelect;
+    const menu=state.activeMenu;
+
+    if(!root||!menu?.contains(option))return;
 
     const value=root.querySelector(
       '[data-jyyr-select-value]'
@@ -176,6 +285,7 @@
     value.value=
       String(option.dataset.value||'');
 
+    closeSelect();
     syncSelect(root);
 
     value.dispatchEvent(
@@ -185,8 +295,6 @@
     value.dispatchEvent(
       new Event('change',{bubbles:true})
     );
-
-    closeSelect();
 
     requestAnimationFrame(()=>{
       root.querySelector(
@@ -963,9 +1071,9 @@
     if(!root)return;
 
     const options=[
-      ...root.querySelectorAll(
+      ...(state.activeMenu?.querySelectorAll(
         '[data-jyyr-select-option]'
-      )
+      )||[])
     ];
 
     const index=
@@ -1028,27 +1136,31 @@
     }
   });
 
+  const repositionActiveSelect=()=>{
+    if(state.activeSelect){
+      positionSelect(state.activeSelect);
+    }
+  };
+
   window.addEventListener(
     'resize',
-    ()=>{
-      if(state.activeSelect){
-        positionSelect(
-          state.activeSelect
-        );
-      }
-    }
+    repositionActiveSelect
   );
 
   window.addEventListener(
     'scroll',
-    ()=>{
-      if(state.activeSelect){
-        positionSelect(
-          state.activeSelect
-        );
-      }
-    },
+    repositionActiveSelect,
     true
+  );
+
+  window.visualViewport?.addEventListener(
+    'resize',
+    repositionActiveSelect
+  );
+
+  window.visualViewport?.addEventListener(
+    'scroll',
+    repositionActiveSelect
   );
 
   let initTimer=0;
@@ -1063,6 +1175,10 @@
 
   const observer=
     new MutationObserver(mutations=>{
+      if(state.activeSelect&&!state.activeSelect.isConnected){
+        closeSelect();
+      }
+
       let hasAddedNodes=false;
 
       for(const mutation of mutations){

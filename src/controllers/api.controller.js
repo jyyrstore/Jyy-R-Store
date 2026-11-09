@@ -496,6 +496,15 @@ function normalizeCategoryWriteError(error){
   return error;
 }
 
+function assertOwnerProductContentAccess(accessType,variantId){
+  if(!variantId||accessType==='PURCHASED')return;
+
+  throw Object.assign(
+    new Error('Konten khusus varian hanya boleh diatur sebagai Hanya pembeli.'),
+    {status:400,code:'PRODUCT_VARIANT_CONTENT_PRIVATE',expose:true}
+  );
+}
+
 const ownerController={
  dashboard:async(req,res)=>ok(res,await analytics.dashboard()),
  analytics:async(req,res)=>ok(res,await analytics.period(req.query.period||'30d',req.query.from,req.query.to)),
@@ -565,12 +574,7 @@ if(variantId){
     );
   }
 
-  if(accessType!=='PURCHASED'){
-    throw Object.assign(
-      new Error('Konten khusus varian hanya boleh diatur sebagai Hanya pembeli.'),
-      {status:400,code:'PRODUCT_VARIANT_CONTENT_PRIVATE',expose:true}
-    );
-  }
+  assertOwnerProductContentAccess(accessType,variantId);
 }
 
 const p=await repo.addContent({
@@ -593,8 +597,110 @@ return ok(res,p,201)},
     repo.contents(req.params.id),
     repo.listVariants(req.params.id)
   ]);
-  return ok(res,{items,variants});
+  const publicAssetBucket=loadEnv().PUBLIC_ASSET_BUCKET;
+  return ok(res,{
+   items,
+   variants:variants.map(variant=>({
+    ...variant,
+    icon_url:variant.icon_path?storage.publicUrl(publicAssetBucket,variant.icon_path):null
+   }))
+  });
 },
+ productContentUpdate:async(req,res)=>{
+  const repo=require('../repositories/products.repository');
+  const current=await repo.findById(req.params.id);
+
+  if(!current){
+    throw Object.assign(
+      new Error('Product not found.'),
+      {status:404,code:'PRODUCT_NOT_FOUND',expose:true}
+    );
+  }
+
+  if(current.status==='ARCHIVED'){
+    throw Object.assign(
+      new Error('Produk ARCHIVED tidak dapat diubah.'),
+      {status:400,code:'PRODUCT_ARCHIVED',expose:true}
+    );
+  }
+
+  const existing=(await repo.contents(req.params.id)).find(
+    item=>String(item.id)===String(req.params.contentId)
+  );
+
+  if(!existing){
+    throw Object.assign(
+      new Error('Content tidak ditemukan pada product tersebut.'),
+      {status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true}
+    );
+  }
+
+  const variantId=String(req.body.variant_id||'').trim()||null;
+  const existingVariantId=String(existing.variant_id||'').trim()||null;
+
+  if(variantId!==existingVariantId){
+    throw Object.assign(
+      new Error('Target varian tidak dapat diubah saat mengedit content.'),
+      {status:400,code:'PRODUCT_CONTENT_VARIANT_IMMUTABLE',expose:true}
+    );
+  }
+
+  const accessType=String(
+    req.body.access_type||'PURCHASED'
+  ).toUpperCase();
+
+  assertOwnerProductContentAccess(accessType,variantId);
+
+  if(
+    existing.type==='TEXT' &&
+    !String(req.body.text_content||'').trim()
+  ){
+    throw Object.assign(
+      new Error('Isi teks wajib diisi.'),
+      {status:400,code:'PRODUCT_CONTENT_INVALID',expose:true}
+    );
+  }
+
+  if(
+    existing.type==='LINK' &&
+    !String(req.body.url||'').trim()
+  ){
+    throw Object.assign(
+      new Error('URL wajib diisi.'),
+      {status:400,code:'PRODUCT_CONTENT_INVALID',expose:true}
+    );
+  }
+
+  const updated=await repo.updateContent(
+    req.params.contentId,
+    {
+      ...req.body,
+      access_type:accessType,
+      is_preview:accessType==='PREVIEW'
+    },
+    req.params.id
+  );
+
+  if(!updated){
+    throw Object.assign(
+      new Error('Content tidak ditemukan pada product tersebut.'),
+      {status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true}
+    );
+  }
+
+  await recordOwnerAudit(req,{
+    action:'UPDATE_PRODUCT_CONTENT',
+    entityType:'product_content',
+    entityId:updated.id,
+    metadata:{
+      productId:req.params.id,
+      type:existing.type,
+      variantId
+    }
+  });
+
+  return ok(res,updated);
+ },
  productContentDelete:async(req,res)=>{const repo=require('../repositories/products.repository');const deleted=await repo.deleteContent(req.params.contentId,req.params.id);if(!deleted)throw Object.assign(new Error('Content tidak ditemukan pada product tersebut.'),{status:404,code:'PRODUCT_CONTENT_NOT_FOUND',expose:true});await removeUnusedProductStorage(deleted.storage_path,loadEnv().PRIVATE_PRODUCT_BUCKET);await recordOwnerAudit(req,{action:'DELETE_PRODUCT_CONTENT',entityType:'product_content',entityId:req.params.contentId,metadata:{productId:req.params.id}});return ok(res,{})},
  categories:async(req,res)=>ok(res,await categories.list(false)),
  categoryCreate:async(req,res)=>{

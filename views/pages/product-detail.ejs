@@ -14,6 +14,7 @@
       >
         <%- icon('share') %>
       </button>
+      <% const productImageVariants=product.pricing_mode==='VARIANT'?(product.variants||[]).filter(v=>Math.max(0,Number(v.stock)-Number(v.reserved_stock||0))>0):[]; %>
       <div class="detail-image-frame">
         <% const productDetailImageUrl=product.thumbnail_url || (product.thumbnail_path?assetUrl(publicAssetBucket,product.thumbnail_path):''); %>
         <img
@@ -30,6 +31,21 @@
           <%- icon('image') %>
           <span>Gambar tidak tersedia</span>
         </div>
+        <button
+          type="button"
+          class="detail-image-open"
+          data-product-image-open
+          aria-label="Lihat gambar penuh <%= product.name %>"
+          title="Lihat gambar penuh"
+          <% if(!productDetailImageUrl){ %>hidden<% } %>
+        ></button>
+        <% if(productImageVariants.length){ %>
+          <div class="product-image-variant-nav" data-product-variant-nav aria-label="Navigasi varian">
+            <button type="button" data-product-variant-prev aria-label="Varian sebelumnya"><span class="product-image-variant-arrow" aria-hidden="true"></span></button>
+            <span data-product-variant-nav-label aria-live="polite">Pilih varian</span>
+            <button type="button" data-product-variant-next aria-label="Varian berikutnya"><span class="product-image-variant-arrow" aria-hidden="true"></span></button>
+          </div>
+        <% } %>
       </div>
     </div>
     <div class="detail-product-stats" aria-label="Statistik produk">
@@ -52,7 +68,7 @@
         </span>
       </div>
     </div>
-    <% if(product.pricing_mode==='VARIANT'){ const availableVariants=(product.variants||[]).filter(v=>Math.max(0,Number(v.stock)-Number(v.reserved_stock||0))>0); %>
+    <% if(product.pricing_mode==='VARIANT'){ const availableVariants=productImageVariants; %>
     <section class="detail-variant-card" aria-labelledby="product-variant-title">
       <h2 class="detail-variant-title" id="product-variant-title">Pilih Nominal</h2>
       <div class="jyyr-select" data-jyyr-select data-product-variant-picker>
