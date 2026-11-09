@@ -25,7 +25,12 @@
           class="cart-item"
           data-cart-item="<%= i.id %>"
         >
-          <% if(i.thumbnail_path){ %>
+          <% if(i.variant_id && i.variant_icon_path){ %>
+            <img
+              src="<%= assetUrl(publicAssetBucket,i.variant_icon_path) %>"
+              alt="<%= i.variant_label || i.name %>"
+            >
+          <% } else if(!i.variant_id && i.thumbnail_path){ %>
             <img
               src="<%= assetUrl(publicAssetBucket,i.thumbnail_path) %>"
               alt="<%= i.name %>"

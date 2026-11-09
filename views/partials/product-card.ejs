@@ -1,8 +1,6 @@
 <% const stock = Math.max(0, Number(product.stock) || 0); %>
-<% const stockCapacity = Math.max(stock, Number(product.stock_capacity) || stock); %>
-<% const initialStock = stockCapacity + Math.max(0, Number(product.purchase_count) || 0); %>
-<% const stockStatus = stock <= 0 ? 'sold-out' : stock * 100 <= initialStock * 20 ? 'orange' : 'green'; %>
-<% const stockLabel = stockStatus === 'sold-out' ? 'Habis' : stockStatus === 'orange' ? 'Sedikit' : 'Tersedia'; %>
+<% const stockStatus = stock <= 0 ? 'sold-out' : 'green'; %>
+<% const stockLabel = stockStatus === 'sold-out' ? 'Habis' : 'Tersedia'; %>
 <% const imageLoading = typeof productCardImageLoading !== 'undefined' ? productCardImageLoading : 'lazy'; %>
 <% const imageFetchPriority = typeof productCardImageFetchPriority !== 'undefined' ? productCardImageFetchPriority : null; %>
 <article class="product-card" data-product-card data-product-id="<%= product.id %>">

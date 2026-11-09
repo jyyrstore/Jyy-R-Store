@@ -406,7 +406,7 @@ test('Owner content target variant dropdown displays saved variant icons',()=>{
   assert.ok(components.includes('.jyyr-select-icon{'));
 });
 
-test('Product card stock badge uses initial inventory percentage',()=>{
+test('Product card stock badge reflects reliable available stock state',()=>{
   const fs=require('node:fs');
   const path=require('node:path');
   const root=path.resolve(__dirname,'../..');
@@ -424,18 +424,14 @@ test('Product card stock badge uses initial inventory percentage',()=>{
     'utf8'
   );
 
-  assert.match(repository,/select sum\(pv\.stock\) from product_variants pv/);
-  assert.match(repository,/end as stock_capacity,c\.name category_name/);
-  assert.match(repository,/end as stock_capacity,\s*case\s+when c\.is_active=true/);
+  assert.doesNotMatch(repository,/stock_capacity/);
+  assert.match(repository,/sum\(greatest\(pv\.stock-pv\.reserved_stock,0\)\)/);
 
-  assert.match(card,/product\.stock_capacity/);
-  assert.match(card,/product\.purchase_count/);
-  assert.match(card,/stock \* 100 <= initialStock \* 20/);
-  assert.match(card,/stockStatus = stock <= 0 \? 'sold-out' : stock \* 100 <= initialStock \* 20 \? 'orange' : 'green'/);
-  assert.match(card,/stockLabel = stockStatus === 'sold-out' \? 'Habis' : stockStatus === 'orange' \? 'Sedikit' : 'Tersedia'/);
+  assert.doesNotMatch(card,/stockCapacity|initialStock|purchase_count|Sedikit/);
+  assert.match(card,/const stockStatus = stock <= 0 \? 'sold-out' : 'green';/);
+  assert.match(card,/const stockLabel = stockStatus === 'sold-out' \? 'Habis' : 'Tersedia';/);
   assert.match(card,/product-stock--<%= stockStatus %>/);
   assert.match(card,/<%= stockLabel %>/);
-  assert.doesNotMatch(card,/stock > 0 \? stock : 'Habis'/);
 
   assert.match(styles,/\.product-stock--green\{color:var\(--success\)\}/);
   assert.match(styles,/\.product-stock--orange\{color:var\(--warning\)\}/);
@@ -480,6 +476,14 @@ test('Product detail image preview crops to 4:5 and opens active image',()=>{
     css,/\.product-image-modal-content img\s*\{[^}]*object-fit:\s*contain/s
   );
 
+  assert.match(
+    css,/\.detail-image-frame > \.product-image-transition-previous\s*\{/
+  );
+
+  assert.match(
+    css,/\.product-image-modal-content > \.product-image-transition-previous\s*\{/
+  );
+
   assert.match(browser,/window\.JYYRModal\?\.open\(/);
   assert.match(browser,/image\.currentSrc\|\|image\.src/);
   assert.match(browser,/imageOpenButton\.hidden=!nextIconUrl/);
@@ -507,13 +511,30 @@ test('Product detail image preview crops to 4:5 and opens active image',()=>{
   assert.match(browser,/syncProductVariantNavigation\(\)/);
   assert.match(css,/\.product-image-variant-nav\s*\{[^}]*position:\s*absolute/s);
   assert.match(css,/\.product-image-variant-nav button:disabled/);
-  assert.match(browser,/modalImage\.src=nextIconUrl/);
+  assert.ok(browser.includes('function swapProductDetailImage(image,nextUrl){'));
+  assert.ok(browser.includes('preload.decode()'));
+  assert.ok(browser.includes('prefers-reduced-motion: reduce'));
+  assert.ok(browser.includes('previous.animate('));
+  assert.ok(browser.includes('swapProductDetailImage(selectedIcon,nextIconUrl)'));
+  assert.ok(browser.includes('swapProductDetailImage(modalImage,nextIconUrl)'));
   assert.match(css,/\.detail-image-open\s*\{[^}]*touch-action:\s*pan-y/s);
-  assert.match(css,/\.product-image-modal-content\s*\{[^}]*touch-action:\s*pan-y/s);
+  assert.match(css,/\.product-image-modal-content\s*\{[^}]*touch-action:\s*none/s);
   assert.match(browser,/img\.matches\('\.detail-image'\)/);
   assert.match(browser,/querySelector\('\[data-product-image-open\]'\)/);
+  assert.match(browser,/window\.setTimeout\(\(\)=>\{\s*suppressProductImageSwipeClick=false;\s*\},0\)/);
 
   assert.match(modal,/window\.JYYRModal=\{open,close,confirm\}/);
+  assert.ok(modal.includes("function open(html, modalClass='')"));
+  assert.match(
+    css,/\.modal\.product-image-modal \.modal-close\s*\{\s*display:\s*none;\s*\}/
+  );
+
+  assert.match(browser,/product-image-modal-content" tabindex="0"/);
+  assert.doesNotMatch(browser,/showCloseButton:false/);
+  assert.match(browser,/function closeProductImageModal\(direction\)/);
+  assert.match(browser,/Math\.abs\(deltaY\)>=72/);
+  assert.match(browser,/closeProductImageModal\(deltaY<0\?-1:1\)/);
+  assert.match(browser,/backdrop\.animate\(/);
 });
 
 test('Product detail variant cards select through shared picker',()=>{
@@ -608,6 +629,17 @@ test('Owner content edit uses scoped metadata updates and preserves stored files
   assert.ok(api.includes('productContentUpdate:async(req,res)=>'));
   const normalizedApi=api.replace(/\s+/g,'');
   assert.ok(normalizedApi.includes('repo.updateContent(req.params.contentId,'));
+
+  assert.ok(api.includes("Object.prototype.hasOwnProperty.call(req.body,'variant_id')"));
+  assert.ok(api.includes("req.body.access_type??existing.access_type??'PURCHASED'"));
+  assert.ok(api.includes('req.body.description??existing.description'));
+  assert.ok(api.includes('req.body.text_content??existing.text_content'));
+  assert.ok(api.includes('req.body.url??existing.url'));
+  assert.ok(api.includes('req.body.sort_order??existing.sort_order'));
+
+  assert.ok(browser.includes('name="sort_order" value="${esc(editingContent?.sort_order??0)}"'));
+  assert.ok(browser.includes("sort_order:Number(fd.get('sort_order')??0)"));
+  assert.ok(browser.includes('!form.dataset.ownerContentId'));
 
   const updateStart=repository.indexOf(
     'async function updateContent(id,data,productId=null)'
@@ -961,6 +993,24 @@ test('homepage displays products across active category groups and uncategorized
   assert.ok(appView.includes("<% if (view !== 'pages/home') { %>"));
   assert.ok(animationsStyles.includes('@keyframes page-reveal'));
   assert.ok(animationsStyles.includes('/* GLOBAL PAGE ENTRANCE SEQUENCE */'));
+  assert.match(
+    animationsStyles,
+    /\.main-content\s*>\s*\*\s*>\s*\*,\s*\.auth-shell:not\(\.auth-shell-login\)\s+\.auth-card\s*>\s*\*\s*\{\s*animation:page-reveal \.48s cubic-bezier\(\.22,1,\.36,1\) both;\s*\}/
+  );
+  assert.match(
+    animationsStyles,
+    /\.main-content\s*>\s*\*\s*>\s*:nth-child\(2\),\s*\.auth-shell:not\(\.auth-shell-login\)\s+\.auth-card\s*>\s*:nth-child\(2\)\s*\{\s*animation-delay:\.08s;\s*\}/
+  );
+  assert.match(
+    animationsStyles,
+    /\.main-content\s*>\s*\*\s*>\s*:nth-child\(12\),\s*\.auth-shell:not\(\.auth-shell-login\)\s+\.auth-card\s*>\s*:nth-child\(12\)\s*\{\s*animation-delay:\.88s;\s*\}/
+  );
+  assert.match(
+    animationsStyles,
+    /@media\(prefers-reduced-motion:reduce\)[\s\S]*?\.main-content\s*>\s*\*\s*>\s*\*,\s*\.auth-shell:not\(\.auth-shell-login\)\s+\.auth-card\s*>\s*\*\s*\{\s*animation:none!important;/
+  );
+  assert.ok(pagesStyles.includes('/* LOGIN ENTRANCE SEQUENCE */'));
+  assert.ok(pagesStyles.includes('animation:page-reveal .48s cubic-bezier(.22,1,.36,1) both;'));
   assert.ok(!pagesStyles.includes('@keyframes page-reveal'));
   assert.ok(!pagesStyles.includes('/* GLOBAL PAGE ENTRANCE SEQUENCE */'));
 
@@ -2666,6 +2716,16 @@ test('Cover Produk uses signed direct upload instead of TUS',()=>{
     pages,
     /uploadSignedFile\(\s*file,\s*init\.signedUrl/
   );
+
+  assert.doesNotMatch(
+    pages,
+    /optimizeThumbnailFile|createImageBitmap|canvas\.toBlob|Mengoptimalkan thumbnail/
+  );
+
+  assert.match(
+    pages,
+    /originalName:file\.name\|\|'file'[\s\S]*?mimeType:file\.type\|\|'application\/octet-stream'[\s\S]*?fileSize:file\.size/
+  );
 });
 
 test('content file is cleared only when content type changes',()=>{
@@ -2871,6 +2931,47 @@ test('BuatQris route is isolated and mounted before JSON parsing',()=>{
 }
 
 
+test('mobile sidebar navigation items enter sequentially when drawer opens', () => {
+  const sidebar = fs.readFileSync(
+    path.join(root, 'views/partials/sidebar.ejs'),
+    'utf8'
+  );
+  const styles = fs.readFileSync(
+    path.join(root, 'public/css/navigation.css'),
+    'utf8'
+  );
+  const navigation = fs.readFileSync(
+    path.join(root, 'public/js/navigation.js'),
+    'utf8'
+  );
+
+  assert.ok(sidebar.includes('<div class="sidebar-inner">'));
+  assert.ok(sidebar.includes('class="nav-link'));
+
+  assert.ok(styles.includes('@keyframes sidebar-nav-enter{'));
+  assert.ok(styles.includes(
+    'animation:sidebar-nav-enter .36s cubic-bezier(.22,1,.36,1) both;'
+  ));
+
+  assert.ok(styles.includes(
+    '.sidebar.open .sidebar-inner > .nav-link:nth-child(2){'
+  ));
+  assert.ok(styles.includes('animation-delay:.035s;'));
+
+  assert.ok(styles.includes(
+    '.sidebar.open .sidebar-inner > .nav-link:nth-child(28){'
+  ));
+  assert.ok(styles.includes('animation-delay:.945s;'));
+
+  assert.ok(styles.includes('@media(prefers-reduced-motion:reduce){'));
+  assert.ok(styles.includes('animation:none!important;'));
+
+  assert.ok(navigation.includes(
+    "drawer?.classList.toggle('open',open)"
+  ));
+});
+
+
 test('mobile bottom navigation matches the floating dark capsule design', () => {
   const nav = fs.readFileSync(
     path.join(root, 'views/partials/bottom-nav.ejs'),
@@ -3003,6 +3104,45 @@ test('failed and expired payment paths create user notifications', () => {
   assert.ok(source.includes("title:'Deposit kedaluwarsa'"));
   assert.ok(source.includes("title:'Pembayaran gagal'"));
   assert.ok(source.includes("title:'Pembayaran kedaluwarsa'"));
+});
+
+
+test('cart shows variant icon and keeps product cover for fixed items', () => {
+  const repository = fs.readFileSync(
+    path.join(root, 'src/repositories/cart.repository.js'),
+    'utf8'
+  );
+  const template = fs.readFileSync(
+    path.join(root, 'views/pages/cart.ejs'),
+    'utf8'
+  );
+
+  assert.match(
+    repository,
+    /\\'variant_icon_path\\',v\.icon_path/
+  );
+
+  assert.ok(
+    template.includes(
+      'if(i.variant_id && i.variant_icon_path)'
+    )
+  );
+  assert.ok(
+    template.includes(
+      'assetUrl(publicAssetBucket,i.variant_icon_path)'
+    )
+  );
+
+  assert.ok(
+    template.includes(
+      'else if(!i.variant_id && i.thumbnail_path)'
+    )
+  );
+  assert.ok(
+    template.includes(
+      'assetUrl(publicAssetBucket,i.thumbnail_path)'
+    )
+  );
 });
 
 

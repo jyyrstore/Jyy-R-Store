@@ -1125,73 +1125,8 @@
     return tusLoaderPromise;
   }
 
-  async function optimizeThumbnailFile(file){
-    if(
-      !file ||
-      !/^image\/(?:jpeg|png|webp)$/i.test(file.type||'') ||
-      typeof createImageBitmap!=='function'
-    )return file;
-
-    let bitmap=null;
-
-    try{
-      bitmap=await createImageBitmap(file);
-
-      if(!bitmap.width||!bitmap.height)return file;
-
-      const scale=Math.min(
-        1,
-        1200/bitmap.width,
-        900/bitmap.height
-      );
-
-      const width=Math.max(1,Math.round(bitmap.width*scale));
-      const height=Math.max(1,Math.round(bitmap.height*scale));
-      const canvas=document.createElement('canvas');
-
-      canvas.width=width;
-      canvas.height=height;
-
-      const context=canvas.getContext('2d');
-      if(!context)return file;
-
-      context.drawImage(bitmap,0,0,width,height);
-
-      const blob=await new Promise(resolve=>{
-        canvas.toBlob(resolve,'image/webp',0.82);
-      });
-
-      if(!blob||blob.type!=='image/webp'||blob.size>=file.size){
-        return file;
-      }
-
-      const baseName=String(file.name||'thumbnail')
-        .replace(/\.[^.]+$/,'')||'thumbnail';
-
-      return new File(
-        [blob],
-        `${baseName}.webp`,
-        {
-          type:'image/webp',
-          lastModified:Date.now()
-        }
-      );
-    }catch{
-      return file;
-    }finally{
-      bitmap?.close?.();
-    }
-  }
-
   async function uploadOwnerFile(productId,file,{contentType='THUMBNAIL',progressEl=null,statusEl=null,meta={}}={}){
     if(!file)return null;
-
-    if(contentType==='THUMBNAIL'){
-      if(statusEl){
-        statusEl.textContent='Mengoptimalkan thumbnail…';
-      }
-      file=await optimizeThumbnailFile(file);
-    }
 
     const init=await api.request(
       '/api/owner/products/'+encodeURIComponent(productId)+'/upload-init',
@@ -1636,6 +1571,7 @@
             data-product-has-thumbnail="${coverReady===true?'1':'0'}"
             data-owner-content-id="${esc(editingContent?.id||'')}"
             class="owner-content-form">
+            <input type="hidden" name="sort_order" value="${esc(editingContent?.sort_order??0)}">
 
             <div class="owner-section-title">
               <div>
@@ -1917,13 +1853,12 @@
         const defaultIconUrl=String(selectedIcon.dataset.productVariantDefaultSrc||'');
         const nextIconUrl=selected&&iconUrl?iconUrl:defaultIconUrl;
 
+        swapProductDetailImage(selectedIcon,nextIconUrl);
+        selectedIcon.hidden=!nextIconUrl;
+
         if(nextIconUrl){
-          selectedIcon.src=nextIconUrl;
-          selectedIcon.hidden=false;
           selectedIcon.nextElementSibling?.setAttribute('hidden','');
         }else{
-          selectedIcon.removeAttribute('src');
-          selectedIcon.hidden=true;
           selectedIcon.nextElementSibling?.removeAttribute('hidden');
         }
 
@@ -1932,8 +1867,7 @@
 
         const modalImage=document.querySelector('.product-image-modal-content img');
         if(modalImage){
-          if(nextIconUrl)modalImage.src=nextIconUrl;
-          else modalImage.removeAttribute('src');
+          swapProductDetailImage(modalImage,nextIconUrl);
         }
       }
 
@@ -2116,7 +2050,8 @@
 
     if(
       uploadStatus &&
-      !uploadStatus.dataset.uploading
+      !uploadStatus.dataset.uploading &&
+      !form.dataset.ownerContentId
     ){
       uploadStatus.textContent=
         [
@@ -4098,7 +4033,7 @@ ${productPricingModesMarkup('FIXED')}
                 access==='PREVIEW',
               access_type:access,
               variant_id:variantId,
-              sort_order:0
+              sort_order:Number(fd.get('sort_order')??0)
             },
             isEditing?'PUT':'POST',
             isEditing?'Content berhasil diperbarui.':'Content berhasil ditambahkan.'
@@ -5297,6 +5232,134 @@ ${productPricingModesMarkup('FIXED')}
   });
 
 
+function swapProductDetailImage(image,nextUrl){
+  if(!image)return;
+
+  const swapId=Number(image.dataset.productImageSwap||0)+1;
+  image.dataset.productImageSwap=String(swapId);
+
+  const url=String(nextUrl||'');
+
+  if(!url){
+    image.removeAttribute('src');
+    return;
+  }
+
+  const currentUrl=image.currentSrc||image.src;
+
+  if(!currentUrl||image.hidden||currentUrl===url){
+    image.src=url;
+    return;
+  }
+
+  const preload=new Image();
+  preload.decoding='async';
+
+  let settled=false;
+
+  const complete=decoded=>{
+    if(settled)return;
+    settled=true;
+
+    if(
+      !image.isConnected||
+      !image.parentElement||
+      Number(image.dataset.productImageSwap)!==swapId
+    )return;
+
+    if(
+      !decoded||
+      image.hidden||
+      typeof image.animate!=='function'||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    ){
+      image.src=url;
+      return;
+    }
+
+    const previousUrl=image.currentSrc||image.src;
+
+    if(!previousUrl||previousUrl===url){
+      image.src=url;
+      return;
+    }
+
+    image.parentElement
+      .querySelectorAll(':scope > .product-image-transition-previous')
+      .forEach(previous=>previous.remove());
+
+    const previous=image.cloneNode(false);
+
+    previous.classList.add('product-image-transition-previous');
+
+    for(const attribute of [
+      'id',
+      'data-image-fallback',
+      'data-product-variant-selected-icon',
+      'data-product-variant-default-src',
+      'data-product-image-swap',
+      'srcset',
+      'sizes'
+    ]){
+      previous.removeAttribute(attribute);
+    }
+
+    previous.alt='';
+    previous.setAttribute('aria-hidden','true');
+    previous.src=previousUrl;
+
+    image.parentElement.insertBefore(
+      previous,
+      image.nextSibling
+    );
+
+    image.src=url;
+
+    const timing={
+      duration:280,
+      easing:'cubic-bezier(.22,1,.36,1)'
+    };
+
+    const fade=previous.animate(
+      [
+        {opacity:1,transform:'scale(1)'},
+        {opacity:0,transform:'scale(1.025)'}
+      ],
+      timing
+    );
+
+    fade.addEventListener(
+      'finish',
+      ()=>previous.remove(),
+      {once:true}
+    );
+
+    fade.addEventListener(
+      'cancel',
+      ()=>previous.remove(),
+      {once:true}
+    );
+
+    image.animate(
+      [
+        {transform:'scale(.985)'},
+        {transform:'scale(1)'}
+      ],
+      timing
+    );
+  };
+
+  preload.onload=()=>complete(true);
+  preload.onerror=()=>complete(false);
+  preload.src=url;
+
+  if(typeof preload.decode==='function'){
+    preload.decode()
+      .then(()=>complete(true))
+      .catch(()=>complete(false));
+  }
+}
+
 function productVariantOptions(){
   const picker=document.querySelector('[data-product-variant-picker]');
 
@@ -5364,6 +5427,61 @@ function moveProductVariant(direction){
   return true;
 }
 
+function closeProductImageModal(direction){
+  const root=document.getElementById('modal-root');
+  const dialog=root?.querySelector('.modal.product-image-modal');
+  const backdrop=root?.querySelector('[data-modal-backdrop]');
+
+  if(!dialog||dialog.dataset.productImageClosing==='1')return;
+
+  dialog.dataset.productImageClosing='1';
+
+  if(
+    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||
+    typeof dialog.animate!=='function'
+  ){
+    window.JYYRModal?.close();
+    return;
+  }
+
+  const distance=Math.max(
+    window.innerHeight||0,
+    dialog.getBoundingClientRect().height
+  )+24;
+
+  const animation=dialog.animate(
+    [
+      {transform:'translate3d(0,0,0)'},
+      {transform:`translate3d(0,${direction*distance}px,0)`}
+    ],
+    {
+      duration:280,
+      easing:'cubic-bezier(.22,1,.36,1)',
+      fill:'forwards'
+    }
+  );
+
+  if(backdrop&&typeof backdrop.animate==='function'){
+    backdrop.animate(
+      [
+        {opacity:1},
+        {opacity:0}
+      ],
+      {
+        duration:240,
+        easing:'ease-out',
+        fill:'forwards'
+      }
+    );
+  }
+
+  animation.addEventListener(
+    'finish',
+    ()=>window.JYYRModal?.close(),
+    {once:true}
+  );
+}
+
 /* PRODUCT DETAIL IMAGE VARIANT SWIPE */
 let productImageSwipe=null;
 let suppressProductImageSwipeClick=false;
@@ -5404,6 +5522,16 @@ document.addEventListener('pointerup',event=>{
   const deltaY=event.clientY-gesture.startY;
 
   if(
+    gesture.surface.matches('.product-image-modal-content') &&
+    Math.abs(deltaY)>=72 &&
+    Math.abs(deltaY)>Math.abs(deltaX)*1.2
+  ){
+    closeProductImageModal(deltaY<0?-1:1);
+    suppressProductImageSwipeClick=true;
+    return;
+  }
+
+  if(
     Math.abs(deltaX)<48 ||
     Math.abs(deltaX)<Math.abs(deltaY)*1.25
   )return;
@@ -5413,6 +5541,10 @@ document.addEventListener('pointerup',event=>{
 
   if(changed){
     suppressProductImageSwipeClick=true;
+
+    window.setTimeout(()=>{
+      suppressProductImageSwipeClick=false;
+    },0);
   }
 });
 
@@ -5459,7 +5591,7 @@ document.addEventListener('click',event=>{
   if(!src)return;
 
   window.JYYRModal?.open(
-    `<div class="product-image-modal-content"><img src="${esc(src)}" alt="${esc(image.alt||'Gambar produk')}"></div>`,
+    `<div class="product-image-modal-content" tabindex="0"><img src="${esc(src)}" alt="${esc(image.alt||'Gambar produk')}"></div>`,
     'product-image-modal'
   );
 

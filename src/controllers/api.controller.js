@@ -635,8 +635,11 @@ return ok(res,p,201)},
     );
   }
 
-  const variantId=String(req.body.variant_id||'').trim()||null;
   const existingVariantId=String(existing.variant_id||'').trim()||null;
+
+  const variantId=Object.prototype.hasOwnProperty.call(req.body,'variant_id')
+    ? String(req.body.variant_id||'').trim()||null
+    : existingVariantId;
 
   if(variantId!==existingVariantId){
     throw Object.assign(
@@ -646,14 +649,20 @@ return ok(res,p,201)},
   }
 
   const accessType=String(
-    req.body.access_type||'PURCHASED'
+    req.body.access_type??existing.access_type??'PURCHASED'
   ).toUpperCase();
+
+  const textContent=
+    req.body.text_content??existing.text_content;
+
+  const contentUrl=
+    req.body.url??existing.url;
 
   assertOwnerProductContentAccess(accessType,variantId);
 
   if(
     existing.type==='TEXT' &&
-    !String(req.body.text_content||'').trim()
+    !String(textContent||'').trim()
   ){
     throw Object.assign(
       new Error('Isi teks wajib diisi.'),
@@ -663,7 +672,7 @@ return ok(res,p,201)},
 
   if(
     existing.type==='LINK' &&
-    !String(req.body.url||'').trim()
+    !String(contentUrl||'').trim()
   ){
     throw Object.assign(
       new Error('URL wajib diisi.'),
@@ -675,6 +684,10 @@ return ok(res,p,201)},
     req.params.contentId,
     {
       ...req.body,
+      description:req.body.description??existing.description,
+      text_content:textContent,
+      url:contentUrl,
+      sort_order:req.body.sort_order??existing.sort_order,
       access_type:accessType,
       is_preview:accessType==='PREVIEW'
     },
