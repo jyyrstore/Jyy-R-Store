@@ -81,6 +81,137 @@
   animation-delay:.88s;
 }
 
+/* GLOBAL STAGGER CARD ENTRANCE */
+
+.stack-list > :is(.list-card,.cart-item,.notification-card),
+.message-chat-list > .message-chat-row,
+.message-detail-body > .message-bubble,
+.ranking-list > .ranking-card,
+.product-grid > :is(.product-card,.list-card),
+.category-grid > .category-card,
+.search-chip-grid > .category-card,
+.service-grid > .service-card,
+.stat-grid > .stat-card {
+  animation:page-reveal .48s cubic-bezier(.22,1,.36,1) backwards;
+}
+
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(2),
+.message-chat-list > .message-chat-row:nth-child(2),
+.message-detail-body > .message-bubble:nth-child(2),
+.ranking-list > .ranking-card:nth-child(2),
+.product-grid > :is(.product-card,.list-card):nth-child(2),
+.category-grid > .category-card:nth-child(2),
+.search-chip-grid > .category-card:nth-child(2),
+.service-grid > .service-card:nth-child(2),
+.stat-grid > .stat-card:nth-child(2) { animation-delay:0.06s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(3),
+.message-chat-list > .message-chat-row:nth-child(3),
+.message-detail-body > .message-bubble:nth-child(3),
+.ranking-list > .ranking-card:nth-child(3),
+.product-grid > :is(.product-card,.list-card):nth-child(3),
+.category-grid > .category-card:nth-child(3),
+.search-chip-grid > .category-card:nth-child(3),
+.service-grid > .service-card:nth-child(3),
+.stat-grid > .stat-card:nth-child(3) { animation-delay:0.12s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(4),
+.message-chat-list > .message-chat-row:nth-child(4),
+.message-detail-body > .message-bubble:nth-child(4),
+.ranking-list > .ranking-card:nth-child(4),
+.product-grid > :is(.product-card,.list-card):nth-child(4),
+.category-grid > .category-card:nth-child(4),
+.search-chip-grid > .category-card:nth-child(4),
+.service-grid > .service-card:nth-child(4),
+.stat-grid > .stat-card:nth-child(4) { animation-delay:0.18s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(5),
+.message-chat-list > .message-chat-row:nth-child(5),
+.message-detail-body > .message-bubble:nth-child(5),
+.ranking-list > .ranking-card:nth-child(5),
+.product-grid > :is(.product-card,.list-card):nth-child(5),
+.category-grid > .category-card:nth-child(5),
+.search-chip-grid > .category-card:nth-child(5),
+.service-grid > .service-card:nth-child(5),
+.stat-grid > .stat-card:nth-child(5) { animation-delay:0.24s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(6),
+.message-chat-list > .message-chat-row:nth-child(6),
+.message-detail-body > .message-bubble:nth-child(6),
+.ranking-list > .ranking-card:nth-child(6),
+.product-grid > :is(.product-card,.list-card):nth-child(6),
+.category-grid > .category-card:nth-child(6),
+.search-chip-grid > .category-card:nth-child(6),
+.service-grid > .service-card:nth-child(6),
+.stat-grid > .stat-card:nth-child(6) { animation-delay:0.30s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(7),
+.message-chat-list > .message-chat-row:nth-child(7),
+.message-detail-body > .message-bubble:nth-child(7),
+.ranking-list > .ranking-card:nth-child(7),
+.product-grid > :is(.product-card,.list-card):nth-child(7),
+.category-grid > .category-card:nth-child(7),
+.search-chip-grid > .category-card:nth-child(7),
+.service-grid > .service-card:nth-child(7),
+.stat-grid > .stat-card:nth-child(7) { animation-delay:0.36s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(8),
+.message-chat-list > .message-chat-row:nth-child(8),
+.message-detail-body > .message-bubble:nth-child(8),
+.ranking-list > .ranking-card:nth-child(8),
+.product-grid > :is(.product-card,.list-card):nth-child(8),
+.category-grid > .category-card:nth-child(8),
+.search-chip-grid > .category-card:nth-child(8),
+.service-grid > .service-card:nth-child(8),
+.stat-grid > .stat-card:nth-child(8) { animation-delay:0.42s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(9),
+.message-chat-list > .message-chat-row:nth-child(9),
+.message-detail-body > .message-bubble:nth-child(9),
+.ranking-list > .ranking-card:nth-child(9),
+.product-grid > :is(.product-card,.list-card):nth-child(9),
+.category-grid > .category-card:nth-child(9),
+.search-chip-grid > .category-card:nth-child(9),
+.service-grid > .service-card:nth-child(9),
+.stat-grid > .stat-card:nth-child(9) { animation-delay:0.48s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(10),
+.message-chat-list > .message-chat-row:nth-child(10),
+.message-detail-body > .message-bubble:nth-child(10),
+.ranking-list > .ranking-card:nth-child(10),
+.product-grid > :is(.product-card,.list-card):nth-child(10),
+.category-grid > .category-card:nth-child(10),
+.search-chip-grid > .category-card:nth-child(10),
+.service-grid > .service-card:nth-child(10),
+.stat-grid > .stat-card:nth-child(10) { animation-delay:0.54s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(11),
+.message-chat-list > .message-chat-row:nth-child(11),
+.message-detail-body > .message-bubble:nth-child(11),
+.ranking-list > .ranking-card:nth-child(11),
+.product-grid > :is(.product-card,.list-card):nth-child(11),
+.category-grid > .category-card:nth-child(11),
+.search-chip-grid > .category-card:nth-child(11),
+.service-grid > .service-card:nth-child(11),
+.stat-grid > .stat-card:nth-child(11) { animation-delay:0.60s; }
+.stack-list > :is(.list-card,.cart-item,.notification-card):nth-child(12),
+.message-chat-list > .message-chat-row:nth-child(12),
+.message-detail-body > .message-bubble:nth-child(12),
+.ranking-list > .ranking-card:nth-child(12),
+.product-grid > :is(.product-card,.list-card):nth-child(12),
+.category-grid > .category-card:nth-child(12),
+.search-chip-grid > .category-card:nth-child(12),
+.service-grid > .service-card:nth-child(12),
+.stat-grid > .stat-card:nth-child(12) { animation-delay:0.66s; }
+
+@media(prefers-reduced-motion:reduce){
+  .stack-list > :is(.list-card,.cart-item,.notification-card),
+.message-chat-list > .message-chat-row,
+.message-detail-body > .message-bubble,
+.ranking-list > .ranking-card,
+.product-grid > :is(.product-card,.list-card),
+.category-grid > .category-card,
+.search-chip-grid > .category-card,
+.service-grid > .service-card,
+.stat-grid > .stat-card {
+    animation:none;
+    opacity:1;
+    transform:none;
+  }
+}
+
+
 @media(prefers-reduced-motion:reduce){
   .main-content > * > *,
   .auth-shell:not(.auth-shell-login) .auth-card > * {

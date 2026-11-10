@@ -100,7 +100,7 @@ async function preview(userId,{buyNowProductId=null,buyNowVariantId=null}={}){
     const stock=Number(variant?variant.stock:product.stock),reserved=Number(variant?variant.reserved_stock:product.reserved_stock||0);
     if(stock-reserved<1) throw badRequest('INSUFFICIENT_STOCK',`Stock ${product.name}${variant?' — '+variant.label:''} tidak mencukupi.`);
     const price=Number(variant?variant.price:product.price);
-    const item={id:null,product_id:product.id,slug:product.slug,name:product.name,quantity:1,price,stock:stock-reserved,variant_id:variant?.id||null,variant_label:variant?.label||null,variant_amount:variant?.amount??null,lineTotal:price};
+    const item={id:null,product_id:product.id,slug:product.slug,name:product.name,quantity:1,price,stock:stock-reserved,variant_id:variant?.id||null,variant_label:variant?.label||null,variant_amount:variant?.amount??null,thumbnail_path:product.thumbnail_path||null,variant_icon_path:variant?.icon_path||null,lineTotal:price};
     return {items:[item],subtotal:item.lineTotal,total:item.lineTotal,recipientContact:recipient?{email:recipient.email,countryCode:recipient.countryCode,countryName:recipient.countryName,dialCode:recipient.dialCode,phone:recipient.phone}:null,directBuyNow:true,buyNowProductId:product.id,buyNowVariantId:variant?.id||null,buyNowSlug:product.slug};
   }
   const items=(c.items||[]).map(i=>({...i,quantity:Number(i.quantity),lineTotal:Number(i.price)*Number(i.quantity)}));

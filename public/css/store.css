@@ -1016,7 +1016,7 @@
   border-color:var(--border-strong);
 }
 
-.payment-option.is-selected{
+.payment-option:has(> input:checked){
   border-color:rgba(96,165,250,.5);
   background:rgba(96,165,250,.07);
 }
@@ -1029,7 +1029,8 @@
 .payment-option input{
   width:18px;
   height:18px;
-  margin:2px 0 0;
+  margin:0;
+  align-self:center;
   accent-color:var(--action);
 }
 

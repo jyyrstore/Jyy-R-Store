@@ -1,4 +1,12 @@
-<section class="page-shell"><div class="page-header"><div><h1>Isi Saldo</h1><p>Tambahkan saldo agar pembayaran produk dapat diproses lebih cepat.</p></div></div><div class="stat-card featured wallet-balance"><span>Saldo tersedia</span><strong><%= formatIDR(wallet.balance) %></strong><small>Saldo dapat dipakai pada checkout yang mendukung Wallet.</small></div><div class="section"><h2>Pilih nominal deposit</h2><div class="amount-grid"><% [10000,25000,50000,100000].forEach(v=>{ %><button class="amount-button" data-deposit-amount="<%= v %>"><%= formatIDR(v) %></button><% }) %><div class="amount-custom-row">
+<section class="page-shell"><div class="page-header"><div><h1>Isi Saldo</h1><p>Tambahkan saldo agar pembayaran produk dapat diproses lebih cepat.</p></div></div><div class="stat-card featured wallet-balance">
+  <div class="deposit-wallet-balance-main">
+    <%- icon('wallet-balance', 'icon deposit-wallet-balance-icon', 'Dompet Balance') %>
+    <div class="deposit-wallet-balance-copy">
+      <span>Saldo tersedia</span>
+      <strong><%= formatIDR(wallet.balance) %></strong>
+    </div>
+  </div>
+</div><div class="section"><h2>Pilih nominal deposit</h2><div class="amount-grid"><% [10000,25000,50000,100000].forEach(v=>{ %><button class="amount-button" data-deposit-amount="<%= v %>"><%= formatIDR(v) %></button><% }) %><div class="amount-custom-row">
 <label class="field amount-custom"><span>Costum Nominal</span><input id="deposit-custom" inputmode="numeric" type="text" placeholder="Rp"></label>
 <div class="field amount-last-deposit-field">
   <span>Terakhir Deposit</span>

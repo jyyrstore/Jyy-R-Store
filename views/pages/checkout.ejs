@@ -26,10 +26,23 @@
       <% if(preview.items.length){ %>
         <% preview.items.forEach(i=>{ %>
           <div class="list-card">
-            <div>
-              <strong><%= i.name %></strong>
-              <% if(i.variant_label){ %><span class="muted small"><%= i.variant_label %></span><% } %>
-              <span><%= i.quantity %> × <%= formatIDR(i.price) %></span>
+            <div class="checkout-item-main">
+              <% if(i.variant_icon_path || i.thumbnail_path){ %>
+                <img
+                  class="order-item-product-image checkout-item-product-image"
+                  src="<%= assetUrl(publicAssetBucket,i.variant_icon_path || i.thumbnail_path) %>"
+                  alt="<%= i.variant_label || i.name %>"
+                  width="56"
+                  height="56"
+                  loading="lazy"
+                  decoding="async"
+                >
+              <% } %>
+              <div class="checkout-item-copy">
+                <strong><%= i.name %></strong>
+                <% if(i.variant_label){ %><span class="muted small"><%= i.variant_label %></span><% } %>
+                <span><%= i.quantity %> × <%= formatIDR(i.price) %></span>
+              </div>
             </div>
 
             <div class="checkout-item-actions">
@@ -104,15 +117,20 @@
               <%= selectedPaymentMethod==='BALANCE' ? 'checked' : '' %>
               <%= walletSufficient ? '' : 'disabled' %>
             >
-            <span class="payment-option__copy">
-              <strong>Saldo Wallet</strong>
-              <small>
-                <% if(walletSufficient){ %>
-                  Saldo tersedia <%= formatIDR(wallet.balance) %>
-                <% } else { %>
-                  Saldo <%= formatIDR(wallet.balance) %> · kurang <%= formatIDR(Number(preview.total)-Number(wallet.balance)) %>
-                <% } %>
-              </small>
+            <span class="payment-option__copy payment-option__copy--wallet">
+              <span class="payment-option__wallet-main">
+                <%- icon('wallet-balance', 'icon payment-option-wallet-icon', 'Dompet Balance') %>
+                <span class="payment-option__wallet-text">
+                  <strong>Saldo Wallet</strong>
+                  <small>
+                    <% if(walletSufficient){ %>
+                      Saldo tersedia <%= formatIDR(wallet.balance) %>
+                    <% } else { %>
+                      Saldo <%= formatIDR(wallet.balance) %> · kurang <%= formatIDR(Number(preview.total)-Number(wallet.balance)) %>
+                    <% } %>
+                  </small>
+                </span>
+              </span>
 
               <% if(!walletSufficient){ %>
                 <a class="checkout-balance-help" href="/deposit">
@@ -151,9 +169,8 @@
               value="LIVE"
               <%= selectedPaymentMethod==='LIVE' ? 'checked' : '' %>
             >
-            <span class="payment-option__copy">
-              <strong>Live · Pembayaran sungguhan</strong>
-              <small>Bayar melalui provider pembayaran yang dikonfigurasi.</small>
+            <span class="payment-option__copy payment-option__copy--qris">
+              <%- icon('qris', 'icon payment-option-qris', 'QRIS') %>
             </span>
           </label>
         </div>

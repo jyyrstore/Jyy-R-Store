@@ -4913,6 +4913,108 @@ button[aria-busy="true"]{
   padding:10px 12px;
 }
 
+/* Checkout item product media: three-line text height */
+.checkout-item-main{
+  display:flex;
+  align-items:center;
+  flex:1 1 auto;
+  gap:10px;
+  min-width:0;
+}
+
+.checkout-item-main > .checkout-item-product-image{
+  flex:0 0 56px;
+  width:56px;
+  height:56px;
+}
+
+.checkout-item-copy{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:3px;
+  min-width:0;
+}
+
+.checkout-item-copy > strong,
+.checkout-item-copy > span{
+  line-height:1.3;
+}
+
+/* Official QRIS mark in checkout payment option */
+
+/* Deposit wallet balance summary icon */
+body[data-view="pages/deposit"] .deposit-wallet-balance-main{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  text-align:left;
+}
+
+body[data-view="pages/deposit"] .deposit-wallet-balance-icon{
+  display:block;
+  flex:0 0 40px;
+  width:40px;
+  height:40px;
+}
+
+body[data-view="pages/deposit"] .deposit-wallet-balance-copy{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  min-width:0;
+  text-align:left;
+}
+
+body[data-view="pages/deposit"] .deposit-wallet-balance-copy > span{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.3;
+}
+
+body[data-view="pages/deposit"] .deposit-wallet-balance-copy > strong{
+  margin:0;
+  line-height:1.2;
+}
+
+/* Checkout wallet balance icon */
+body[data-view="pages/checkout"] .payment-option__wallet-main{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+body[data-view="pages/checkout"] .payment-option-wallet-icon{
+  display:block;
+  flex:0 0 40px;
+  width:40px;
+  height:40px;
+}
+
+body[data-view="pages/checkout"] .payment-option__wallet-text{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:3px;
+  min-width:0;
+}
+
+body[data-view="pages/checkout"] .payment-option__copy--qris{
+  justify-content:center;
+  min-height:44px;
+}
+
+body[data-view="pages/checkout"] .payment-option__copy--qris .payment-option-qris{
+  display:block;
+  width:min(200px,100%);
+  max-width:100%;
+  height:auto;
+}
+
+
 .checkout-item-actions{
   display:flex;
   flex-direction:column;
