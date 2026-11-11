@@ -6,7 +6,7 @@
       <p><%= total %> produk tersedia. Gunakan filter untuk mempersempit pilihan.</p>
     </div>
     <% if (currentUser) { %>
-      <a class="button button-secondary" href="/cart" data-cart-link>
+      <a class="button button-secondary cart-button" href="/cart" data-cart-link>
         <%- icon('cart') %>
         <span>Keranjang</span>
         <span class="cart-count" data-cart-badge hidden></span>

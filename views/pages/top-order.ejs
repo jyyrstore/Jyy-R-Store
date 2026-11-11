@@ -1,13 +1,150 @@
-<section class="page-shell"><div class="page-header"><div><h1>Produk populer</h1><p>Ranking produk berdasarkan performa pembelian. Bukan ranking user.</p></div></div><div class="ranking-list"><% items.forEach((p,i)=>{ %><article class="ranking-card">
-  <span class="rank"><%= i+1 %></span>
-  <div class="ranking-card-content">
-    <div class="ranking-card-head">
-      <strong class="ranking-product-name"><%= p.name %></strong>
-      <span class="ranking-purchases"><%= p.purchase_count %> pembelian</span>
-    </div>
-    <div class="ranking-card-meta">
-      <b class="ranking-price"><%= formatIDR(p.price) %></b>
-      <span class="ranking-metrics">· <%= p.view_count %> views · <%= p.cart_add_count %> cart</span>
+<section class="page-shell">
+  <div class="page-header top-order-page-header">
+    <div>
+      <h1><%- icon('trophy') %> Pengguna Teratas <%- icon('trophy') %></h1>
+      <p>Dibawah ini merupakan top 10 pengguna dengan total pemesanan dan deposit tertinggi sepanjang waktu.</p>
+      <p>Terimakasih telah menjadi pelanggan setia kami!</p>
     </div>
   </div>
-</article><% }) %><% if(!items.length){ %><%- include('../partials/empty',{title:'Belum ada data performa',description:'Ranking akan terisi dari event nyata.'}) %><% } %></div></section>
+
+  <% if(currentUser){ %>
+    <section class="top-order-customers-section">
+      <div class="panel top-order-customers-panel">
+        <div class="top-order-customers-heading">
+          <%- icon('trophy') %>
+          <h2>10 Pesanan Terbanyak</h2>
+        </div>
+
+        <% if(topCustomers.length){ %>
+          <div class="top-order-customers-list">
+            <% topCustomers.forEach((customer,i)=>{
+              const isCurrentCustomer=
+                String(currentUser?.id||'')===String(customer.user_id);
+            %>
+              <article class="top-order-customer-card <%= i===0?'is-first':isCurrentCustomer?'is-current-user':'' %>">
+                <span
+                  class="top-order-customer-rank"
+                  aria-label="Peringkat <%= i+1 %>"
+                >
+                  <% if(i===0){ %>
+                    <%- icon('trophy') %>
+                  <% } else { %>
+                    <%= i+1 %>
+                  <% } %>
+                </span>
+
+                <div class="top-order-customer-info">
+                  <strong><%= customer.name %></strong>
+                </div>
+
+                <div class="top-order-customer-stats">
+                  <strong><%= formatIDR(customer.total_spent) %></strong>
+                  <span>(<%= new Intl.NumberFormat('id-ID').format(Number(customer.order_count||0)) %>)</span>
+                </div>
+              </article>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <div class="top-order-customers-empty">
+            <%- include('../partials/empty',{
+              title:'Belum ada data pesanan',
+              description:'Ranking akan muncul setelah transaksi berhasil.'
+            }) %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+  <% } %>
+
+  <% if(currentUser){ %>
+    <section class="top-order-customers-section top-order-deposits-section">
+      <div class="panel top-order-customers-panel">
+        <div class="top-order-customers-heading">
+          <%- icon('trophy') %>
+          <h2>10 Deposit Terbanyak</h2>
+        </div>
+
+        <% if(topDeposits.length){ %>
+          <div class="top-order-customers-list">
+            <% topDeposits.forEach((customer,i)=>{
+              const isCurrentCustomer=
+                String(currentUser?.id||'')===String(customer.user_id);
+            %>
+              <article class="top-order-customer-card <%= i===0?'is-first':isCurrentCustomer?'is-current-user':'' %>">
+                <span
+                  class="top-order-customer-rank"
+                  aria-label="Peringkat <%= i+1 %>"
+                >
+                  <% if(i===0){ %>
+                    <%- icon('trophy') %>
+                  <% } else { %>
+                    <%= i+1 %>
+                  <% } %>
+                </span>
+
+                <div class="top-order-customer-info">
+                  <strong><%= customer.name %></strong>
+                </div>
+
+                <div class="top-order-customer-stats">
+                  <strong><%= formatIDR(customer.total_deposited) %></strong>
+                  <span>(<%= new Intl.NumberFormat('id-ID').format(Number(customer.deposit_count||0)) %>)</span>
+                </div>
+              </article>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <div class="top-order-customers-empty">
+            <%- include('../partials/empty',{
+              title:'Belum ada data deposit',
+              description:'Ranking akan muncul setelah deposit berhasil.'
+            }) %>
+          </div>
+        <% } %>
+      </div>
+    </section>
+  <% } %>
+
+  <section class="top-order-customers-section top-order-products-section">
+  <div class="panel top-order-customers-panel">
+    <div class="top-order-customers-heading">
+      <%- icon('shop-twotone') %>
+      <h2>Produk Populer</h2>
+    </div>
+
+
+    <div class="ranking-list top-order-customers-list">
+      <% items.forEach((p,i)=>{ %>
+        <article class="ranking-card <%= i===0?'is-first':'' %>">
+          <span class="rank top-order-customer-rank"
+                aria-label="Peringkat <%= i+1 %>">
+            <% if(i===0){ %>
+              <%- icon('trophy') %>
+            <% } else { %>
+              <%= i+1 %>
+            <% } %>
+          </span>
+
+          <div class="ranking-card-content">
+            <div class="ranking-card-head">
+              <strong class="ranking-product-name"><%= p.name %></strong>
+              <span class="ranking-purchases"><%= p.purchase_count %> pembelian</span>
+            </div>
+
+            <div class="ranking-card-meta">
+              <b class="ranking-price"><%= formatIDR(p.price) %></b>
+              <span class="ranking-metrics">· <%= p.view_count %> views · <%= p.cart_add_count %> cart</span>
+            </div>
+          </div>
+        </article>
+      <% }) %>
+
+      <% if(!items.length){ %>
+        <%- include('../partials/empty',{
+          title:'Belum ada data performa',
+          description:'Ranking akan terisi dari event nyata.'
+        }) %>
+      <% } %>
+    </div>
+  </div>
+</section></section>

@@ -1,5 +1,59 @@
-<section class="page-shell"><div class="page-header"><div><h1>Halo, <%= profile.username %></h1><p>Pantau pesanan, saldo, dan aktivitas akunmu dalam satu ringkasan.</p></div><div class="header-actions"><a class="button button-secondary" href="/orders">Lihat Pesanan</a><a class="button button-primary" href="/deposit"><%- icon('wallet') %> Deposit</a></div></div>
+<section class="page-shell"><div class="page-header"><div><h1>Halo, <%= profile.username %></h1><p>Pantau pesanan, saldo, dan aktivitas<br>akunmu dalam satu ringkasan.</p></div><div class="header-actions"><a class="button button-secondary" href="/orders">Lihat Pesanan</a><a class="button button-primary" href="/deposit"><%- icon('wallet') %> Deposit</a></div></div>
 <div class="stat-grid"><div class="stat-card featured"><span>Total Pesanan</span><strong><%= profile.total_orders %></strong><small>Semua order</small></div><div class="stat-card"><span>Total Deposit</span><strong><%= formatIDR(profile.total_deposit) %></strong><small>Kumulatif berhasil</small></div><div class="stat-card"><span>Sisa Saldo</span><strong><%= formatIDR(profile.balance) %></strong><small>Wallet aktif</small></div></div>
 <div class="two-column section"><div><div class="section-header"><h2>Pesanan terbaru</h2><a href="/orders">Lihat semua</a></div><div class="stack-list dashboard-order-list"><% orders.forEach(o=>{ %><a class="list-card" href="/orders/<%= o.id %>"><div class="order-list-main"><% if(o.items?.[0]?.variant_icon_path || o.items?.[0]?.product_thumbnail_path){ %><img class="order-item-product-image" src="<%= assetUrl(publicAssetBucket,o.items[0].variant_icon_path || o.items[0].product_thumbnail_path) %>" alt="" width="44" height="44" loading="lazy" decoding="async"><% } %><div class="order-list-copy"><strong><%= o.order_number %></strong><span><%= o.items?.map(i=>`${i.variant_id ? (i.variant_label || i.product_name) : i.product_name} × ${i.quantity}`).join(', ') %></span></div></div><div class="align-right"><span class="badge badge-<%= String(o.status||'').toLowerCase() %>"><%= labelStatus(o.status) %></span><b><%= formatIDR(o.total) %></b></div></a><% }) %><% if(!orders.length){ %><%- include('../partials/empty',{title:'Belum ada pesanan',description:'Mulai dari katalog produk.'}) %><% } %></div></div><div><div class="section-header"><h2>Aktivitas saldo</h2><a href="/history">Lihat Riwayat</a></div><div class="stack-list dashboard-balance-list"><% mutations.forEach(m=>{ %><div class="list-card"><div><strong><%= labelStatus(m.type) %></strong><span><%= m.reference || '—' %></span></div><div class="align-right"><b><%= formatIDR(m.amount) %></b><span><%= formatDate(m.created_at) %></span></div></div><% }) %><% if(!mutations.length){ %><%- include('../partials/empty',{title:'Belum ada transaksi',description:'Deposit atau pembelian akan tampil di sini.'}) %><% } %></div></div></div>
 <section class="section"><div class="section-header"><h2>Layanan pilihan</h2><a href="/services">Semua layanan</a></div><div class="service-grid"><% services.forEach(s=>{ %><article class="service-card"><div><div class="eyebrow"><%= s.category||'Layanan' %></div><h3><%= s.name %></h3><p><%= s.description||'Layanan Jyyr Store.' %></p></div><div class="service-footer"><b><%= formatIDR(s.price) %></b><a href="/services" class="text-link">Detail</a></div></article><% }) %></div></section>
+<section class="section dashboard-information-section">
+  <div class="panel dashboard-information-panel">
+    <div class="dashboard-information-heading">
+      <%- icon('text-box-multiple-outline') %>
+      <h2 id="dashboard-information-title">Informasi</h2>
+    </div>
+
+    <% if(announcements.length){ %>
+      <div
+        class="dashboard-information-timeline"
+        aria-labelledby="dashboard-information-title"
+      >
+        <% announcements.forEach(a=>{
+          const informationDate=a.publish_at||a.created_at;
+        %>
+          <article class="dashboard-information-item">
+            <span
+              class="dashboard-information-marker"
+              aria-hidden="true"
+            ></span>
+
+            <div class="dashboard-information-card">
+              <div class="dashboard-information-meta">
+                <span class="dashboard-information-type">
+                  <%= a.type || 'INFO' %>
+                </span>
+
+                <% if(informationDate){ %>
+                  <time
+                    class="dashboard-information-date"
+                    datetime="<%= informationDate %>"
+                  ><%= formatDate(informationDate) %></time>
+                <% } %>
+              </div>
+
+              <h3 class="dashboard-information-title">
+                <%= a.title %>
+              </h3>
+
+              <p class="dashboard-information-body"><%= a.body %></p>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="dashboard-information-empty">
+        <%- include('../partials/empty',{
+          title:'Belum ada informasi',
+          description:'Announcement akan tampil di sini.'
+        }) %>
+      </div>
+    <% } %>
+  </div>
+</section>
 </section>

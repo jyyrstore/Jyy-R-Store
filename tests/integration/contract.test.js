@@ -4,8 +4,246 @@ const fs=require('fs'),path=require('path');
 const root=path.join(__dirname,'..','..');
 const route=fs.readFileSync(path.join(root,'src/routes/index.js'),'utf8');
 const page=fs.readFileSync(path.join(root,'src/controllers/page.controller.js'),'utf8');
+const homeView=fs.readFileSync(path.join(root,'views/pages/home.ejs'),'utf8');
+const dashboardView=fs.readFileSync(path.join(root,'views/pages/dashboard.ejs'),'utf8');
 const migrations=fs.readdirSync(path.join(root,'database/migrations')).filter(x=>x.endsWith('.sql')).map(x=>fs.readFileSync(path.join(root,'database/migrations',x),'utf8')).join('\n');
 for(const r of ['/','/store','/product/:slug','/dashboard','/cart','/checkout','/orders','/deposit','/history','/profile','/tickets','/notifications','/messages','/services','/faq','/security','/owner']) test(`required route ${r}`,()=>assert.ok(route.includes(`'${r}'`),r));
+
+test('homepage moves Service and New Information to authenticated dashboard',()=>{
+  const homeStart=page.indexOf('async function home(');
+  const storeStart=page.indexOf('async function store(',homeStart);
+  const dashboardStart=page.indexOf('async function dashboard(');
+  const cartStart=page.indexOf('async function cartPage(',dashboardStart);
+
+  assert.ok(homeStart>=0 && storeStart>homeStart);
+  assert.ok(dashboardStart>=0 && cartStart>dashboardStart);
+
+  const homeController=page.slice(homeStart,storeStart);
+  const dashboardController=page.slice(dashboardStart,cartStart);
+
+  assert.equal(homeController.includes('services.list(true)'),false);
+  assert.equal(homeController.includes('infoRepo.listPublic()'),false);
+
+  assert.ok(dashboardController.includes('services.list(true)'));
+  assert.ok(dashboardController.includes('infoRepo.listPublic()'));
+  assert.ok(dashboardController.includes('announcements:announcements.slice(0,5)'));
+
+  assert.equal(homeView.includes('<h2>Service</h2>'),false);
+  assert.equal(homeView.includes('<h2>New Information</h2>'),false);
+  assert.ok(dashboardView.includes('<h2>Layanan pilihan</h2>'));
+  assert.ok(dashboardView.includes('<h2 id="dashboard-information-title">Informasi</h2>'));
+
+  assert.ok(route.includes("pageRouter.get('/dashboard',requireAuth,asyncHandler(page.dashboard));"));
+});
+
+test('top-order adds authenticated customer ranking and preserves product ranking',()=>{
+  const analyticsRepository=fs.readFileSync(
+    path.join(root,'src/repositories/analytics.repository.js'),
+    'utf8'
+  );
+  const analyticsService=fs.readFileSync(
+    path.join(root,'src/services/analytics/analytics.service.js'),
+    'utf8'
+  );
+  const controller=fs.readFileSync(
+    path.join(root,'src/controllers/page.controller.js'),
+    'utf8'
+  );
+  const view=fs.readFileSync(
+    path.join(root,'views/pages/top-order.ejs'),
+    'utf8'
+  );
+  const styles=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const repository=analyticsRepository.replace(/\s+/g,' ').toLowerCase();
+  const marker='/* TOP ORDER CUSTOMER LEADERBOARD */';
+  const styleStart=styles.indexOf(marker);
+
+  assert.ok(styleStart>=0);
+  const leaderboardStyles=styles.slice(styleStart);
+
+  assert.ok(repository.includes('async function topcustomers()'));
+  assert.ok(repository.includes('sum(o.total)::bigint as total_spent'));
+  assert.ok(repository.includes('count(*)::int as order_count'));
+  assert.ok(repository.includes("o.status in ('paid','processing','completed')"));
+  assert.ok(repository.includes("o.payment_method is distinct from 'sandbox'"));
+  assert.ok(repository.includes('p.deleted_at is null'));
+  assert.ok(repository.includes('order by total_spent desc,order_count desc,p.username asc limit 10'));
+
+  assert.ok(analyticsService.includes('async function topCustomers()'));
+  assert.ok(analyticsService.includes('repo.topCustomers()'));
+
+  assert.match(
+    controller,
+    /req\.user\?\.id\s*\?\s*analytics\.topCustomers\(\)\s*:\s*Promise\.resolve\(\[\]\)/
+  );
+  assert.ok(controller.includes('items:data.top'));
+  assert.ok(controller.includes('topCustomers'));
+
+  assert.ok(view.includes('10 Pesanan Terbanyak'));
+  assert.ok(view.includes('customer.name'));
+  assert.ok(view.includes('customer.total_spent'));
+  assert.ok(view.includes('customer.order_count'));
+  assert.ok(view.includes('currentUser?.id'));
+  assert.ok(view.includes('<h2>Produk Populer</h2>'));
+  assert.ok(view.includes('ranking-list top-order-customers-list'));
+  assert.ok(view.includes('class="ranking-card'));
+  for(const field of [
+    'p.name',
+    'p.purchase_count',
+    'formatIDR(p.price)',
+    'p.view_count',
+    'p.cart_add_count'
+  ]){
+    assert.ok(view.includes(field),field);
+  }
+  assert.ok(leaderboardStyles.includes('.ranking-card.is-first'));
+
+  for(const className of [
+    'top-order-customers-panel',
+    'top-order-customer-card',
+    'top-order-customer-rank',
+    'top-order-customer-stats',
+    'is-first',
+    'is-current-user'
+  ]){
+    assert.ok(view.includes(className),className);
+    assert.ok(leaderboardStyles.includes(className),className);
+  }
+
+  for(const token of [
+    '--surface',
+    '--surface-raised',
+    '--panel',
+    '--border',
+    '--text',
+    '--muted',
+    '--warning',
+    '--primary-2'
+  ]){
+    assert.ok(leaderboardStyles.includes(`var(${token})`),token);
+  }
+
+  assert.doesNotMatch(leaderboardStyles,/#[0-9a-f]{3,8}\b/i);
+});
+
+test('top-order adds successful deposit ranking in a separate card',()=>{
+  const repository=fs.readFileSync(
+    path.join(root,'src/repositories/analytics.repository.js'),
+    'utf8'
+  );
+  const service=fs.readFileSync(
+    path.join(root,'src/services/analytics/analytics.service.js'),
+    'utf8'
+  );
+  const controller=fs.readFileSync(
+    path.join(root,'src/controllers/page.controller.js'),
+    'utf8'
+  );
+  const view=fs.readFileSync(
+    path.join(root,'views/pages/top-order.ejs'),
+    'utf8'
+  );
+  const normalized=repository.replace(/\s+/g,' ').toLowerCase();
+
+  assert.ok(normalized.includes('async function topdeposits()'));
+  assert.ok(normalized.includes('sum(d.amount)::bigint as total_deposited'));
+  assert.ok(normalized.includes('count(*)::int as deposit_count'));
+  assert.ok(normalized.includes("d.status='success'"));
+  assert.ok(normalized.includes('p.deleted_at is null'));
+  assert.ok(normalized.includes('limit 10'));
+
+  assert.ok(service.includes('repo.topDeposits()'));
+  assert.ok(controller.includes('analytics.topDeposits()'));
+  assert.ok(controller.includes('topDeposits'));
+
+  const ordersStart=view.indexOf(
+    '<section class="top-order-customers-section">'
+  );
+  const depositsStart=view.indexOf(
+    '<section class="top-order-customers-section top-order-deposits-section">'
+  );
+  const productsStart=view.indexOf(
+    '<section class="top-order-customers-section top-order-products-section">'
+  );
+
+  const ordersEnd=view.indexOf('</section>',ordersStart);
+  const depositsBlock=view.slice(depositsStart,productsStart);
+
+  assert.ok(ordersStart>=0);
+  assert.ok(ordersEnd>ordersStart);
+  assert.ok(depositsStart>ordersEnd);
+  assert.ok(productsStart>depositsStart);
+
+  assert.ok(view.slice(ordersStart,ordersEnd).includes(
+    '<div class="panel top-order-customers-panel">'
+  ));
+  assert.ok(depositsBlock.includes(
+    '<div class="panel top-order-customers-panel">'
+  ));
+
+  assert.ok(view.includes('10 Pesanan Terbanyak'));
+  assert.ok(view.includes('10 Deposit Terbanyak'));
+  assert.ok(depositsBlock.includes('topDeposits.forEach((customer,i)=>{'));
+  assert.ok(depositsBlock.includes('customer.total_deposited'));
+  assert.ok(depositsBlock.includes('customer.deposit_count'));
+  assert.ok(depositsBlock.includes('is-current-user'));
+  assert.ok(view.includes('<h2>Produk Populer</h2>'));
+});
+
+test('dashboard information uses timeline markup and global theme tokens',()=>{
+  const dashboard=fs.readFileSync(
+    path.join(root,'views/pages/dashboard.ejs'),
+    'utf8'
+  );
+  const styles=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  const marker='/* DASHBOARD INFORMATION TIMELINE */';
+  const styleStart=styles.indexOf(marker);
+
+  assert.ok(styleStart>=0);
+  const timelineStyles=styles.slice(styleStart);
+
+  for(const className of [
+    'dashboard-information-panel',
+    'dashboard-information-timeline',
+    'dashboard-information-marker',
+    'dashboard-information-type',
+    'dashboard-information-date',
+    'dashboard-information-title',
+    'dashboard-information-body'
+  ]){
+    assert.ok(dashboard.includes(className),className);
+    assert.ok(timelineStyles.includes(className),className);
+  }
+
+  assert.ok(dashboard.includes('a.type || \'INFO\''));
+  assert.ok(dashboard.includes('a.publish_at||a.created_at'));
+  assert.ok(dashboard.includes('formatDate(informationDate)'));
+  assert.ok(dashboard.includes('a.body'));
+  assert.ok(timelineStyles.includes('white-space:pre-line'));
+
+  for(const token of [
+    '--panel',
+    '--surface-raised',
+    '--border',
+    '--border-strong',
+    '--text',
+    '--muted',
+    '--muted-strong',
+    '--primary-2'
+  ]){
+    assert.ok(timelineStyles.includes(`var(${token})`),token);
+  }
+
+  assert.doesNotMatch(timelineStyles,/#[0-9a-f]{3,8}\b/i);
+});
 for(const t of ['profiles','roles','categories','products','product_variants','product_contents','carts','cart_items','orders','order_items','payments','payment_events','deposits','wallets','wallet_transactions','idempotency_keys','entitlements','download_logs','services','service_orders','tickets','ticket_messages','messages','notifications','notification_preferences','login_history','activity_logs','announcements','faqs','maintenance_settings','site_settings','refunds']) test(`schema includes ${t}`,()=>assert.match(migrations,new RegExp(`create table if not exists ${t}\\b`,'i')));
 test('database verifier includes critical payment and idempotency tables',()=>{
   const verifier=fs.readFileSync(

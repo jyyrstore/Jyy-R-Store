@@ -49,9 +49,7 @@ function configurationPage(req,res) {
 async function home(req,res,next){
   if(!isConfigured()) return configurationPage(req,res);
   try {
-    const [homeData,service,ann] = await Promise.all([
-      products.homepageHighlights(6), services.list(true), infoRepo.listPublic()
-    ]);
+    const homeData=await products.homepageHighlights(6);
     const cat=homeData.categories;
     const publicAssetBucket=loadEnv().PUBLIC_ASSET_BUCKET;
     const subcategoryGroups=homeData.groups.map(group=>({
@@ -64,7 +62,7 @@ async function home(req,res,next){
           : null
       }))
     }));
-    res.render('app', base(req,{view:'pages/home',categories:cat,subcategoryGroups,services:service.slice(0,6),announcements:ann.slice(0,5)}));
+    res.render('app', base(req,{view:'pages/home',categories:cat,subcategoryGroups}));
   } catch(e){ next(e); }
 }
 async function store(req,res,next){
@@ -204,7 +202,36 @@ async function productDetail(req,res,next){
     next(e);
   }
 }
-async function dashboard(req,res,next){ try { const [p,n,c,o,s] = await Promise.all([profile.get(req.user.id),notifications.list(req.user.id),cart.get(req.user.id),orderService.getUserOrders(req.user.id,{limit:5}),services.list(true)]); const mut=await wallet.mutations(req.user.id); res.render('app',base(req,{view:'pages/dashboard',profile:p,notifications:n.slice(0,6),cart:c,orders:o,mutations:mut.slice(0,6),services:s.slice(0,4)})); } catch(e){next(e)} }
+async function dashboard(req,res,next){
+  try{
+    const [p,n,c,o,s,announcements]=await Promise.all([
+      profile.get(req.user.id),
+      notifications.list(req.user.id),
+      cart.get(req.user.id),
+      orderService.getUserOrders(req.user.id,{limit:5}),
+      services.list(true),
+      infoRepo.listPublic()
+    ]);
+
+    const mut=await wallet.mutations(req.user.id);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/dashboard',
+        profile:p,
+        notifications:n.slice(0,6),
+        cart:c,
+        orders:o,
+        mutations:mut.slice(0,6),
+        services:s.slice(0,4),
+        announcements:announcements.slice(0,5)
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
 async function cartPage(req,res,next){
   try{
     const {
@@ -736,7 +763,31 @@ async function notificationsPage(req,res,next){
   }
 }
 async function servicesPage(req,res,next){try{res.render('app',base(req,{view:'pages/services',services:await services.list(true)}));}catch(e){next(e)}}
-async function topOrder(req,res,next){try{const data=(await analytics.period('30d')).top;res.render('app',base(req,{view:'pages/top-order',items:data}));}catch(e){next(e)}}
+async function topOrder(req,res,next){
+  try{
+    const [data,topCustomers,topDeposits]=await Promise.all([
+      analytics.period('30d'),
+      req.user?.id
+        ? analytics.topCustomers()
+        : Promise.resolve([]),
+      req.user?.id
+        ? analytics.topDeposits()
+        : Promise.resolve([])
+    ]);
+
+    res.render(
+      'app',
+      base(req,{
+        view:'pages/top-order',
+        items:data.top,
+        topCustomers,
+        topDeposits
+      })
+    );
+  }catch(e){
+    next(e);
+  }
+}
 async function faq(req,res,next){try{res.render('app',base(req,{view:'pages/faq',faqs:await faqRepo.listPublic()}));}catch(e){next(e)}}
 async function security(req,res){res.render('app',base(req,{view:'pages/security'}))}
 async function legal(req,res){const key=requestPath(req).slice(1);const titles={privacy:'Privacy Policy',terms:'Terms of Service',refund:'Refund Policy',dmca:'DMCA / Hak Cipta'}; res.render('app',base(req,{view:'pages/legal',legalKey:key,legalTitle:titles[key]||'Policy'}))}
