@@ -69,6 +69,7 @@ async function findForUser(id,userId){
         'variant_label',oi.variant_label,
         'variant_amount',oi.variant_amount,
         'pricing_mode',p.pricing_mode,
+        'product_status',p.status,
         'product_thumbnail_path',p.thumbnail_path,
         'variant_icon_path',pv.icon_path,
         'quantity',oi.quantity,

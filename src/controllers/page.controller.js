@@ -373,64 +373,74 @@ async function orderDetail(req,res,next){
     const productRepo=require('../repositories/products.repository');
     const accessControl=require('../services/delivery/access-control.service');
 
-    const items=await Promise.all(
-      order.items.map(async item=>{
-        const [
-          contents,
-          owned,
-          product
-        ]=await Promise.all([
-          productRepo.contents(item.product_id,{
-            variantId:item.variant_id||null,
-            forOrder:true
-          }),
-          accessControl.canAccess(
-            req.user.id,
-            item.product_id,
-            order.id
-          ),
-          productRepo.findById(item.product_id)
-        ]);
+    const [orderContents,ownedProductIds]=await Promise.all([
+      productRepo.contentsForOrder(order.items),
+      accessControl.accessibleProductsForOrder(
+        req.user.id,
+        order.id,
+        order.items.map(item=>item.product_id)
+      )
+    ]);
 
-        const published=
-          String(product?.status||'').toUpperCase()==='PUBLISHED';
+    const itemKey=(productId,variantId)=>`${productId}:${variantId||''}`;
+    const contentsByItem=new Map();
 
-        const mappedContents=await Promise.all(
-          contents.map(async content=>{
-            const allowed=
-              (!content.variant_id && published && content.access_type==='PUBLIC') ||
-              (!content.variant_id && published && content.access_type==='PREVIEW' && content.is_preview) ||
-              owned;
+    for (const content of orderContents) {
+      const key=itemKey(
+        content.requested_product_id,
+        content.requested_variant_id
+      );
+      const scoped=contentsByItem.get(key)||[];
+      scoped.push(content);
+      contentsByItem.set(key,scoped);
+    }
 
-            let preview_url=null;
+    const items=[];
 
-            if(allowed && content.storage_path){
-              const bucket=
-                content.storage_path.startsWith('public-assets/')
-                  ? loadEnv().PUBLIC_ASSET_BUCKET
-                  : loadEnv().PRIVATE_PRODUCT_BUCKET;
+    for (const item of order.items) {
+      const contents=contentsByItem.get(
+        itemKey(item.product_id,item.variant_id)
+      )||[];
+      const owned=ownedProductIds.has(item.product_id);
 
-              preview_url=await storage.signedUrl(
-                bucket,
-                content.storage_path.replace(/^public-assets\//,''),
-                loadEnv().SIGNED_URL_EXPIRATION
-              ).catch(()=>null);
-            }
+      const published=
+        String(item.product_status||'').toUpperCase()==='PUBLISHED';
 
-            return {
-              ...content,
-              allowed,
-              preview_url
-            };
-          })
-        );
+      const mappedContents=await Promise.all(
+        contents.map(async content=>{
+          const allowed=
+            (!content.variant_id && published && content.access_type==='PUBLIC') ||
+            (!content.variant_id && published && content.access_type==='PREVIEW' && content.is_preview) ||
+            owned;
 
-        return {
-          ...item,
-          contents:mappedContents
-        };
-      })
-    );
+          let preview_url=null;
+
+          if(allowed && content.storage_path){
+            const bucket=
+              content.storage_path.startsWith('public-assets/')
+                ? loadEnv().PUBLIC_ASSET_BUCKET
+                : loadEnv().PRIVATE_PRODUCT_BUCKET;
+
+            preview_url=await storage.signedUrl(
+              bucket,
+              content.storage_path.replace(/^public-assets\//,''),
+              loadEnv().SIGNED_URL_EXPIRATION
+            ).catch(()=>null);
+          }
+
+          return {
+            ...content,
+            allowed,
+            preview_url
+          };
+        })
+      );
+
+      items.push({
+        ...item,
+        contents:mappedContents
+      });
+    }
 
     const storedPayment=await require('../repositories/payments.repository').findLatestForOrderForUser(
       orderId,

@@ -606,7 +606,11 @@ test('variant-specific content preserves shared legacy access and checks the pur
   assert.match(delivery,/oi\.variant_id=\$3/);
   assert.match(delivery,/e\.status='ACTIVE'/);
   assert.match(delivery,/!content\.variant_id/);
-  assert.match(page,/productRepo\.contents\(item\.product_id,\s*\{\s*variantId:item\.variant_id\|\|null,\s*forOrder:true\s*\}\)/);
+  assert.match(repository,/async function contentsForOrder\(items=\[\]\)/);
+  assert.match(repository,/unnest\(\$1::uuid\[\],\s*\$2::uuid\[\]\)/);
+  assert.match(repository,/pc\.variant_id is null or pc\.variant_id=requested\.variant_id/);
+  assert.match(page,/productRepo\.contentsForOrder\(order\.items\)/);
+  assert.match(page,/itemKey\(item\.product_id,item\.variant_id\)/);
   assert.match(orders,/'variant_id',oi\.variant_id/);
 });
 test('Owner content target variant dropdown displays saved variant icons',()=>{

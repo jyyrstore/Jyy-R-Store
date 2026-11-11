@@ -1162,16 +1162,42 @@ test('owner mode replaces the main sidebar content instead of nesting a second s
 test('order detail checks entitlement for the exact order',()=>{
   const access=read('src/services/delivery/access-control.service.js');
   const delivery=read('src/repositories/delivery.repository.js');
+  const orders=read('src/repositories/orders.repository.js');
+  const products=read('src/repositories/products.repository.js');
   const controller=read('src/controllers/page.controller.js');
 
   assert.match(access,/async function canAccess\(userId,productId,orderId\)/);
   assert.match(access,/repo\.entitlement\(\s*userId,\s*productId,\s*orderId\s*\)/);
   assert.match(delivery,/async function entitlement\(userId,productId,orderId=null\)/);
   assert.match(delivery,/and \(\$3::uuid is null or order_id=\$3\)/);
-  assert.match(
-    controller,
-    /accessControl\.canAccess\(\s*req\.user\.id,\s*item\.product_id,\s*order\.id\s*\)/
+
+  const orderDetail=controller.match(
+    /async function orderDetail\(req,res,next\)\{[\s\S]*?\n\}\nasync function history/
   );
+
+  assert.ok(orderDetail);
+  assert.match(orders,/'product_status',p\.status/);
+  assert.match(orderDetail[0],/for\s*\(\s*const item of order\.items\s*\)/);
+  assert.match(orderDetail[0],/item\.product_status/);
+  assert.doesNotMatch(orderDetail[0],/productRepo\.findById/);
+
+  assert.match(access,/async function accessibleProductsForOrder\(userId,orderId,productIds=\[\]\)/);
+  assert.match(access,/repo\.entitlementsForOrder/);
+  assert.match(delivery,/async function entitlementsForOrder\(userId,orderId,productIds=\[\]\)/);
+  assert.match(delivery,/e\.user_id=\$1/);
+  assert.match(delivery,/e\.order_id=\$2/);
+  assert.match(delivery,/e\.product_id=any\(\$3::uuid\[\]\)/);
+  assert.match(delivery,/e\.status='ACTIVE'/);
+  assert.match(delivery,/o\.status in \('PAID','PROCESSING','COMPLETED'\)/);
+
+  assert.match(products,/async function contentsForOrder\(items=\[\]\)/);
+  assert.match(products,/unnest\(\$1::uuid\[\],\s*\$2::uuid\[\]\)/);
+  assert.match(products,/pc\.variant_id is null or pc\.variant_id=requested\.variant_id/);
+
+  assert.match(orderDetail[0],/productRepo\.contentsForOrder\(order\.items\)/);
+  assert.match(orderDetail[0],/accessControl\.accessibleProductsForOrder/);
+  assert.doesNotMatch(orderDetail[0],/productRepo\.contents\(/);
+  assert.doesNotMatch(orderDetail[0],/accessControl\.canAccess\(/);
 });
 
 test('production requires distributed rate limiting over HTTPS',()=>{

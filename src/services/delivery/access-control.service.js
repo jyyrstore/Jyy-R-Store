@@ -25,4 +25,14 @@ async function canAccess(userId,productId,orderId){
 
   return Boolean(order);
 }
-module.exports={canAccess};
+
+async function accessibleProductsForOrder(userId,orderId,productIds=[]){
+  if(!userId||!orderId||!Array.isArray(productIds)||!productIds.length){
+    return new Set();
+  }
+
+  return new Set(
+    await repo.entitlementsForOrder(userId,orderId,productIds)
+  );
+}
+module.exports={canAccess,accessibleProductsForOrder};

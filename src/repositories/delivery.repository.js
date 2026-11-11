@@ -6,6 +6,26 @@ async function entitlement(userId,productId,orderId=null){
     [userId,productId,orderId]
   )).rows[0]||null;
 }
+
+async function entitlementsForOrder(userId,orderId,productIds=[]){
+  if(!userId||!orderId||!Array.isArray(productIds)||!productIds.length){
+    return [];
+  }
+
+  return (await query(
+    `select distinct e.product_id
+       from entitlements e
+       join orders o
+         on o.id=e.order_id
+        and o.user_id=e.user_id
+      where e.user_id=$1
+        and e.order_id=$2
+        and e.product_id=any($3::uuid[])
+        and e.status='ACTIVE'
+        and o.status in ('PAID','PROCESSING','COMPLETED')`,
+    [userId,orderId,productIds]
+  )).rows.map(row=>row.product_id);
+}
 async function createEntitlement({userId,productId,orderId},client){ const c=client||require('../config/database').db(); return (await c.query("insert into entitlements(user_id,product_id,order_id,status) values($1,$2,$3,'ACTIVE') on conflict(user_id,product_id,order_id) do nothing returning *",[userId,productId,orderId])).rows[0]||null; }
 async function revokeByOrder(orderId,client){ const c=client||require('../config/database').db(); await c.query("update entitlements set status='REVOKED',revoked_at=now() where order_id=$1 and status='ACTIVE'",[orderId]); }
 async function logDownload(data,client){ const c=client||require('../config/database').db(); return (await c.query('insert into download_logs(user_id,content_id,order_id,ip,user_agent) values($1,$2,$3,$4,$5) returning *',[data.user_id,data.content_id,data.order_id||null,maskIp(data.ip),data.user_agent||null])).rows[0]; }
@@ -46,6 +66,6 @@ async function countEntitlements(userId){
   );
 }
 
-module.exports={entitlement,entitlements,createEntitlement,revokeByOrder,logDownload,
+module.exports={entitlement,entitlementsForOrder,entitlements,createEntitlement,revokeByOrder,logDownload,
   countEntitlements
 };

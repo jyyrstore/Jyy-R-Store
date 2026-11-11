@@ -680,6 +680,42 @@ async function contents(productId,options={}){
   )).rows;
 }
 
+async function contentsForOrder(items=[]){
+  if(!Array.isArray(items)||!items.length)return [];
+
+  const productIds=items.map(item=>item&&item.product_id);
+  const variantIds=items.map(item=>item&&item.variant_id||null);
+
+  if(productIds.some(productId=>!productId)){
+    throw new TypeError('Order items harus memiliki product_id.');
+  }
+
+  return (await query(
+    `with requested as (
+       select distinct product_id,variant_id
+       from unnest($1::uuid[],$2::uuid[]) as requested(product_id,variant_id)
+     )
+     select
+       requested.product_id as requested_product_id,
+       requested.variant_id as requested_variant_id,
+       pc.*,
+       pv.label as variant_label,
+       pv.is_active as variant_is_active
+     from requested
+     join product_contents pc
+       on pc.product_id=requested.product_id
+      and (pc.variant_id is null or pc.variant_id=requested.variant_id)
+     left join product_variants pv
+       on pv.id=pc.variant_id and pv.product_id=pc.product_id
+     order by
+       requested.product_id,
+       requested.variant_id,
+       pc.sort_order,
+       pc.created_at`,
+    [productIds,variantIds]
+  )).rows;
+}
+
 async function addContent(data){
   return (await query(
     'insert into product_contents(product_id,variant_id,type,title,description,text_content,url,storage_path,mime_type,file_size,sort_order,is_preview,access_type) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) returning *',
@@ -806,6 +842,6 @@ async function countAdmin({
   );
 }
 
-module.exports={list,listHomepageHighlights,adminList,count,findBySlug,findById,create,update,remove,deletePermanently,unpublish,duplicate,contents,addContent,updateContent,deleteContent,event,listVariants,findVariant,updateVariantIcon,hasReservedVariants,saveVariants,
+module.exports={list,listHomepageHighlights,adminList,count,findBySlug,findById,create,update,remove,deletePermanently,unpublish,duplicate,contents,contentsForOrder,addContent,updateContent,deleteContent,event,listVariants,findVariant,updateVariantIcon,hasReservedVariants,saveVariants,
   countAdmin
 };
