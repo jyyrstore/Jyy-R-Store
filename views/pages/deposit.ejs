@@ -37,7 +37,7 @@
           data-copy-value="<%= d.reference || d.id || '' %>"
           aria-label="Salin ID lengkap <%= d.reference || d.id || '' %>"
           title="Ketuk untuk menyalin ID lengkap"
-          <%= (d.reference || d.id) ? '' : 'disabled' %>><%= String(d.reference || '').toUpperCase().startsWith('DEPOSIT-') ? String(d.reference).slice(0, 16) : (d.reference || (d.id ? String(d.id).slice(0, 8) : '—')) %></button>
+          <%= (d.reference || d.id) ? '' : 'disabled' %>><%= String(d.reference || d.id || '—').length > 27 ? String(d.reference || d.id).slice(0, 27) + '...' : (d.reference || d.id || '—') %></button>
   <span class="history-mutation-status badge badge-<%= String(d.status||'').toLowerCase() %>"><%= labelStatus(d.status) %></span>
   <span class="history-mutation-date"><%= new Intl.DateTimeFormat('id-ID', {day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Jakarta'}).format(new Date(d.created_at)) %>, <%= new Intl.DateTimeFormat('id-ID', {hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'Asia/Jakarta'}).format(new Date(d.created_at)) %></span>
   <span class="history-mutation-zone">[ WIB ]</span>

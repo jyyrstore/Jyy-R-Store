@@ -58,6 +58,88 @@ async function countForUser(userId){
   );
 }
 
+
+async function listItemsForUser(userId,{limit=50,offset=0}={}){
+  const lim=safeLimit(limit,50);
+  const off=safeOffset(offset);
+
+  return (
+    await query(
+      `with ordered_items as (
+         select
+           o.*,
+           (
+             select payment.id
+             from payments payment
+             where payment.order_id=o.id
+               and payment.status='PENDING'
+               and lower(payment.provider)='buatqris'
+             order by payment.created_at desc,payment.id desc
+             limit 1
+           ) as pending_payment_id,
+           (
+             select lower(payment.provider)
+             from payments payment
+             where payment.order_id=o.id
+               and payment.status='PENDING'
+               and lower(payment.provider)='buatqris'
+             order by payment.created_at desc,payment.id desc
+             limit 1
+           ) as pending_payment_provider,
+           oi.id as order_item_id,
+           oi.product_id,
+           oi.product_name,
+           oi.variant_id,
+           oi.variant_label,
+           oi.variant_amount,
+           oi.unit_price,
+           oi.quantity,
+           oi.line_total,
+           product.thumbnail_path as product_thumbnail_path,
+           variant.icon_path as variant_icon_path
+         from orders o
+         join order_items oi
+           on oi.order_id=o.id
+         left join products product
+           on product.id=oi.product_id
+         left join product_variants variant
+           on variant.id=oi.variant_id
+          and variant.product_id=oi.product_id
+         where o.user_id=$1
+       ),
+       page_items as (
+         select *
+         from ordered_items
+         order by created_at desc,id desc,order_item_id asc
+         limit $2 offset $3
+       )
+       select
+         page_items.*,
+         row_number() over (
+           partition by id
+           order by order_item_id
+         )=1 as is_first_order_item
+       from page_items
+       order by created_at desc,id desc,order_item_id asc`,
+      [userId,lim,off]
+    )
+  ).rows;
+}
+
+async function countItemsForUser(userId){
+  return Number(
+    (
+      await query(
+        `select count(*)::int count
+         from orders o
+         join order_items oi on oi.order_id=o.id
+         where o.user_id=$1`,
+        [userId]
+      )
+    ).rows[0].count
+  );
+}
+
 async function findForUser(id,userId){
   return (
     await query(
@@ -166,6 +248,8 @@ async function countAdmin(filters={}){
 module.exports={
   listForUser,
   countForUser,
+  listItemsForUser,
+  countItemsForUser,
   findForUser,
   findById,
   adminList,

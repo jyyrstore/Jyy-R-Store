@@ -11,7 +11,7 @@
 </button></div><section
   data-tab="orders"
   class="tab-panel <%= activeHistoryTab==='orders'?'active':'' %>"
-><div class="stack-list"><% orders.forEach(o=>{ %><a class="list-card" href="/orders/<%= o.id %>"><div class="order-list-main"><% if(o.items?.[0]?.variant_icon_path || o.items?.[0]?.product_thumbnail_path){ %><img class="order-item-product-image" src="<%= assetUrl(publicAssetBucket,o.items[0].variant_icon_path || o.items[0].product_thumbnail_path) %>" alt="" width="44" height="44" loading="lazy" decoding="async"><% } %><div class="order-list-copy"><strong><%= o.order_number %></strong><span><%= o.items?.map(i=>`${i.variant_id ? (i.variant_label || i.product_name) : i.product_name} × ${i.quantity}`).join(', ') %></span></div></div><div class="align-right"><span class="badge badge-<%= String(o.status||'').toLowerCase() %>"><%= labelStatus(o.status) %></span><b><%= formatIDR(o.total) %></b></div></a><% }) %><% if(!orders.length){ %><%- include('../partials/empty',{title:'Belum ada pesanan',description:'Order akan muncul setelah checkout.'}) %><% } %>
+><div class="stack-list"><% orders.forEach(o=>{ %><a class="list-card" href="/orders/<%= o.id %>"><div class="order-list-main"><% if(o.variant_icon_path || o.product_thumbnail_path){ %><img class="order-item-product-image" src="<%= assetUrl(publicAssetBucket,o.variant_icon_path || o.product_thumbnail_path) %>" alt="" width="44" height="44" loading="lazy" decoding="async"><% } %><div class="order-list-copy"><strong><%= o.order_number %></strong><span><%= o.variant_id ? (o.variant_label || o.product_name) : o.product_name %> × <%= o.quantity %></span></div></div><div class="align-right"><span class="badge badge-<%= String(o.status||'').toLowerCase() %>"><%= labelStatus(o.status) %></span><b><%= formatIDR(o.line_total) %></b></div></a><% }) %><% if(!orders.length){ %><%- include('../partials/empty',{title:'Belum ada pesanan',description:'Order akan muncul setelah checkout.'}) %><% } %>
 <%- include('../partials/pagination',{
   pagination:ordersPagination,
   param:'ordersPage',
@@ -32,7 +32,7 @@
           data-copy-value="<%= m.reference || '' %>"
           aria-label="Salin ID lengkap <%= m.reference || '' %>"
           title="Ketuk untuk menyalin ID lengkap"
-          <%= m.reference ? '' : 'disabled' %>><%= String(m.reference || '—').toUpperCase().startsWith('DEPOSIT-') ? String(m.reference).slice(0, 16) : (m.reference || '—') %></button>
+          <%= m.reference ? '' : 'disabled' %>><%= String(m.reference || '—').length > 27 ? String(m.reference).slice(0, 27) + '...' : (m.reference || '—') %></button>
   <span class="history-mutation-balance">Saldo <%= formatIDR(m.balance_after) %></span>
   <span class="history-mutation-date"><%= new Intl.DateTimeFormat('id-ID', {day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Jakarta'}).format(new Date(m.created_at)) %>, <%= new Intl.DateTimeFormat('id-ID', {hour:'2-digit',minute:'2-digit',hourCycle:'h23',timeZone:'Asia/Jakarta'}).format(new Date(m.created_at)) %></span>
   <span class="history-mutation-zone">[ WIB ]</span>

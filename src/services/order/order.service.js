@@ -724,4 +724,5 @@ async function ownerUpdateStatus(ownerId,orderId,status){
 }
 
 async function getUserOrders(userId,opts){ return require('../../repositories/orders.repository').listForUser(userId,opts); }
-module.exports={preview,createWalletOrder,createGatewayOrder,getUserOrders,ownerUpdateStatus,hasAvailableStock};
+async function getUserOrderItems(userId,opts){ return require('../../repositories/orders.repository').listItemsForUser(userId,opts); }
+module.exports={preview,createWalletOrder,createGatewayOrder,getUserOrders,getUserOrderItems,ownerUpdateStatus,hasAvailableStock};

@@ -204,11 +204,20 @@ async function productDetail(req,res,next){
 }
 async function dashboard(req,res,next){
   try{
-    const [p,n,c,o,s,announcements]=await Promise.all([
+    const orderPager=pageParams({
+      page:req.query.page,
+      limit:5
+    });
+    const ordersRepo=require('../repositories/orders.repository');
+    const [p,n,c,o,orderTotal,s,announcements]=await Promise.all([
       profile.get(req.user.id),
       notifications.list(req.user.id),
       cart.get(req.user.id),
-      orderService.getUserOrders(req.user.id,{limit:5}),
+      orderService.getUserOrderItems(req.user.id,{
+        limit:orderPager.limit,
+        offset:orderPager.offset
+      }),
+      ordersRepo.countItemsForUser(req.user.id),
       services.list(true),
       infoRepo.listPublic()
     ]);
@@ -223,6 +232,12 @@ async function dashboard(req,res,next){
         notifications:n.slice(0,6),
         cart:c,
         orders:o,
+        ordersPagination:
+          paginationMeta(
+            orderTotal,
+            orderPager.page,
+            orderPager.limit
+          ),
         mutations:mut.slice(0,6),
         services:s.slice(0,4),
         announcements:announcements.slice(0,5)
@@ -313,14 +328,14 @@ async function orders(req,res,next){
     const ordersRepo=require('../repositories/orders.repository');
 
     const [items,total]=await Promise.all([
-      orderService.getUserOrders(
+      orderService.getUserOrderItems(
         req.user.id,
         {
           limit:pager.limit,
           offset:pager.offset
         }
       ),
-      ordersRepo.countForUser(req.user.id)
+      ordersRepo.countItemsForUser(req.user.id)
     ]);
 
     res.render(
@@ -489,7 +504,7 @@ async function history(req,res,next){
       mutations,
       mutationTotal
     ]=await Promise.all([
-      orderService.getUserOrders(
+      orderService.getUserOrderItems(
         req.user.id,
         {
           limit:orderPager.limit,
@@ -497,7 +512,7 @@ async function history(req,res,next){
         }
       ),
       require('../repositories/orders.repository')
-        .countForUser(req.user.id),
+        .countItemsForUser(req.user.id),
       wallet.mutations(
         req.user.id,
         mutationPager.limit,
