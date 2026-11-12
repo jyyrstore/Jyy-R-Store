@@ -365,7 +365,7 @@ pageRouter.get('/payment/:id',requireAuth,asyncHandler(page.paymentStatus));
 pageRouter.get('/delivery',requireAuth,asyncHandler(page.delivery));
 
 const owner=express.Router(); owner.use(requireAuth,requireOwner);
-const ownerSections=['dashboard','products','categories','orders','payments','deposits','users','roles','tickets','messages','services','information','faq','notifications','maintenance','storage','activity','login-history','reports','top-orders','refunds','settings','system'];
+const ownerSections=['dashboard','products','categories','icon','orders','payments','deposits','users','roles','tickets','messages','services','information','faq','notifications','maintenance','storage','activity','login-history','reports','top-orders','refunds','settings','system'];
 for(const s of ownerSections){ owner.get('/'+s,asyncHandler(page.ownerPage(s))); }
 owner.get('/security',(req,res)=>res.redirect('/owner/login-history'));
 owner.get('/messages/:id',asyncHandler(page.ownerMessageDetail));

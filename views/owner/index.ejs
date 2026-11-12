@@ -16,7 +16,7 @@
             <div class="eyebrow">Owner</div>
           <% } %>
           <h1><%= ({create_produk:'Buat Produk',edit_produk:'Edit Produk',content_produk:'Content Produk'})[ownerSection] || (ownerSection==='dashboard'?'Ringkasan':ownerSection.replace(/(^|-)/g,m=>m.toUpperCase()).replace(/-/g,' ')) %></h1>
-          <p><%= ownerSection==='create_produk'?'Lengkapi informasi utama produk, cover, dan harga. Content serta publikasi dapat diatur setelah produk tersimpan.':'Semua aksi sensitif tetap diverifikasi server-side dan dicatat ke activity log.' %></p>
+          <p><%= ownerSection==='icon'?'Daftar seluruh icon global yang tersedia di source.':ownerSection==='create_produk'?'Lengkapi informasi utama produk, cover, dan harga. Content serta publikasi dapat diatur setelah produk tersimpan.':'Semua aksi sensitif tetap diverifikasi server-side dan dicatat ke activity log.' %></p>
         </div>
         <% if(['products','categories','services','faq','information','notifications'].includes(ownerSection)){ %>
           <button class="button button-primary" data-owner-create="<%= ownerSection %>"><%- icon('circle-plus') %> Tambah</button>
@@ -393,30 +393,55 @@
               %>
                 <article class="owner-category-item">
                   <div class="owner-category-card">
-                    <div class="owner-category-fields">
-                      <div><span>Kategori</span><strong><span class="category-name-with-icon"><%- icon(row.icon_key||'category-management','icon category-inline-icon') %><span><%= row.name %></span></span></strong></div>
-                      <div><span>Subkategori</span><strong><%= subcategories.length ? subcategories.length+' subkategori' : '—' %></strong></div>
-                      <div><span>Slug</span><strong><%= row.slug %></strong></div>
-                      <div><span>Active</span><strong><%= row.is_active?'Aktif':'Nonaktif' %></strong></div>
-                    </div>
-                    <div class="owner-category-actions">
-                      <button class="button button-secondary button-small" data-owner-edit-category='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'>Edit</button>
-                      <button class="button button-danger button-small" type="button" data-owner-delete-category="<%= row.id %>"><%- icon('trash-can') %>Hapus</button>
-                    </div>
+                    <button
+                      class="owner-category-edit"
+                      type="button"
+                      data-owner-edit-category='<%- JSON.stringify(row).replace(/'/g,"&#39;") %>'
+                      aria-label="Edit kategori <%= row.name %>"
+                    >
+                      <span class="owner-category-heading">
+                        <strong class="owner-category-name"><span class="category-name-with-icon"><%- icon(row.icon_key||'category-management','icon category-inline-icon') %><span><%= row.name %></span></span></strong>
+                        <span class="owner-category-status <%= row.is_active?'is-active':'is-inactive' %>"><%= row.is_active?'Aktif':'Nonaktif' %></span>
+                      </span>
+                      <span class="owner-category-meta">
+                        <span><%= subcategories.length %> subkategori</span>
+                        <span title="<%= row.slug %>"><%= row.slug %></span>
+                      </span>
+                    </button>
+                    <button
+                      class="owner-category-delete"
+                      type="button"
+                      data-owner-delete-category="<%= row.id %>"
+                      aria-label="Hapus kategori <%= row.name %>"
+                      title="Hapus kategori <%= row.name %>"
+                    ><%- icon('trash-can') %></button>
                   </div>
                   <% if(subcategories.length){ %>
                     <div class="owner-category-sublist" aria-label="Daftar subkategori <%= row.name %>">
                       <% subcategories.forEach(subcategory=>{ %>
                         <div class="owner-category-card owner-category-subcard">
-                          <div class="owner-category-fields">
-                            <div><span>Subkategori</span><strong><span class="category-name-with-icon"><%- icon(subcategory.icon_key||'category-management','icon category-inline-icon') %><span><%= subcategory.name %></span></span></strong></div>
-                            <div><span>Slug</span><strong><%= subcategory.slug %></strong></div>
-                            <div><span>Active</span><strong><%= subcategory.is_active?'Aktif':'Nonaktif' %></strong></div>
-                          </div>
-                          <div class="owner-category-actions">
-                            <button class="button button-secondary button-small" data-owner-edit-category='<%- JSON.stringify(subcategory).replace(/'/g,"&#39;") %>'>Edit</button>
-                            <button class="button button-danger button-small" type="button" data-owner-delete-category="<%= subcategory.id %>"><%- icon('trash-can') %>Hapus</button>
-                          </div>
+                          <button
+                            class="owner-category-edit"
+                            type="button"
+                            data-owner-edit-category='<%- JSON.stringify(subcategory).replace(/'/g,"&#39;") %>'
+                            aria-label="Edit subkategori <%= subcategory.name %>"
+                          >
+                            <span class="owner-category-heading">
+                              <strong class="owner-category-name"><span class="category-name-with-icon"><%- icon(subcategory.icon_key||'category-management','icon category-inline-icon') %><span><%= subcategory.name %></span></span></strong>
+                              <span class="owner-category-status <%= subcategory.is_active?'is-active':'is-inactive' %>"><%= subcategory.is_active?'Aktif':'Nonaktif' %></span>
+                            </span>
+                            <span class="owner-category-meta">
+                              <span>Subkategori</span>
+                              <span title="<%= subcategory.slug %>"><%= subcategory.slug %></span>
+                            </span>
+                          </button>
+                          <button
+                            class="owner-category-delete"
+                            type="button"
+                            data-owner-delete-category="<%= subcategory.id %>"
+                            aria-label="Hapus subkategori <%= subcategory.name %>"
+                            title="Hapus subkategori <%= subcategory.name %>"
+                          ><%- icon('trash-can') %></button>
                         </div>
                       <% }) %>
                     </div>
@@ -425,6 +450,15 @@
               <% }) %>
             </div>
           <% } %>
+      <% } else if(ownerSection==='icon'){ %>
+        <div class="owner-icon-grid" aria-label="Daftar icon global">
+          <% Object.keys(iconPaths).sort().forEach(iconName=>{ %>
+            <div class="owner-icon-item">
+              <%- icon(iconName,'icon owner-icon-preview') %>
+              <span><%= iconName %></span>
+            </div>
+          <% }) %>
+        </div>
       <% } else if(ownerSection==='users'){ %>
         <%
           const userSearch=String(req.query.search||'');

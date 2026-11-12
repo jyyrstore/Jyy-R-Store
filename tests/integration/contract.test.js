@@ -32,6 +32,23 @@ test('homepage moves Service and New Information to authenticated dashboard',()=
   assert.equal(homeView.includes('<h2>New Information</h2>'),false);
   assert.ok(dashboardView.includes('<h2>Layanan pilihan</h2>'));
   assert.ok(dashboardView.includes('<h2 id="dashboard-information-title">Informasi</h2>'));
+  assert.ok(dashboardView.includes("icon('interface-user-circle-circle-geometric','icon dashboard-greeting-icon')"));
+  assert.ok(dashboardView.indexOf("icon('interface-user-circle-circle-geometric','icon dashboard-greeting-icon')") < dashboardView.indexOf('Halo,'));
+
+  const dashboardStyles=fs.readFileSync(
+    path.join(root,'public/css/pages.css'),
+    'utf8'
+  );
+
+  assert.match(
+    dashboardStyles,
+    /body\[data-view="pages\/dashboard"\]\s+\.dashboard-greeting\s*\{[^}]*display:\s*inline-flex;/
+  );
+
+  assert.match(
+    dashboardStyles,
+    /body\[data-view="pages\/dashboard"\]\s+\.dashboard-greeting-icon\s*\{[^}]*width:\s*22px;[^}]*height:\s*22px;/
+  );
 
   assert.ok(route.includes("pageRouter.get('/dashboard',requireAuth,asyncHandler(page.dashboard));"));
 });
@@ -422,7 +439,41 @@ test('category update preserves omitted metadata',async()=>{
   }
 });
 
-test('Owner category actions stay inside each card under the values',()=>{
+test('Owner icon page shows every icon from the global registry',()=>{
+  const routes=fs.readFileSync(
+    path.join(root,'src/routes/index.js'),
+    'utf8'
+  );
+  const server=fs.readFileSync(
+    path.join(root,'server.js'),
+    'utf8'
+  );
+  const sidebar=fs.readFileSync(
+    path.join(root,'views/partials/sidebar.ejs'),
+    'utf8'
+  );
+  const owner=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+  const registry=fs.readFileSync(
+    path.join(root,'src/utils/icons.js'),
+    'utf8'
+  );
+
+  assert.ok(routes.includes("'categories','icon','orders'"));
+  assert.ok(routes.includes(
+    'const owner=express.Router(); owner.use(requireAuth,requireOwner);'
+  ));
+  assert.ok(server.includes('app.locals.iconPaths = icons;'));
+  assert.ok(registry.includes('module.exports = { icon, icons };'));
+  assert.ok(sidebar.includes("['icon','Ikon','image']"));
+  assert.ok(owner.includes("ownerSection==='icon'"));
+  assert.ok(owner.includes('Object.keys(iconPaths).sort()'));
+  assert.ok(owner.includes("icon(iconName,'icon owner-icon-preview')"));
+});
+
+test('Owner category cards edit from the card surface and use icon-only delete',()=>{
   const ownerView=fs.readFileSync(
     path.join(root,'views/owner/index.ejs'),
     'utf8'
@@ -445,15 +496,29 @@ test('Owner category actions stay inside each card under the values',()=>{
   assert.ok(section.includes('const subcategories=categoryRows.filter('));
   assert.ok(section.includes('class="owner-category-sublist"'));
   assert.ok(section.includes('subcategories.forEach(subcategory=>{'));
+
+  assert.equal((section.match(/class="owner-category-edit"/g)||[]).length,2);
+  assert.equal((section.match(/class="owner-category-delete"/g)||[]).length,2);
+
+  assert.ok(section.includes('data-owner-edit-category='));
   assert.ok(section.includes('data-owner-delete-category="<%= row.id %>"'));
   assert.ok(section.includes('data-owner-delete-category="<%= subcategory.id %>"'));
-  for(const label of ['Kategori','Subkategori','Slug','Active']){
-    assert.ok(section.includes(`<span>${label}</span>`),label);
-  }
-  assert.ok(section.includes('data-owner-edit-category='));
-  assert.ok(section.includes('data-owner-delete-category='));
-  assert.equal(section.includes('owner-category-data-row'),false);
-  assert.equal(section.includes('owner-category-actions-row'),false);
+
+  assert.ok(section.includes('<%= subcategories.length %> subkategori'));
+  assert.ok(section.includes('title="<%= row.slug %>"'));
+  assert.ok(section.includes('title="<%= subcategory.slug %>"'));
+  assert.ok(section.includes("row.is_active?'is-active':'is-inactive'"));
+  assert.ok(section.includes("subcategory.is_active?'is-active':'is-inactive'"));
+
+  assert.ok(section.includes('aria-label="Edit kategori <%= row.name %>"'));
+  assert.ok(section.includes('aria-label="Edit subkategori <%= subcategory.name %>"'));
+  assert.ok(section.includes('aria-label="Hapus kategori <%= row.name %>"'));
+  assert.ok(section.includes('aria-label="Hapus subkategori <%= subcategory.name %>"'));
+
+  assert.equal(section.includes('>Hapus</button>'),false);
+  assert.equal(section.includes('>Edit</button>'),false);
+  assert.equal(section.includes('owner-category-fields'),false);
+  assert.equal(section.includes('owner-category-actions'),false);
 
   assert.ok(responsive.includes(
     '.owner-page .owner-categories-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%;overflow:visible;padding:0}'
@@ -461,23 +526,37 @@ test('Owner category actions stay inside each card under the values',()=>{
   assert.ok(responsive.includes(
     '.owner-page .owner-category-item{display:flex;flex-direction:column;gap:8px;min-width:0;max-width:100%}'
   ));
+  assert.match(responsive,/\.owner-page \.owner-category-edit\s*\{[^}]*display\s*:\s*flex;[^}]*\}/);
+  assert.match(responsive,/\.owner-page \.owner-category-meta\s*\{[^}]*justify-content\s*:\s*space-between;[^}]*\}/);
+
+  const editRule=responsive.match(
+    /\.owner-page \.owner-category-edit\s*\{([^}]*)\}/
+  );
+  assert.ok(editRule);
+  assert.match(editRule[1],/padding:\s*14px;/);
+
+  const headingRule=responsive.match(
+    /\.owner-page \.owner-category-heading\s*\{([^}]*)\}/
+  );
+  assert.ok(headingRule);
+  assert.match(headingRule[1],/padding-right:\s*40px;/);
+
   assert.ok(responsive.includes(
-    '.owner-page .owner-category-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;min-width:0}'
+    '.owner-page .owner-category-meta>span:last-child{text-align:right}'
   ));
-  assert.ok(responsive.includes(
-    '@media(max-width:600px){.owner-page .owner-category-fields{grid-template-columns:repeat(4,minmax(0,1fr))}}'
-  ));
+  assert.match(responsive,/\.owner-page \.owner-category-delete\s*\{[^}]*position\s*:\s*absolute;[^}]*width\s*:\s*32px;[^}]*height\s*:\s*32px;[^}]*\}/);
+
   assert.equal(
-    responsive.includes('owner-category-item{display:flex;flex:0 0 min(86vw,320px)'),
+    responsive.includes('.owner-page .owner-category-fields'),
+    false
+  );
+  assert.equal(
+    responsive.includes('.owner-page .owner-category-actions'),
     false
   );
   assert.ok(responsive.includes(
     '.owner-page .owner-category-sublist{display:flex;flex-direction:column;gap:8px;margin-left:12px;padding-left:12px;border-left:1px solid var(--border-strong);min-width:0}'
   ));
-  assert.ok(responsive.includes(
-    '.owner-page .owner-category-subcard .owner-category-fields{grid-template-columns:repeat(3,minmax(0,1fr))}'
-  ));
-  assert.match(responsive,/\.owner-page \.owner-category-fields strong\{[^}]*overflow:hidden[^}]*text-overflow:ellipsis[^}]*white-space:nowrap[^}]*\}/);
 });
 
 test('Owner category deletion is owner-protected and keeps products',()=>{
@@ -1187,6 +1266,26 @@ test('category and subcategory icons render across product surfaces',()=>{
   assert.ok(productsRepository.includes('c.icon_key category_icon_key'));
   assert.ok(productsRepository.includes('parent_c.icon_key category_parent_icon_key'));
   assert.ok(styles.includes('.category-name-with-icon'));
+
+  const sharedStyles=fs.readFileSync(
+    path.join(root,'public/css/components.css'),
+    'utf8'
+  );
+
+  assert.doesNotMatch(
+    sharedStyles,
+    /\.category-card span,\.category-card small\{display:block\}/
+  );
+
+  assert.match(
+    styles,
+    /\.category-name-with-icon\s*\{[^}]*display\s*:\s*inline-flex;/
+  );
+
+  assert.match(
+    styles,
+    /\.category-card__content\s*\{[^}]*display\s*:\s*flex;/
+  );
 });
 
 test('category hierarchy supports one-level subcategories',()=>{

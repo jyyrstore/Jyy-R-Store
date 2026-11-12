@@ -217,7 +217,7 @@
 
     syncSelect(root);
 
-    const placeholder=root.closest('.owner-product-editor-page')
+    const placeholder=root.closest('.owner-product-editor-page, .filter-bar')
       ?document.createComment('jyyr-select-menu')
       :null;
 

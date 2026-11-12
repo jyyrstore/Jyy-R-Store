@@ -1095,7 +1095,7 @@ test('owner mode replaces the main sidebar content instead of nesting a second s
 
   assert.equal(
     sections.length,
-    23
+    24
   );
 
   assert.match(

@@ -201,15 +201,165 @@
   border-color:#3478D4;
   box-shadow:0 0 0 2px rgba(52,120,212,.25);
 }
+/* Global icon registry gallery */
+.owner-page .owner-icon-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(104px,1fr));
+  gap:12px;
+  min-width:0;
+}
+.owner-page .owner-icon-item{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  min-width:0;
+  min-height:104px;
+  padding:14px 10px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+  text-align:center;
+}
+.owner-page .owner-icon-preview{
+  width:30px;
+  height:30px;
+  max-width:30px;
+  max-height:30px;
+  flex:0 0 30px;
+}
+.owner-page .owner-icon-item span{
+  max-width:100%;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.35;
+  overflow-wrap:anywhere;
+}
+
 .owner-page .owner-categories-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0;max-width:100%;overflow:visible;padding:0}
 
 .owner-page .owner-category-item{display:flex;flex-direction:column;gap:8px;min-width:0;max-width:100%}
-.owner-page .owner-category-card{min-width:0;padding:14px;border:1px solid var(--border);border-radius:15px 0 15px 0;background:var(--surface)}
-.owner-page .owner-category-fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;min-width:0}
-@media(max-width:600px){.owner-page .owner-category-fields{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.owner-page .owner-category-fields>div{min-width:0;text-align:center}
-.owner-page .owner-category-fields span{display:block;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}
-.owner-page .owner-category-fields strong{display:block;min-width:0;font-size:13px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.owner-page .owner-category-card{
+  position:relative;
+  min-width:0;
+  border:1px solid var(--border);
+  border-radius:15px 0 15px 0;
+  background:var(--surface);
+  transition:border-color .15s ease,background .15s ease;
+}
+.owner-page .owner-category-edit{
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:center;
+  gap:9px;
+  width:100%;
+  min-width:0;
+  padding:14px;
+  border:0;
+  border-radius:inherit;
+  background:transparent;
+  color:var(--text);
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+  box-sizing:border-box;
+}
+.owner-page .owner-category-card:focus-within{
+  border-color:var(--border-strong);
+}
+.owner-page .owner-category-edit:focus-visible{
+  outline:2px solid var(--focus);
+  outline-offset:-3px;
+}
+.owner-page .owner-category-heading{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+  min-width:0;
+  padding-right:40px;
+}
+.owner-page .owner-category-name{
+  display:block;
+  min-width:0;
+  max-width:100%;
+  margin:0;
+  font-size:14px;
+  line-height:1.4;
+  font-weight:800;
+  overflow-wrap:anywhere;
+}
+.owner-page .owner-category-status{
+  display:inline-flex;
+  align-items:center;
+  flex:0 0 auto;
+  gap:4px;
+  font-size:12px;
+  font-weight:700;
+  line-height:1.4;
+  white-space:nowrap;
+}
+.owner-page .owner-category-status::before{
+  content:"•";
+  font-size:16px;
+  line-height:1;
+}
+.owner-page .owner-category-status.is-active{color:var(--success)}
+.owner-page .owner-category-status.is-inactive{color:var(--muted)}
+.owner-page .owner-category-meta{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-width:0;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.4;
+}
+.owner-page .owner-category-meta>span{
+  flex:1 1 0;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.owner-page .owner-category-meta>span:last-child{text-align:right}
+.owner-page .owner-category-delete{
+  position:absolute;
+  top:10px;
+  right:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:32px;
+  height:32px;
+  min-width:32px;
+  padding:0;
+  border:1px solid var(--border);
+  border-radius:9px;
+  background:var(--panel);
+  color:var(--muted);
+  cursor:pointer;
+  box-sizing:border-box;
+  transition:color .15s ease,border-color .15s ease,background .15s ease;
+}
+.owner-page .owner-category-delete>.icon{
+  width:16px;
+  height:16px;
+  max-width:16px;
+  max-height:16px;
+}
+.owner-page .owner-category-delete:hover{
+  color:var(--error);
+  border-color:var(--error);
+  background:rgba(235,111,115,.08);
+}
+.owner-page .owner-category-delete:focus-visible{
+  outline:2px solid var(--focus);
+  outline-offset:2px;
+}
 .owner-page .owner-product-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;min-width:0}
 .owner-page .owner-product-card{display:flex;flex-direction:column;min-width:0;padding:14px;border:1px solid var(--border);border-radius:15px 0 15px 0;background:var(--surface)}
 .owner-page .owner-product-card-title{margin:0 0 12px;text-align:center;font-size:16px;line-height:1.4;overflow-wrap:anywhere;word-break:break-word}
@@ -239,10 +389,7 @@
 .owner-page .owner-categories-table-panel .table-scroll th:nth-child(3),.owner-page .owner-categories-table-panel .table-scroll td:nth-child(3){width:28%}
 .owner-page .owner-categories-table-panel .table-scroll th:nth-child(4),.owner-page .owner-categories-table-panel .table-scroll td:nth-child(4){width:18%;text-align:center}
 .owner-page .owner-categories-table-panel .table-scroll td::before{display:none;content:none}
-.owner-page .owner-category-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%;max-width:100%;margin:20px 0 0}
 .owner-page .owner-category-sublist{display:flex;flex-direction:column;gap:8px;margin-left:12px;padding-left:12px;border-left:1px solid var(--border-strong);min-width:0}
-.owner-page .owner-category-subcard .owner-category-fields{grid-template-columns:repeat(3,minmax(0,1fr))}
-.owner-page .owner-category-actions .button{width:100%;min-width:0;max-width:100%;height:32px;min-height:32px;padding:0 10px;font-size:12px;box-sizing:border-box;white-space:nowrap}
 :is(.owner-deposits-table-panel,.owner-payments-table-panel)>h2{text-align:center;margin:0 0 14px}
 .owner-users-table-panel{padding-top:12px}
 .owner-users-table-panel>h2{text-align:center;margin:0 0 14px}
