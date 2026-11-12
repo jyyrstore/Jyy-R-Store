@@ -1642,6 +1642,130 @@
   }
 }
 
+.home-trust-labels{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:nowrap;
+  gap:clamp(7px,2vw,18px);
+  width:100%;
+  margin:12px 0 16px;
+  padding:0;
+  list-style:none;
+  white-space:nowrap;
+}
+
+.home-trust-labels li{
+  display:inline-flex;
+  align-items:center;
+  flex:0 0 auto;
+  gap:clamp(3px,.9vw,7px);
+  color:var(--muted-strong);
+  font-size:clamp(8px,2.7vw,13px);
+  font-weight:750;
+  line-height:1.2;
+  white-space:nowrap;
+}
+
+.home-trust-labels .icon{
+  display:block;
+  flex:0 0 auto;
+  width:clamp(11px,3vw,16px);
+  height:clamp(11px,3vw,16px);
+  color:var(--primary-2);
+}
+
+.home-category-filters{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  min-width:0;
+  margin:0 0 18px;
+  padding:4px 0 10px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+  scroll-snap-type:x proximity;
+}
+
+.home-category-filters::-webkit-scrollbar{
+  display:none;
+}
+
+.home-category-filter{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  gap:10px;
+  min-height:48px;
+  padding:0 18px;
+  border:1px solid var(--border-strong);
+  border-radius:14px;
+  background:transparent;
+  color:var(--text);
+  font:inherit;
+  font-size:clamp(13px,1.5vw,18px);
+  font-weight:750;
+  line-height:1;
+  white-space:nowrap;
+  cursor:pointer;
+  scroll-snap-align:start;
+  transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease;
+}
+
+.home-category-filter .icon{
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
+  color:var(--primary-2);
+}
+
+.home-category-filter:hover{
+  border-color:var(--primary-2);
+  background:rgba(37,99,235,.08);
+}
+
+.home-category-filter.is-active{
+  border:2px solid var(--surface);
+  background:var(--primary-2);
+  color:var(--on-action);
+  box-shadow:none;
+}
+
+.home-category-filter.is-active .icon{
+  color:currentColor;
+}
+
+.home-category-filter:focus-visible{
+  outline:2px solid var(--primary-2);
+  outline-offset:3px;
+}
+
+@media(max-width:600px){
+  .home-category-filters{
+    gap:8px;
+    margin-bottom:16px;
+  }
+
+  .home-category-filter{
+    min-height:44px;
+    padding:0 14px;
+    gap:8px;
+    border-radius:12px;
+    font-size:14px;
+  }
+
+  .home-category-filter .icon{
+    width:21px;
+    height:21px;
+    flex-basis:21px;
+  }
+}
+
 .hero-store-icon{
   width:1.2em;
   height:1.2em;

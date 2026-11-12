@@ -10,6 +10,11 @@
       decoding="async"
     >
   </figure>
+  <ul class="home-trust-labels" aria-label="Keunggulan layanan">
+    <li><%- icon('shield') %><span>Transaksi Aman</span></li>
+    <li><%- icon('rotate-ccw') %><span>Garansi Uang Kembali</span></li>
+    <li><%- icon('timer') %><span>Proses Cepat</span></li>
+  </ul>
   <section class="hero">
     <div>
       <div class="hero-actions">
@@ -23,9 +28,35 @@
     </div>
   </section>
 
+  <nav class="home-category-filters" aria-label="Filter kategori produk">
+    <button
+      class="home-category-filter is-active"
+      type="button"
+      data-home-category-filter="all"
+      aria-pressed="true"
+    >
+      <%- icon('category-management') %>
+      <span>Semua</span>
+    </button>
+    <% categories.filter(c=>!c.parent_id).filter(c=>subcategoryGroups.some(group=>String(group.category.id)===String(c.id)||String(group.category.parent_id)===String(c.id))).forEach(c=>{ %>
+    <button
+      class="home-category-filter"
+      type="button"
+      data-home-category-filter="<%= c.id %>"
+      aria-pressed="false"
+    >
+      <%- icon('category-management') %>
+      <span><%= c.name %></span>
+    </button>
+    <% }) %>
+  </nav>
+
   <% let homepageProductIndex=0; %>
   <% subcategoryGroups.forEach(group=>{ %>
-    <section class="section">
+    <section
+      class="section home-category-group"
+      data-home-category-group="<%= group.category.parent_id || group.category.id || 'uncategorized' %>"
+    >
       <% const parentCategory=categories.find(category=>String(category.id)===String(group.category.parent_id)); %>
       <div class="section-header home-subcategory-header">
         <span class="home-parent-category-name"><%= parentCategory ? parentCategory.name : '' %></span>
@@ -40,18 +71,6 @@
     </section>
   <% }) %>
 
-  <section class="section home-category-section">
-    <div class="section-header"><div><h2>Category</h2></div></div>
-    <div class="category-grid">
-<% categories.filter(c=>!c.parent_id).forEach(c=>{ %>
-  <a href="/store?category=<%= c.slug %>" class="category-card">
-    <span class="category-card__content">
-      <strong class="category-card__name"><%= c.name %></strong>
-      <small class="category-card__description"><%= c.description || 'Lihat produk' %></small>
-    </span>
-  </a>
-<% }) %>
-</div>
-  </section>
+
 
 </section>

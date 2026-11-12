@@ -222,10 +222,51 @@
   gap:9px;
 }
 
-.auth-login-form .field>span{
+.auth-login-form .field>span:not(.auth-login-field-placeholder){
   font-size:18px;
   font-weight:750;
   color:var(--muted-strong);
+}
+
+.auth-login-form .auth-login-field{
+  position:relative;
+  display:block;
+  width:100%;
+  min-width:0;
+  gap:0;
+}
+
+.auth-login-form .auth-login-field input{
+  padding-left:50px;
+}
+
+.auth-login-form .auth-login-field-placeholder{
+  position:absolute;
+  top:50%;
+  left:20px;
+  display:inline-flex;
+  align-items:center;
+  gap:9px;
+  margin:0;
+  color:var(--muted);
+  font-size:16px;
+  font-weight:600;
+  line-height:1;
+  pointer-events:none;
+  transform:translateY(-50%);
+  transition:opacity .16s ease,visibility .16s ease;
+}
+
+.auth-login-form .auth-login-field-placeholder .icon{
+  width:18px;
+  height:18px;
+  flex:0 0 18px;
+}
+
+.auth-login-form .auth-login-field:focus-within>.auth-login-field-placeholder,
+.auth-login-form .auth-login-field:has(input:not(:placeholder-shown))>.auth-login-field-placeholder{
+  opacity:0;
+  visibility:hidden;
 }
 
 .auth-login-form .field input{
@@ -5214,12 +5255,12 @@ body[data-view="pages/dashboard"] .dashboard-balance-list .history-mutation-refe
   -webkit-appearance:none;
 }
 body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-reference-copy:hover,
-body[data-view="pages/deposit"] .deposit-history-list .history-mutation-reference-copy,
+body[data-view="pages/deposit"] .deposit-history-list .history-mutation-reference-copy:hover,
 body[data-view="pages/dashboard"] .dashboard-balance-list .history-mutation-reference-copy:hover{
   color:var(--action);
 }
 body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-reference-copy:focus-visible,
-body[data-view="pages/deposit"] .deposit-history-list .history-mutation-reference-copy,
+body[data-view="pages/deposit"] .deposit-history-list .history-mutation-reference-copy:focus-visible,
 body[data-view="pages/dashboard"] .dashboard-balance-list .history-mutation-reference-copy:focus-visible{
   outline:2px solid var(--focus);
   outline-offset:2px;

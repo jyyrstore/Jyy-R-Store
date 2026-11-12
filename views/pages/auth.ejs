@@ -64,41 +64,65 @@
     >
       <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
       <% if(mode==='register'){ %>
-      <label class="field">
-        <span>Username</span>
+      <label class="field auth-login-field">
         <input
           name="username"
           autocomplete="username"
-          placeholder="Pilih username"
+          placeholder=" "
           minlength="3"
           maxlength="32"
           required
         >
+        <span class="auth-login-field-placeholder"><%- icon('user') %> Username</span>
       </label>
       <% } %>
 
-      <label class="field">
-        <span>Email</span>
+      <% if(mode==='login'){ %>
+      <label class="field auth-login-field">
         <input
           type="email"
           name="email"
           autocomplete="email"
-          placeholder="nama@email.com"
+          placeholder=" "
           required
         >
+        <span class="auth-login-field-placeholder"><%- icon('envelope') %> Email</span>
       </label>
 
-      <label class="field">
-        <span>Password</span>
+      <label class="field auth-login-field">
         <input
           type="password"
           name="password"
-          autocomplete="<%= mode==='register' ? 'new-password' : 'current-password' %>"
-          placeholder="Masukkan password"
-          <% if(mode==='register'){ %>minlength="8"<% } %>
+          autocomplete="current-password"
+          placeholder=" "
           required
         >
+        <span class="auth-login-field-placeholder"><%- icon('lock') %> Password</span>
       </label>
+      <% } else { %>
+      <label class="field auth-login-field">
+        <input
+          type="email"
+          name="email"
+          autocomplete="email"
+          placeholder=" "
+          required
+        >
+        <span class="auth-login-field-placeholder"><%- icon('envelope') %> Email</span>
+      </label>
+
+      <label class="field auth-login-field">
+        <input
+          type="password"
+          name="password"
+          autocomplete="new-password"
+          placeholder=" "
+          minlength="8"
+          required
+        >
+        <span class="auth-login-field-placeholder"><%- icon('lock') %> Password</span>
+      </label>
+      <% } %>
 
       <% if(mode==='login'){ %>
       <div class="auth-login-meta">

@@ -2136,6 +2136,29 @@
   });
 
   document.addEventListener('click',async e=>{
+    const homeCategoryFilter=e.target.closest('[data-home-category-filter]');
+    if(homeCategoryFilter){
+      const homePage=homeCategoryFilter.closest('.home-page');
+      const filterBar=homeCategoryFilter.closest('.home-category-filters');
+      if(!homePage||!filterBar)return;
+
+      const selectedCategory=homeCategoryFilter.dataset.homeCategoryFilter;
+
+      filterBar.querySelectorAll('[data-home-category-filter]').forEach(button=>{
+        const active=button===homeCategoryFilter;
+        button.classList.toggle('is-active',active);
+        button.setAttribute('aria-pressed',String(active));
+      });
+
+      homePage.querySelectorAll('[data-home-category-group]').forEach(group=>{
+        group.hidden=
+          selectedCategory!=='all' &&
+          group.dataset.homeCategoryGroup!==selectedCategory;
+      });
+
+      return;
+    }
+
     const editorBack=e.target.closest('[data-owner-editor-back]');
     if(editorBack){
       e.preventDefault();
