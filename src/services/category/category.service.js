@@ -82,6 +82,8 @@ async function update(id,data){
       slug:slug(data.slug||parent.slug||parent.name),
       subcategory,
       subcategory_slug:slug(subcategory),
+      icon_key:Object.prototype.hasOwnProperty.call(data,'icon_key')?data.icon_key:parent.icon_key,
+      subcategory_icon_key:Object.prototype.hasOwnProperty.call(data,'subcategory_icon_key')?data.subcategory_icon_key:current.icon_key,
       is_active:data.is_active
     });
   }
@@ -89,6 +91,7 @@ async function update(id,data){
   if(hasSubcategory&&subcategory){
     return repo.updateWithSubcategory(id,{
       ...data,
+      icon_key:Object.prototype.hasOwnProperty.call(data,'icon_key')?data.icon_key:current.icon_key,
       subcategory,
       slug:slug(data.slug||data.name||current.name),
       subcategory_slug:slug(subcategory)

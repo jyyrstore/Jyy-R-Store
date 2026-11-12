@@ -31,13 +31,14 @@ async function hasChildren(id){
 
 async function create(data){
   return (await query(
-    'insert into categories(name,slug,description,sort_order,parent_id) values($1,$2,$3,$4,$5) returning *',
+    'insert into categories(name,slug,description,sort_order,parent_id,icon_key) values($1,$2,$3,$4,$5,$6) returning *',
     [
       data.name,
       data.slug,
       data.description||null,
       data.sort_order||0,
-      data.parent_id||null
+      data.parent_id||null,
+      data.icon_key||null
     ]
   )).rows[0];
 }
@@ -49,7 +50,8 @@ async function update(id,data){
     'description',
     'sort_order',
     'is_active',
-    'parent_id'
+    'parent_id',
+    'icon_key'
   ];
 
   const keys=allowed.filter(
@@ -65,6 +67,7 @@ async function update(id,data){
       if(k==='sort_order')return data[k]??0;
       if(k==='is_active')return data[k]!==false;
       if(k==='parent_id')return data[k]||null;
+      if(k==='icon_key')return data[k]||null;
 
       return data[k];
     })
@@ -86,26 +89,33 @@ async function createWithSubcategory(data){
 
     if(!parent){
       parent=(await client.query(
-        'insert into categories(name,slug,description,sort_order,parent_id,is_active) values($1,$2,$3,$4,null,$5) returning *',
+        'insert into categories(name,slug,description,sort_order,parent_id,is_active,icon_key) values($1,$2,$3,$4,null,$5,$6) returning *',
         [
           data.name,
           data.slug,
           data.description||null,
           data.sort_order||0,
-          data.is_active!==false
+          data.is_active!==false,
+          data.icon_key||null
         ]
       )).rows[0];
+    }else if(data.icon_key){
+      parent=(await client.query(
+        'update categories set icon_key=$2 where id=$1 returning *',
+        [parent.id,data.icon_key]
+      )).rows[0]||parent;
     }
 
     return (await client.query(
-      'insert into categories(name,slug,description,sort_order,parent_id,is_active) values($1,$2,$3,$4,$5,$6) returning *',
+      'insert into categories(name,slug,description,sort_order,parent_id,is_active,icon_key) values($1,$2,$3,$4,$5,$6,$7) returning *',
       [
         data.subcategory,
         data.subcategory_slug,
         data.description||null,
         data.sort_order||0,
         parent.id,
-        data.is_active!==false
+        data.is_active!==false,
+        data.subcategory_icon_key||null
       ]
     )).rows[0];
   });
@@ -126,19 +136,20 @@ async function updateWithSubcategory(id,data){
     }
 
     const updatedParent=(await client.query(
-      'update categories set name=$2,slug=$3,is_active=$4 where id=$1 returning *',
-      [id,data.name,data.slug,data.is_active!==false]
+      'update categories set name=$2,slug=$3,is_active=$4,icon_key=$5 where id=$1 returning *',
+      [id,data.name,data.slug,data.is_active!==false,data.icon_key||null]
     )).rows[0];
 
     return (await client.query(
-      'insert into categories(name,slug,description,sort_order,parent_id,is_active) values($1,$2,$3,$4,$5,$6) returning *',
+      'insert into categories(name,slug,description,sort_order,parent_id,is_active,icon_key) values($1,$2,$3,$4,$5,$6,$7) returning *',
       [
         data.subcategory,
         data.subcategory_slug,
         data.description||null,
         data.sort_order||0,
         updatedParent.id,
-        data.is_active!==false
+        data.is_active!==false,
+        data.subcategory_icon_key||null
       ]
     )).rows[0];
   });
@@ -159,18 +170,19 @@ async function updateHierarchy(parentId,childId,data){
     }
 
     await client.query(
-      'update categories set name=$2,slug=$3 where id=$1',
-      [parentId,data.name,data.slug]
+      'update categories set name=$2,slug=$3,icon_key=$4 where id=$1',
+      [parentId,data.name,data.slug,data.icon_key||null]
     );
 
     const child=(await client.query(
-      'update categories set name=$2,slug=$3,is_active=$4 where id=$1 and parent_id=$5 returning *',
+      'update categories set name=$2,slug=$3,is_active=$4,icon_key=$6 where id=$1 and parent_id=$5 returning *',
       [
         childId,
         data.subcategory,
         data.subcategory_slug,
         data.is_active!==false,
-        parentId
+        parentId,
+        data.subcategory_icon_key||null
       ]
     )).rows[0];
 

@@ -880,6 +880,26 @@
   outline-offset:2px;
 }
 
+.category-name-with-icon{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  max-width:100%;
+  vertical-align:middle;
+}
+.category-name-with-icon>.icon{
+  display:block;
+  width:18px;
+  height:18px;
+  flex:0 0 18px;
+}
+.category-name-with-icon>span{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
 .category-card__content{
   min-width:0;
   width:100%;

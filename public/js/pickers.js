@@ -33,15 +33,30 @@
     if(selected){
       label.replaceChildren();
 
-      const iconUrl=String(selected.dataset.iconUrl||'');
+      const iconName=String(selected.dataset.iconName||'');
 
-      if(iconUrl){
-        const image=document.createElement('img');
-        image.className='jyyr-select-icon';
-        image.src=iconUrl;
-        image.alt='';
-        image.setAttribute('aria-hidden','true');
-        label.appendChild(image);
+      if(iconName && typeof window.JYYRIcon==='function'){
+        const template=document.createElement('template');
+        template.innerHTML=window.JYYRIcon(iconName,'jyyr-select-icon');
+        const renderedIcon=template.content.firstElementChild;
+        if(renderedIcon)label.appendChild(renderedIcon);
+      }else{
+        const optionIcon=selected.querySelector('.jyyr-select-icon');
+
+        if(optionIcon){
+          label.appendChild(optionIcon.cloneNode(true));
+        }else{
+          const iconUrl=String(selected.dataset.iconUrl||'');
+
+          if(iconUrl){
+            const image=document.createElement('img');
+            image.className='jyyr-select-icon';
+            image.src=iconUrl;
+            image.alt='';
+            image.setAttribute('aria-hidden','true');
+            label.appendChild(image);
+          }
+        }
       }
 
       const text=document.createElement('span');

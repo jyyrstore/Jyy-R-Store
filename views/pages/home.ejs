@@ -45,7 +45,7 @@
       data-home-category-filter="<%= c.id %>"
       aria-pressed="false"
     >
-      <%- icon('category-management') %>
+      <%- icon(c.icon_key||'category-management','icon category-inline-icon') %>
       <span><%= c.name %></span>
     </button>
     <% }) %>
@@ -59,9 +59,9 @@
     >
       <% const parentCategory=categories.find(category=>String(category.id)===String(group.category.parent_id)); %>
       <div class="section-header home-subcategory-header">
-        <span class="home-parent-category-name"><%= parentCategory ? parentCategory.name : '' %></span>
+        <span class="home-parent-category-name"><% if(parentCategory){ %><span class="category-name-with-icon"><%- icon(parentCategory.icon_key||'category-management','icon category-inline-icon') %><span><%= parentCategory.name %></span></span><% } %></span>
         <div class="home-subcategory-heading">
-          <h2><%= group.category.name %></h2>
+          <h2><span class="category-name-with-icon"><%- icon(group.category.icon_key||'category-management','icon category-inline-icon') %><span><%= group.category.name %></span></span></h2>
           <span class="home-subcategory-count" aria-label="<%= group.total %> item produk"><%= group.total %></span>
         </div>
         <span class="home-subcategory-rule" aria-hidden="true"></span>

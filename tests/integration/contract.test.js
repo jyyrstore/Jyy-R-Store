@@ -276,7 +276,7 @@ test('Owner category edit omits an empty optional slug',()=>{
   );
 
   assert.ok(browser.includes(
-    "const categoryPayload={name:fd.name,is_active:fd.is_active,subcategory:String(fd.subcategory||'').trim()};" +
+    "const categoryPayload={name:fd.name,is_active:fd.is_active,subcategory:String(fd.subcategory||'').trim(),icon_key:String(fd.icon_key||'').trim()||null,subcategory_icon_key:String(fd.subcategory_icon_key||'').trim()||null};" +
     "const categorySlug=String(fd.slug||'').trim();" +
     "if(categorySlug)categoryPayload.slug=categorySlug;"
   ));
@@ -1109,6 +1109,86 @@ test('Owner product create/edit selects subcategories',()=>{
   assert.match(browser, /'Kategori lama · '\+c\.name/);
 });
 
+test('Owner category icons use the global registry and persist both hierarchy levels',()=>{
+  const route=fs.readFileSync(path.join(root,'src/routes/index.js'),'utf8');
+  const service=fs.readFileSync(path.join(root,'src/services/category/category.service.js'),'utf8');
+  const repository=fs.readFileSync(path.join(root,'src/repositories/categories.repository.js'),'utf8');
+  const browser=fs.readFileSync(path.join(root,'public/js/pages.js'),'utf8');
+  const picker=fs.readFileSync(path.join(root,'public/js/pickers.js'),'utf8');
+  const app=fs.readFileSync(path.join(root,'views/app.ejs'),'utf8');
+  const migration=fs.readFileSync(path.join(root,'database/migrations/046_category_icon_keys.sql'),'utf8');
+
+  assert.match(route,/icon_key:z\.string\(\)\.trim\(\)\.max\(120\)\.nullable\(\)\.optional\(\)/);
+  assert.match(route,/subcategory_icon_key:z\.string\(\)\.trim\(\)\.max\(120\)\.nullable\(\)\.optional\(\)/);
+
+  assert.ok(browser.includes("Object.keys(window.JYYR?.icons||{}).sort()"));
+  assert.ok(browser.includes("categoryIconPicker('icon_key'"));
+  assert.ok(browser.includes("categoryIconPicker('subcategory_icon_key'"));
+  assert.ok(browser.includes("icon_key:String(fd.icon_key||'').trim()||null"));
+  assert.ok(browser.includes("subcategory_icon_key:String(fd.subcategory_icon_key||'').trim()||null"));
+
+  assert.ok(service.includes('subcategory_icon_key'));
+  assert.ok(repository.includes('icon_key=$4'));
+  assert.ok(repository.includes('subcategory_icon_key||null'));
+  assert.ok(picker.includes("selected.dataset.iconName"));
+
+  assert.ok(app.includes("'streamline-plump-color:star-medal':'0 0 48 48'"));
+  assert.ok(app.includes("'video-game':'0 0 128 128'"));
+  assert.ok(app.includes("'qris':'0 0 108.37466 17.412731'"));
+  assert.ok(app.includes('jyyr-crown-gradient-client-'));
+  assert.match(migration,/add column if not exists icon_key text/i);
+});
+
+test('category and subcategory icons render across product surfaces',()=>{
+  const storeView=fs.readFileSync(
+    path.join(root,'views/pages/store.ejs'),
+    'utf8'
+  );
+  const detailView=fs.readFileSync(
+    path.join(root,'views/pages/product-detail.ejs'),
+    'utf8'
+  );
+  const ownerView=fs.readFileSync(
+    path.join(root,'views/owner/index.ejs'),
+    'utf8'
+  );
+  const browser=fs.readFileSync(
+    path.join(root,'public/js/pages.js'),
+    'utf8'
+  );
+  const productsRepository=fs.readFileSync(
+    path.join(root,'src/repositories/products.repository.js'),
+    'utf8'
+  );
+  const styles=fs.readFileSync(
+    path.join(root,'public/css/store.css'),
+    'utf8'
+  );
+
+  assert.ok(homeView.includes("icon(c.icon_key||'category-management'"));
+  assert.ok(homeView.includes("icon(parentCategory.icon_key||'category-management'"));
+  assert.ok(homeView.includes("icon(group.category.icon_key||'category-management'"));
+
+  assert.ok(storeView.includes('data-icon-name="<%= c.icon_key||\'category-management\' %>"'));
+  assert.ok(storeView.includes("icon(categoryParent.icon_key||'category-management'"));
+  assert.ok(storeView.includes("icon(c.icon_key||'category-management'"));
+
+  assert.ok(detailView.includes("product.category_parent_icon_key||product.category_icon_key||'category-management'"));
+  assert.ok(detailView.includes("icon(category.icon_key||'category-management'"));
+
+  assert.ok(ownerView.includes("icon(row.icon_key||'category-management'"));
+  assert.ok(ownerView.includes("icon(subcategory.icon_key||'category-management'"));
+  assert.ok(ownerView.includes('row.category_icon_key'));
+
+  assert.ok(browser.includes("window.JYYRIcon(p.category_icon_key||'category-management'"));
+  assert.ok(browser.includes("window.JYYRIcon(c.icon_key||'category-management'"));
+  assert.ok(browser.includes("return [c.id,categoryLabel,'',c.icon_key||'category-management'];"));
+
+  assert.ok(productsRepository.includes('c.icon_key category_icon_key'));
+  assert.ok(productsRepository.includes('parent_c.icon_key category_parent_icon_key'));
+  assert.ok(styles.includes('.category-name-with-icon'));
+});
+
 test('category hierarchy supports one-level subcategories',()=>{
   const categoryRepository=fs.readFileSync(
     path.join(root,'src/repositories/categories.repository.js'),
@@ -1197,7 +1277,7 @@ test('homepage displays products across active category groups and uncategorized
   assert.match(controller,/products\.homepageHighlights\(6\)/);
   assert.match(controller,/total:group\.total/);
   assert.match(homeView,/subcategoryGroups\.forEach\(group=>/);
-  assert.match(homeView,/<h2><%= group\.category\.name %><\/h2>[\s\S]*?home-subcategory-count/);
+  assert.match(homeView,/<h2><span class="category-name-with-icon">[\s\S]*?<%= group\.category\.name %><\/span><\/span><\/h2>[\s\S]*?home-subcategory-count/);
   assert.match(homeView,/home-subcategory-count" aria-label="<%= group\.total %> item produk">[\s\S]*?<%= group\.total %>/);
   assert.match(homeStyles,/\.home-page \.home-subcategory-rule[\s\S]*?height:1px/);
   assert.match(homeStyles,/\.home-page \.home-subcategory-count\{[\s\S]*?\bborder:1px solid var\(--border\);[\s\S]*?\}/);

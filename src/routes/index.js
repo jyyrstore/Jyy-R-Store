@@ -22,6 +22,8 @@ const ownerCategorySchema=z.object({
   subcategory:z.string().trim().max(120).optional(),
   slug:z.string().trim().min(1).max(140).transform(makeSlug).pipe(z.string().min(1).max(140).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)).optional(),
   parent_id:z.string().uuid().nullable().optional(),
+  icon_key:z.string().trim().max(120).nullable().optional(),
+  subcategory_icon_key:z.string().trim().max(120).nullable().optional(),
   description:z.string().max(2000).optional(),
   sort_order:z.coerce.number().int().min(0).max(10000).optional(),
   is_active:zBool.optional()

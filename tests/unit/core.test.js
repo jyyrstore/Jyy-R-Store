@@ -297,6 +297,42 @@ test('Xendit return URLs require HTTPS',()=>{
 });
 test('icon system returns SVG',()=>assert.match(icon('download'),/^<svg[\s\S]*<\/svg>$/));
 
+test('global icon registry preserves multicolor SVG viewBoxes',()=>{
+  const cases=[
+    ['withicons-lunar:crown','0 0 24 24'],
+    ['streamline-plump-color:star-medal','0 0 48 48'],
+    ['video-game','0 0 128 128']
+  ];
+
+  for(const [name,viewBox] of cases){
+    const markup=icon(name);
+    assert.match(markup,/^<svg[\s\S]*<\/svg>$/);
+    assert.ok(
+      markup.includes(`viewBox="${viewBox}"`),
+      `${name} harus menggunakan viewBox aslinya`
+    );
+    assert.ok(
+      markup.includes('stroke="none"'),
+      `${name} tidak boleh mewarisi stroke monochrome`
+    );
+  }
+
+  assert.match(icon('streamline-plump-color:star-medal'),/fill="#8fbffa"/);
+  assert.match(icon('video-game'),/fill="#464c4f"/);
+
+  const first=icon('withicons-lunar:crown')
+    .match(/id="(jyyr-crown-gradient-\d+)"/)?.[1];
+  const second=icon('withicons-lunar:crown')
+    .match(/id="(jyyr-crown-gradient-\d+)"/)?.[1];
+
+  assert.ok(first && second);
+  assert.notEqual(
+    first,
+    second,
+    'render crown berulang tidak boleh menduplikasi ID gradient'
+  );
+});
+
 
 test('navigation icons stay visibly scalable',()=>{
   const fs=require('fs');

@@ -51,8 +51,7 @@
     <div class="detail-product-stats" aria-label="Statistik produk">
       <div class="detail-product-stat">
         <span class="detail-product-stat-value">
-          <%- icon('category-management') %>
-          <span><%= product.category_parent_name || product.category_name || 'Produk' %></span>
+          <span class="category-name-with-icon"><%- icon(product.category_parent_icon_key||product.category_icon_key||'category-management','icon category-inline-icon') %><span><%= product.category_parent_name || product.category_name || 'Produk' %></span></span>
         </span>
       </div>
       <div class="detail-product-stat">
@@ -611,9 +610,7 @@
             >
               <span class="category-card__content">
 
-                <strong class="category-card__name">
-                  <%= category.name %>
-                </strong>
+                <strong class="category-card__name"><span class="category-name-with-icon"><%- icon(category.icon_key||'category-management','icon category-inline-icon') %><span><%= category.name %></span></span></strong>
 
                 <% if(category.description){ %>
                   <span class="category-card__description">

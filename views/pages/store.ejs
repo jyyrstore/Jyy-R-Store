@@ -68,7 +68,15 @@
           ? categoryParent.name+' → '+c.name
           : c.name;
       %>
-        <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="<%= c.slug %>" data-label="<%= categoryLabel %>"><%= categoryLabel %></button>
+        <button type="button" class="jyyr-select-option" role="option" data-jyyr-select-option data-value="<%= c.slug %>" data-label="<%= categoryLabel %>" data-icon-name="<%= c.icon_key||'category-management' %>">
+          <span class="jyyr-select-option-content">
+            <% if(categoryParent){ %>
+              <span class="category-name-with-icon"><%- icon(categoryParent.icon_key||'category-management','icon category-inline-icon') %><span><%= categoryParent.name %></span></span>
+              <span aria-hidden="true">→</span>
+            <% } %>
+            <span class="category-name-with-icon"><%- icon(c.icon_key||'category-management','icon category-inline-icon') %><span><%= c.name %></span></span>
+          </span>
+        </button>
       <% }) %>
   </div>
 </div>
