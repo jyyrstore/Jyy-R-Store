@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const {formatIDR}=require('../../src/utils/currency');
 const {hmac}=require('../../src/utils/crypto');
 const {pageParams}=require('../../src/utils/pagination');
-const {icon}=require('../../src/utils/icons');
+const {icon,icons}=require('../../src/utils/icons');
 const {safeSameOriginUrl}=require('../../src/utils/url');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -297,10 +297,64 @@ test('Xendit return URLs require HTTPS',()=>{
 });
 test('icon system returns SVG',()=>assert.match(icon('download'),/^<svg[\s\S]*<\/svg>$/));
 
+test('obsolete icon keys are removed and UI uses canonical replacements',()=>{
+  const removed=[
+    'activity','back','bar-chart','dashboard','tool','trash-can',
+    'x','signal','users','deposit','inbox'
+  ];
+
+  for(const name of removed){
+    assert.equal(
+      Object.prototype.hasOwnProperty.call(icons,name),
+      false,
+      `${name} tidak boleh tersedia lagi di registry`
+    );
+  }
+
+  const replacements=[
+    'bar-chart-outlined','wrench','trash','circle-x','signal-slash',
+    'interface-user-circle-circle-geometric','wallet','envelope'
+  ];
+
+  for(const name of replacements){
+    assert.equal(typeof icons[name],'string',`${name} harus tersedia`);
+  }
+
+  assert.equal(typeof icons['nav-dashboards'],'string');
+
+  const read=file=>fs.readFileSync(path.join(root,file),'utf8');
+  const owner=read('views/owner/index.ejs');
+  const notifications=read('views/pages/notifications.ejs');
+  const cart=read('views/pages/cart.ejs');
+  const browser=read('public/js/pages.js');
+
+  const count=(text,value)=>text.split(value).length-1;
+
+  assert.equal(count(owner,"icon('trash')"),3);
+  assert.equal(count(owner,"icon('envelope')"),1);
+  assert.equal(count(notifications,"icon('trash')"),1);
+  assert.equal(count(cart,"icon('trash')"),1);
+  assert.equal(count(browser,"window.JYYRIcon?.('trash')"),3);
+
+  assert.ok(notifications.includes("n.type==='DEPOSIT'"));
+  assert.ok(notifications.includes("? 'wallet'"));
+  assert.ok(browser.includes("everySelected?'circle-x':'list-check'"));
+  assert.ok(browser.includes("enabled?'circle-x':'layers'"));
+  assert.ok(browser.includes("shouldSelect?'circle-x':'list-check'"));
+
+  assert.equal(owner.includes("icon('trash-can')"),false);
+  assert.equal(owner.includes("icon('inbox')"),false);
+  assert.equal(notifications.includes("icon('trash-can')"),false);
+  assert.equal(notifications.includes("? 'deposit'"),false);
+  assert.equal(cart.includes("icon('trash-can')"),false);
+  assert.equal(browser.includes("JYYRIcon?.('trash-can')"),false);
+});
+
 test('global icon registry preserves multicolor SVG viewBoxes',()=>{
   const cases=[
     ['withicons-lunar:crown','0 0 24 24'],
     ['streamline-plump-color:star-medal','0 0 48 48'],
+    ['trophy-v1','0 0 128 128'],
     ['video-game','0 0 128 128']
   ];
 
@@ -318,6 +372,38 @@ test('global icon registry preserves multicolor SVG viewBoxes',()=>{
   }
 
   assert.match(icon('streamline-plump-color:star-medal'),/fill="#8fbffa"/);
+
+  const trophyV1=icon('trophy-v1');
+  assert.match(trophyV1,/fill="#2f2f2f"/);
+  assert.match(trophyV1,/fill="#fcc21b"/);
+  assert.match(trophyV1,/fill="#855c52"/);
+
+  const trophyFirst=icon('trophy-v1')
+    .match(/id="(jyyr-trophy-v1-[0-9]+)"/)?.[1];
+  const trophySecond=icon('trophy-v1')
+    .match(/id="(jyyr-trophy-v1-[0-9]+)"/)?.[1];
+
+  assert.ok(trophyFirst && trophySecond);
+  assert.notEqual(
+    trophyFirst,
+    trophySecond,
+    'render trophy-v1 berulang tidak boleh menduplikasi ID SVG'
+  );
+
+  const appTemplate=fs.readFileSync(
+    path.join(root,'views/app.ejs'),
+    'utf8'
+  );
+
+  assert.ok(
+    appTemplate.includes("'trophy-v1':'0 0 128 128'")
+  );
+
+  assert.ok(
+    appTemplate.includes(
+      "body=body.replace(/SVGKFFKCdLp/g,svgId);"
+    )
+  );
   assert.match(icon('video-game'),/fill="#464c4f"/);
 
   const first=icon('withicons-lunar:crown')

@@ -48,8 +48,11 @@
       csrf: <%- JSON.stringify(csrfToken || '') %>,
       icons: <%- JSON.stringify(iconPaths || {}) %>,
       iconViewBoxes: {
+        "withicons-skeuo-images": "0 0 24 24",
+        'premium-app': "0 0 1092 1200",
         'withicons-lunar:crown':'0 0 24 24',
         'streamline-plump-color:star-medal':'0 0 48 48',
+        'trophy-v1':'0 0 128 128',
         'video-game':'0 0 128 128',
         'qris':'0 0 108.37466 17.412731'
       }
@@ -66,6 +69,11 @@
       if(name==='withicons-lunar:crown'){
         const gradientId=`jyyr-crown-gradient-client-${++iconRenderSequence}`;
         body=body.replace(/SVGjjqMcdLQ/g,gradientId);
+      }
+
+      if(name==='trophy-v1'){
+        const svgId=`jyyr-trophy-v1-client-${++iconRenderSequence}`;
+        body=body.replace(/SVGKFFKCdLp/g,svgId);
       }
 
       const viewBox=iconViewBoxes[name]||'0 0 24 24';

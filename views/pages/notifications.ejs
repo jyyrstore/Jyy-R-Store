@@ -58,7 +58,7 @@
           aria-label="Hapus semua notifikasi"
           title="Hapus semua notifikasi"
           hidden>
-          <%- icon('trash-can') %>
+          <%- icon('trash') %>
         </button>
       </div>
     <% } %>
@@ -80,7 +80,7 @@
           : n.type==='ORDER'
             ? 'clipboard-list'
             : n.type==='DEPOSIT'
-              ? 'deposit'
+              ? 'wallet'
               : n.type==='SYSTEM'
                 ? 'server'
                 : n.type==='PROMOTION'

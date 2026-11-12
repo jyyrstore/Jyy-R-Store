@@ -785,7 +785,7 @@
         class="button button-secondary jyyr-file-clear"
         data-jyyr-file-clear
         hidden
-      >${window.JYYRIcon?.('trash-can')||''}Hapus</button>
+      >${window.JYYRIcon?.('trash')||''}Hapus</button>
     </div>
   `;
 
@@ -904,7 +904,7 @@
         selectAll.setAttribute('aria-label',selectionLabel);
         selectAll.title=selectionLabel;
         selectAll.innerHTML=
-          window.JYYRIcon?.(everySelected?'x':'list-check')||
+          window.JYYRIcon?.(everySelected?'circle-x':'list-check')||
           selectAll.innerHTML;
         selectAll.setAttribute(
           'aria-pressed',
@@ -1427,7 +1427,7 @@
                     data-owner-content-status="${esc(productStatus)}"
                     data-owner-content-has-thumbnail="${coverReady===true?'1':'0'}"
                     aria-label="Hapus content"
-                    title="Hapus content">${window.JYYRIcon?.('trash-can')||''}
+                    title="Hapus content">${window.JYYRIcon?.('trash')||''}
                   </button>
                 </div>
               </article>
@@ -2596,7 +2596,7 @@
         selectMode.setAttribute('aria-label',selectionModeLabel);
         selectMode.title=selectionModeLabel;
         selectMode.innerHTML=
-          window.JYYRIcon?.(enabled?'x':'layers')||
+          window.JYYRIcon?.(enabled?'circle-x':'layers')||
           selectMode.innerHTML;
 
         selectMode.setAttribute(
@@ -2672,7 +2672,7 @@
         selectAll.setAttribute('aria-label',selectionLabel);
         selectAll.title=selectionLabel;
         selectAll.innerHTML=
-          window.JYYRIcon?.(shouldSelect?'x':'list-check')||
+          window.JYYRIcon?.(shouldSelect?'circle-x':'list-check')||
           selectAll.innerHTML;
 
         selectAll.setAttribute(
@@ -3300,7 +3300,7 @@ ${productPricingModesMarkup('FIXED')}
         toast.error(err.message);
       }
     }
-    const user=e.target.closest('[data-owner-user]');if(user){const id=user.dataset.ownerUser,status=user.dataset.ownerStatus,role=user.dataset.ownerRole;open(`<div class="stack-form"><h2>Kelola ${esc(user.dataset.ownerUsername)}</h2><p class="muted">Status: ${esc(status)} · Role: ${esc(role)}</p><div class="button-grid"><button class="button button-secondary" data-user-ban="${id}">Ban</button><button class="button button-secondary" data-user-unban="${id}">Unban</button><button class="button button-secondary" data-user-suspend="${id}">Suspend</button><button class="button button-secondary" data-user-unsuspend="${id}">Unsuspend</button><button class="button button-secondary" data-user-reset="${id}">Reset Sessions</button><button class="button button-danger" data-user-delete="${id}">${window.JYYRIcon?.('trash-can')||''}Delete (Anonymize)</button></div><label class="field"><span>Role</span>${pickerSelect({
+    const user=e.target.closest('[data-owner-user]');if(user){const id=user.dataset.ownerUser,status=user.dataset.ownerStatus,role=user.dataset.ownerRole;open(`<div class="stack-form"><h2>Kelola ${esc(user.dataset.ownerUsername)}</h2><p class="muted">Status: ${esc(status)} · Role: ${esc(role)}</p><div class="button-grid"><button class="button button-secondary" data-user-ban="${id}">Ban</button><button class="button button-secondary" data-user-unban="${id}">Unban</button><button class="button button-secondary" data-user-suspend="${id}">Suspend</button><button class="button button-secondary" data-user-unsuspend="${id}">Unsuspend</button><button class="button button-secondary" data-user-reset="${id}">Reset Sessions</button><button class="button button-danger" data-user-delete="${id}">${window.JYYRIcon?.('trash')||''}Delete (Anonymize)</button></div><label class="field"><span>Role</span>${pickerSelect({
       name:'owner_role',
       value:role,
       id:'user-role-select',

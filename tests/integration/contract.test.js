@@ -108,6 +108,27 @@ test('top-order adds authenticated customer ranking and preserves product rankin
   assert.ok(view.includes('<h2>Produk Populer</h2>'));
   assert.ok(view.includes('ranking-list top-order-customers-list'));
   assert.ok(view.includes('class="ranking-card'));
+
+  const iconRegistry=fs.readFileSync(
+    path.join(root,'src/utils/icons.js'),
+    'utf8'
+  );
+
+  assert.ok(iconRegistry.includes("'withicons-lunar:crown':"));
+  assert.ok(iconRegistry.includes("'streamline-plump-color:star-medal':"));
+
+  const normalizedRanking=view.replace(/\s+/g,' ');
+  const expectedRankingMarkup=
+    "<% if(i===0){ %> <%- icon('trophy-v1') %> " +
+    "<% } else if(i===1){ %> <%- icon('withicons-lunar:crown') %> " +
+    "<% } else if(i===2){ %> <%- icon('streamline-plump-color:star-medal') %> " +
+    "<% } else { %> <%= i+1 %> <% } %>";
+
+  assert.equal(
+    normalizedRanking.split(expectedRankingMarkup).length-1,
+    3,
+    'ketiga daftar harus mempertahankan trophy, crown, medal, lalu angka'
+  );
   for(const field of [
     'p.name',
     'p.purchase_count',
