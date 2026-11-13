@@ -9,6 +9,58 @@ const dashboardView=fs.readFileSync(path.join(root,'views/pages/dashboard.ejs'),
 const migrations=fs.readdirSync(path.join(root,'database/migrations')).filter(x=>x.endsWith('.sql')).map(x=>fs.readFileSync(path.join(root,'database/migrations',x),'utf8')).join('\n');
 for(const r of ['/','/store','/product/:slug','/dashboard','/cart','/checkout','/orders','/deposit','/history','/profile','/tickets','/notifications','/messages','/services','/faq','/security','/owner']) test(`required route ${r}`,()=>assert.ok(route.includes(`'${r}'`),r));
 
+test('customer page titles use consistent contextual icons',()=>{
+  const registry=fs.readFileSync(
+    path.join(root,'src/utils/icons.js'),'utf8'
+  );
+  const styles=fs.readFileSync(
+    path.join(root,'public/css/components.css'),'utf8'
+  );
+
+  const pages=[
+    ['views/pages/store.ejs','shop-twotone','Katalog produk'],
+    ['views/pages/orders.ejs','transaction-history','Pesanan saya'],
+    ['views/pages/delivery.ejs','archive-box-arrow-down','Produk Saya'],
+    ['views/pages/history.ejs','dialog-history','Riwayat aktivitas'],
+    ['views/pages/deposit.ejs','wallet-plus','Isi Saldo'],
+    ['views/pages/messages.ejs','mail-check','Pesan'],
+    ['views/pages/tickets.ejs','user-headset-outline','Tiket bantuan'],
+    ['views/pages/notifications.ejs','circle-alert','Notifikasi'],
+    ['views/pages/services.ejs','layanan','Layanan'],
+    ['views/pages/faq.ejs','help-circle','Pertanyaan yang sering diajukan'],
+    ['views/pages/security.ejs','shield-key-outline','Keamanan Jyyr Store']
+  ];
+
+  for(const [file,name,title] of pages){
+    const view=fs.readFileSync(path.join(root,file),'utf8');
+
+    assert.ok(
+      view.includes(`icon('${name}','icon page-title-icon')`),
+      `${title} harus memiliki icon yang sesuai.`
+    );
+
+    assert.ok(
+      view.includes(`<span>${title}</span>`),
+      `${title} harus mempertahankan teks judul.`
+    );
+
+    assert.ok(
+      registry.includes(`'${name}':`),
+      `Icon ${name} harus tersedia di registry.`
+    );
+  }
+
+  assert.match(
+    styles,
+    /\.page-title-with-icon\s*\{[^}]*display:flex;[^}]*align-items:center;/s
+  );
+
+  assert.match(
+    styles,
+    /\.page-title-with-icon>\.page-title-icon\s*\{[^}]*width:24px;[^}]*height:24px;/s
+  );
+});
+
 test('homepage moves Service and New Information to authenticated dashboard',()=>{
   const homeStart=page.indexOf('async function home(');
   const storeStart=page.indexOf('async function store(',homeStart);

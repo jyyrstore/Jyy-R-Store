@@ -223,6 +223,29 @@
 .owner-storage-panel .owner-storage-item>strong{display:block;font-size:15px;font-weight:700;line-height:1.5;overflow-wrap:anywhere;word-break:break-word}
 .owner-storage-panel .owner-storage-item>p{margin:0;font-size:15px;line-height:1.5;overflow-wrap:anywhere;word-break:break-word}
 .icon{width:1.1em;height:1.1em;max-width:none;max-height:none;flex:0 0 auto}
+
+.page-title-with-icon{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.page-title-with-icon>.page-title-icon{
+  display:block;
+  flex:0 0 24px;
+  width:24px;
+  height:24px;
+  max-width:24px;
+  max-height:24px;
+  color:var(--primary-2);
+}
+
+.page-title-with-icon>span{
+  min-width:0;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
 .header-actions .cart-button > .icon{
   width:24px;
   height:24px;

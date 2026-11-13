@@ -5227,6 +5227,54 @@ body[data-view="pages/dashboard"] .dashboard-order-list .list-card .align-right 
 .history-mutation-date{grid-column:1;grid-row:3;min-width:0;margin:0;color:var(--muted);font-size:10px;line-height:1.4;overflow-wrap:anywhere}
 .history-mutation-zone{grid-column:2;grid-row:3;justify-self:end;margin:0;color:var(--muted);font-size:10px;white-space:nowrap}
 
+/* DASHBOARD BALANCE CARD ROW ALIGNMENT */
+body[data-view="pages/dashboard"] .dashboard-balance-list .list-card{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) max-content;
+  grid-template-rows:auto auto;
+  align-items:baseline;
+  column-gap:12px;
+  row-gap:4px;
+}
+
+body[data-view="pages/dashboard"] .dashboard-balance-list .list-card > div:first-child,
+body[data-view="pages/dashboard"] .dashboard-balance-list .list-card > .align-right{
+  display:contents;
+}
+
+body[data-view="pages/dashboard"] .dashboard-balance-list .list-card > div:first-child > strong{
+  grid-column:1;
+  grid-row:1;
+  min-width:0;
+  margin:0;
+  line-height:1.35;
+}
+
+body[data-view="pages/dashboard"] .dashboard-balance-list .list-card .history-mutation-reference-copy{
+  grid-column:1;
+  grid-row:2;
+  min-width:0;
+  margin:0;
+}
+
+body[data-view="pages/dashboard"] .dashboard-balance-list .list-card > .align-right > b{
+  grid-column:2;
+  grid-row:1;
+  justify-self:end;
+  white-space:nowrap;
+  line-height:1.35;
+}
+
+body[data-view="pages/dashboard"] .dashboard-balance-list .list-card > .align-right > span{
+  grid-column:2;
+  grid-row:2;
+  justify-self:end;
+  margin:0;
+  text-align:right;
+  white-space:nowrap;
+  line-height:1.35;
+}
+
 /* SHARED TRANSACTION REFERENCE COPY BUTTON */
 body[data-view="pages/history"] [data-tab="mutations"] .history-mutation-reference-copy,
 body[data-view="pages/deposit"] .deposit-history-list .history-mutation-reference-copy,

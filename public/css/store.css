@@ -54,6 +54,18 @@
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+
+.home-page .home-subcategory-heading .category-name-with-icon>.icon{
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
+}
+
+.home-page .home-parent-category-name .category-name-with-icon>.icon{
+  width:30px;
+  height:30px;
+  flex:0 0 30px;
+}
 .home-page .home-subcategory-count{
   display:inline-flex;
   align-items:center;
@@ -1669,7 +1681,7 @@
   flex-wrap:nowrap;
   gap:clamp(7px,2vw,18px);
   width:100%;
-  margin:12px 0 16px;
+  margin:18px 0 16px;
   padding:0;
   list-style:none;
   white-space:nowrap;
